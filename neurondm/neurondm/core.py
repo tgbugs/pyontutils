@@ -185,7 +185,12 @@ class LabelMaker:
                 # TODO negative phenotypes
                 less_entailed = [p for p in phenotypes
                                  if not isinstance(p, EntailedPhenotype)]
-                sub_labels = sorted(function(less_entailed))
+                _sl = function(less_entailed)
+                if function_name == 'hasCircuitRolePhenotype':
+                    sub_labels = _sl
+                else:
+                    sub_labels = sorted(_sl)
+
                 labels += sub_labels
 
                 yes_entailed = [p for p in phenotypes
@@ -297,6 +302,10 @@ class LabelMaker:
     def hasPresynapticTerminalsIn(self, phenotypes):
         yield from self._with_thing_located_in('with-presynaptic-terminals-in', phenotypes)
 
+    @od
+    def hasSensorySubcellularElementIn(self, phenotypes):
+        yield from self._with_thing_located_in('with-sensory-subcellular-element-in', phenotypes)
+
     def _with_thing_located_in(self, prefix_template, phenotypes):
         # TODO consider field separator here as well ... or string quotes ...
         lp = len(phenotypes)
@@ -379,6 +388,9 @@ class LabelMaker:
     def hasComputedPhenotype(self, phenotypes):
         yield from self._plus_minus(phenotypes)
     @od
+    def hasProjectionLaterality(self, phenotypes):  # TODO where should this go in the order?
+        yield from self._with_thing_located_in('projecting', phenotypes)
+    @od
     def hasProjectionPhenotype(self, phenotypes):  # consider inserting after end, requires rework of code...
         yield from self._with_thing_located_in('projecting-to', phenotypes)
     @od
@@ -437,6 +449,7 @@ class LabelMaker:
             if suffix:
                 yield suffix
 
+
 # helper classes
 
 class OntTerm(bOntTerm, OntId):
@@ -486,8 +499,12 @@ class OntTerm(bOntTerm, OntId):
             self._cache_ind[self] = ind
             return ind
         else:
-            log.debug(f'No indicator for {self.curie} {self.label}')
             self._cache_ind[self] = self  # avoid repeated lookup cost which is quite high
+            if (self.prefix in ('UBERON', 'PATO', 'FMA', 'ilxtr')):
+                pass
+            else:
+                log.debug(f'No indicator for {self.curie} {self.label}')
+
             return self
 
     def triples(self, predicate):

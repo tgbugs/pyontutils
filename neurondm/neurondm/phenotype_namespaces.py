@@ -78,6 +78,7 @@ class PaxRatRegions(LocalNameManager):
 class Species(LocalNameManager):
     Rat = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInTaxon')
     Mouse = Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInTaxon')
+    Human = Phenotype('NCBITaxon:9606', 'ilxtr:hasInstanceInTaxon')
 
 
 class BBP(PaxRatLayers, PaxRatRegions, Species):

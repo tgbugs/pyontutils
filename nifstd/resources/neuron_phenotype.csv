@@ -109,3 +109,9 @@ ilxtr:NonAccommodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,,,hasElectrophy
 ilxtr:ExpressionPhenotype,ilxtr:CellPhenotype,,molecular phenotype,,,,hasExpressionPhenotype
 ilxtr:DopaminergicPhenotype,ilxtr:ExpressionPhenotype,,,,,"figure out how to regularize these since I have used ilxtr:parvalbumin elsewhere, probably ilxtr:phenotype/thing will be best",hasExpressionPhenotype
 ilxtr:SerotonergicPhenotype,ilxtr:ExpressionPhenotype,,,,,,
+,,,,,,,
+ilxtr:ANSPopulationPhenotype,ilxtr:CellPhenotype,Autonomic nervous system population phenotype,,,subClassesDisjoint,used to account for populations that are part of distinct autonomic nervous system subdivisions,
+ilxtr:neuron-phenotype-para-pre,ilxtr:ANSPopulationPhenotype,Parasympathetic Pre-Ganglionic phenotype,,,,,
+ilxtr:neuron-phenotype-para-post,ilxtr:ANSPopulationPhenotype,Parasympathetic Post-Ganglionic phenotype,,,,,
+ilxtr:neuron-phenotype-sym-pre,ilxtr:ANSPopulationPhenotype,Sympathetic Pre-Ganglionic phenotype,,,,,
+ilxtr:neuron-phenotype-sym-post,ilxtr:ANSPopulationPhenotype,Sympathetic Post-Ganglionic phenotype,,,,,

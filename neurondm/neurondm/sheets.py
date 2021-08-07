@@ -1,4 +1,5 @@
 from pprint import pprint
+from contextlib import nullcontext  # 3.7
 from functools import wraps
 import rdflib  # FIXME decouple
 import ontquery as oq
@@ -367,10 +368,13 @@ class CutsV1(Cuts):
     def lower_check(label, cell):
         return label not in cell and label.lower() not in cell.lower()  # have to handle comma sep case
 
+    _prefix_exclude = ('FMA',)
+    _search_prefixes = ('UBERON', 'CHEBI', 'PR', 'NCBIGene', 'NCBITaxon',
+                        'ilxtr', 'NIFEXT', 'SAO', 'NLXMOL', 'BIRNLEX', 'FMA', 'PATO')
+
     @classmethod
     def mapCell(cls, cell, syns=False, predicate=None):
-        search_prefixes = ('UBERON', 'CHEBI', 'PR', 'NCBIGene', 'NCBITaxon',
-                           'ilxtr', 'NIFEXT', 'SAO', 'NLXMOL', 'BIRNLEX',)
+        search_prefixes = tuple(p for p in cls._search_prefixes if p not in cls._prefix_exclude)
 
         if predicate and predicate in Phenotype._molecular_predicates:
             # uberon syns pollute molecular results so move it to one before birnlex
@@ -421,7 +425,7 @@ class CutsV1(Cuts):
         #printD(cell, result)
         if not result:
             log.debug(f'{cell}')
-            maybe = list(cls.query(label=cell, exclude_prefix=('FMA',)))
+            maybe = list(cls.query(label=cell, exclude_prefix=cls._prefix_exclude))
             if maybe:
                 t = maybe[0]
                 return t.u, t.label
@@ -502,6 +506,14 @@ class CutsV1Lite(Cuts):
 
 class Row(sheets.Row):
 
+    neuron_class = NeuronCUT
+
+    entail_predicates = (
+        ilxtr.hasAxonLocatedIn,
+        ilxtr.hasDendriteLocatedIn,
+        ilxtr.hasDendriteMorphologicalPhenotype,
+    )
+
     def neuron_existing(self):
         curie = self.curie().value
         if curie:
@@ -566,11 +578,11 @@ class Row(sheets.Row):
                         yield out
                         continue
                     elif isinstance(iri, LacksObject):
-                        p = NegPhenotype(iri.asURIRef(), predicate)
+                        pheno = NegPhenotype(iri.asURIRef(), predicate)
                     else:
-                        p = Phenotype(iri, predicate)
+                        pheno = Phenotype(iri, predicate)
 
-                    yield p.asIndicator()
+                    yield pheno.asIndicator()
 
 
         mapped = [(v, p) for attr, p in has for v in map(attr, p)]
@@ -591,14 +603,9 @@ class Row(sheets.Row):
 
     def asNeuron(self):
         pes = self.asPhenotypes()
-        return NeuronCUT(*pes, label=self.label().value)
+        return self.neuron_class(*pes, label=self.label().value)
 
-    def neuron_cleaned(self):
-        entail_predicates = (
-            ilxtr.hasAxonLocatedIn,
-            ilxtr.hasDendriteLocatedIn,
-            ilxtr.hasDendriteMorphologicalPhenotype,
-        )
+    def neuron_cleaned(self, context=nullcontext):
         conditional_entailed_predicates = (
             (ilxtr.hasSomaLocatedInLayer, (False or self.curie().value == 'NIFEXT:55')),  # martinotti cell
         )
@@ -608,7 +615,7 @@ class Row(sheets.Row):
         eobjects = [e.p for e in emp]
         def should_entail(pe):
             return (pe.p in eobjects or
-                    pe.e in entail_predicates or
+                    pe.e in self.entail_predicates or
                     (pe.e, True) in conditional_entailed_predicates or
                     isinstance(pe, LogicalPhenotype) and any(should_entail(_) for _ in pe.pes) or
                     # see this comment for discussion about negative phenotypes on CUTs
@@ -621,24 +628,26 @@ class Row(sheets.Row):
         if ne is None:
             curie = self.curie().value
             id_ = curie if curie else None
-            return NeuronCUT(*sheet_pes, id_=id_, label=self.label().value, override=id_ is None)
+            return self.neuron_class(*sheet_pes, id_=id_, label=self.label().value, override=id_ is None)
 
         if not emp:
             # can't just return the existing neuron because it isn't bound to the current config
             # FIXME uh what an aweful design
-            return NeuronCUT(*ne, *sheet_pes, id_=ne.id_, label=ne.origLabel, override=True).adopt_meta(ne)
+            return self.neuron_class(*ne, *sheet_pes, id_=ne.id_, label=ne.origLabel, override=True).adopt_meta(ne)
 
         pes = [pe.asEntailed() if should_entail(pe) else pe for pe in ne]
-        return NeuronCUT(*pes, *sheet_pes, id_=ne.id_, label=ne.origLabel, override=True)
 
-
-# monkey patch
-sheets.Row = Row
+        with context:
+            nrn = self.neuron_class(*pes, *sheet_pes, id_=ne.id_, label=ne.origLabel, override=True)
+            return nrn
 
 
 def main():
     #from neurondm.models.cuts import main as cuts_main
     #cuts_config, *_ = cuts_main()
+
+    # monkey patch inside main to ensure that other code doesn't change while we are at the top level
+    sheets.Row = Row
 
     from neurondm.compiled.common_usage_types import config as cuts_config
     cuts_neurons = cuts_config.neurons()
