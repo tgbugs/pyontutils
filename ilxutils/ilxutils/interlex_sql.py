@@ -1,14 +1,17 @@
 from pathlib import Path
+import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine, inspect, Table, Column
 from collections import defaultdict
 from .tools import light_degrade, open_pickle, create_pickle
 import os
 #ELASTIC = 'https://5f86098ac2b28a982cebf64e82db4ea2.us-west-2.aws.found.io:9243/interlex/term/'
-TERMS_COMPLETE_BACKUP_PATH = Path.home()/'Dropbox/interlex_backups/ilx_db_terms_complete_backup.pickle'
+TERMS_COMPLETE_BACKUP_PATH = Path.home(
+)/'Dropbox/interlex_backups/ilx_db_terms_complete_backup.pickle'
 TERMS_BACKUP_PATH = Path.home()/'Dropbox/interlex_backups/ilx_db_terms_backup.pickle'
 ANNOS_BACKUP_PATH = Path.home()/'Dropbox/interlex_backups/ilx_db_annotations_backup.pickle'
-RELAS_BACKUP_PATH = Path.home()/'Dropbox/interlex_backups/ilx_db_relationships_backup.pickle'
+RELAS_BACKUP_PATH = Path.home(
+)/'Dropbox/interlex_backups/ilx_db_relationships_backup.pickle'
 SUPER_BACKUP_PATH = Path.home()/'Dropbox/interlex_backups/ilx_db_superclasses_backup.pickle'
 SYNOS_BACKUP_PATH = Path.home()/'Dropbox/interlex_backups/ilx_db_synonyms_backup.pickle'
 EXIDS_BACKUP_PATH = Path.home()/'Dropbox/interlex_backups/ilx_db_ex_backup.pickle'
@@ -19,7 +22,8 @@ class IlxSql():
     def __init__(self, db_url, pre_load=False, from_backup=False):
         self.db_url = db_url
         self.engine = create_engine(self.db_url)
-        self.local_degrade = lambda string: string.lower().strip()  # current degrade of choice for sql
+        # current degrade of choice for sql
+        self.local_degrade = lambda string: string.lower().strip()
         self.from_backup = from_backup
         self.terms_complete = self.get_terms_complete() if pre_load else pd.DataFrame
         self.terms = self.get_terms() if pre_load else pd.DataFrame
@@ -28,6 +32,25 @@ class IlxSql():
         self.existing_ids = self.get_existing_ids() if pre_load else pd.DataFrame
         self.relationships = self.get_relationships() if pre_load else pd.DataFrame
         self.synonyms = self.get_synonyms() if pre_load else pd.DataFrame
+
+    def fix_df_types(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Convert Float Columns to Int with 0 for NaN while converting the rest of the NaNs to None.
+
+        Parameters
+        ----------
+        df : dataframe
+
+        Returns
+        -------
+        dataframe
+            0 and None in place of nans
+        """
+        float_col = df.select_dtypes(include=['float64'])
+        for col in float_col:
+            df[col] = df[col].replace({np.nan: 0}).astype(int)
+        df = df.replace({np.nan: None})
+        return df
 
     def fetch_terms_complete(self):
         if self.terms_complete.empty:
@@ -64,161 +87,168 @@ class IlxSql():
             return self.get_superclasses()
         return self.superclasses
 
-    def get_terms(self):
+    def get_terms(self, status=0, refresh=False):
         ''' GROUP BY is a shortcut to only getting the first in every list of group '''
-        if not self.terms.empty:
+        if not self.terms.empty and not refresh:
             return self.terms
         if self.from_backup:
             self.terms = open_pickle(TERMS_BACKUP_PATH)
             return self.terms
         engine = create_engine(self.db_url)
-        data = """
-            SELECT t.id as tid, t.ilx, t.label, t.definition, t.type, t.comment, t.version, t.uid, t.time, t.status
+        data = f"""
+            SELECT t.*
             FROM terms t
-            GROUP BY t.ilx
+            WHERE t.status = '{status}'
         """
         self.terms = pd.read_sql(data, engine)
+        self.terms = self.fix_df_types(self.terms)
         create_pickle(self.terms, TERMS_BACKUP_PATH)
         return self.terms
 
-    def get_annotations(self):
-        if not self.annotations:
+    def get_annotations(self, status=0, withdrawn=0, refresh=False):
+        if not self.annotations.empty and not refresh:
             return self.fetch_annotations()
         if self.from_backup:
             self.annotations = open_pickle(ANNOS_BACKUP_PATH)
             return self.annotations
         engine = create_engine(self.db_url)
-        data = """
+        data = f"""
             SELECT
-                ta.tid, ta.annotation_tid as annotation_type_tid,
-                t1.ilx as term_ilx, t2.ilx as annotation_type_ilx,
-                t2.label as annotation_type_label,
-                ta.value, ta.withdrawn
+                t1.ilx as term_ilx, t1.label as term_label, t1.type as term_type,
+                t2.ilx as annotation_type_ilx, t2.label as annotation_type_label,
+                ta.*
             FROM term_annotations AS ta
             JOIN (
                 SELECT *
                 FROM terms
-                GROUP BY terms.ilx
+                WHERE status = '{status}'
             ) AS t1 ON ta.tid=t1.id
             JOIN (
                 SELECT *
                 FROM terms
-                GROUP BY terms.ilx
+                WHERE status = '{status}'
             ) AS t2 ON ta.annotation_tid=t2.id
+           WHERE ta.withdrawn = '{withdrawn}'
         """
         self.annotations = pd.read_sql(data, engine)
+        self.annotations = self.fix_df_types(self.annotations)
         create_pickle(self.annotations, ANNOS_BACKUP_PATH)
         return self.annotations
 
-    def get_existing_ids(self):
-        if not self.existing_ids.empty:
+    def get_existing_ids(self, status=0, refresh=False):
+        if not self.existing_ids.empty and not refresh:
             return self.existing_ids
         if self.from_backup:
             self.existing_ids = open_pickle(EXIDS_BACKUP_PATH)
             return self.existing_ids
         engine = create_engine(self.db_url)
-        data = """
-            SELECT tei.tid, tei.curie, tei.iri, tei.preferred, t.ilx, t.label, t.definition, t.status
+        data = f"""
+            SELECT tei.*, t.ilx, t.label, t.type
             FROM (
                 SELECT *
                 FROM terms
-                GROUP BY terms.ilx
+                WHERE status = '{status}'
             ) as t
             JOIN term_existing_ids AS tei
             ON t.id = tei.tid
         """
         self.existing_ids = pd.read_sql(data, engine)
+        self.existing_ids = self.fix_df_types(self.existing_ids)
         create_pickle(self.existing_ids, EXIDS_BACKUP_PATH)
         return self.existing_ids
 
-    def get_relationships(self):
-        if not self.relationships.empty:
+    def get_relationships(self, status=0, withdrawn=0, refresh=False):
+        if not self.relationships.empty and not refresh:
             return self.relationships
         if self.from_backup:
             self.relationships = open_pickle(RELAS_BACKUP_PATH)
             return self.relationships
         engine = create_engine(self.db_url)
-        data = """
+        data = f"""
            SELECT
-               t1.id as term1_tid, t1.ilx AS term1_ilx, t1.type as term1_type,
-               t2.id as term2_tid, t2.ilx AS term2_ilx, t2.type as term2_type,
-               t3.id as relationship_tid, t3.ilx AS relationship_ilx, t3.label as relationship_label, 
-               tr.withdrawn
+               t1.ilx AS term1_ilx, t1.type as term1_type, t1.label as term1_label,
+               t2.ilx AS term2_ilx, t2.type as term2_type, t2.label as term2_label,
+               t3.ilx AS relationship_ilx, t3.label as relationship_label, 
+               tr.*
            FROM term_relationships AS tr
            JOIN (
                SELECT *
                FROM terms
-               GROUP BY terms.ilx
+               WHERE status = '{status}'
            ) t1 ON t1.id = tr.term1_id
            JOIN (
                SELECT *
                FROM terms
-               GROUP BY terms.ilx
+               WHERE status = '{status}'
            ) AS t2 ON t2.id = tr.term2_id
            JOIN (
                SELECT *
                FROM terms
-               GROUP BY terms.ilx
+               WHERE status = '{status}'
            ) AS t3 ON t3.id = tr.relationship_tid
+           WHERE tr.withdrawn = '{withdrawn}'
         """
         self.relationships = pd.read_sql(data, engine)
+        self.relationships = self.fix_df_types(self.relationships)
         create_pickle(self.relationships, RELAS_BACKUP_PATH)
         return self.relationships
 
-    def get_superclasses(self):
-        if not self.superclasses.empty:
+    def get_superclasses(self, status=0, withdrawn=0, refresh=False):
+        if not self.superclasses.empty and not refresh:
             return self.superclasses
         if self.from_backup:
             self.superclasses = open_pickle(SUPER_BACKUP_PATH)
             return self.superclasses
         engine = create_engine(self.db_url)
-        data = """
+        data = f"""
             SELECT
-                ts.tid, ts.superclass_tid,
-                t1.label as term_label, t1.ilx as term_ilx,
-                t2.label as superclass_label, t2.ilx as superclass_ilx
+                t1.ilx as term_ilx, t1.label as term_label,
+                t2.ilx as superclass_ilx, t2.label as superclass_label,
+                ts.*
             FROM term_superclasses AS ts
             JOIN (
                 SELECT *
                 FROM terms
-                GROUP BY terms.ilx
+                WHERE status = '{status}'
             ) as t1
             ON t1.id = ts.tid
             JOIN (
                 SELECT *
                 FROM terms
-                GROUP BY terms.ilx
+                WHERE status = '{status}'
             ) AS t2
             ON t2.id = ts.superclass_tid
         """
         self.superclasses = pd.read_sql(data, engine)
+        self.superclasses = self.fix_df_types(self.superclasses)
         create_pickle(self.superclasses, SUPER_BACKUP_PATH)
         return self.superclasses
 
-    def get_synonyms(self):
-        if not self.synonyms.empty:
+    def get_synonyms(self, status=0, refresh=False):
+        if not self.synonyms.empty and not refresh:
             return self.synonyms
         if self.from_backup:
             self.synonyms = open_pickle(SYNOS_BACKUP_PATH)
             return self.synonyms
         engine = create_engine(self.db_url)
-        data = """
-            SELECT ts.tid as tid, t.ilx, ts.literal, ts.type
+        data = f"""
+            SELECT t.ilx, t.type as term_type, t.label, ts.*
             FROM term_synonyms AS ts
             JOIN (
                 SELECT *
                 FROM terms
-                GROUP BY terms.ilx
+                WHERE status = '{status}'
             ) AS t
             WHERE ts.tid=t.id
         """
         self.synonyms = pd.read_sql(data, engine)
+        self.synonyms = self.fix_df_types(self.synonyms)
         create_pickle(self.synonyms, SYNOS_BACKUP_PATH)
         return self.synonyms
 
-    def get_terms_complete(self) -> pd.DataFrame:
+    def get_terms_complete(self, status=0, withdrawn=0, refresh=False) -> pd.DataFrame:
         ''' Gets complete entity data like term/view '''
-        if not self.terms_complete.empty:
+        if not self.terms_complete.empty and not refresh:
             return self.terms_complete
         if self.from_backup:
             self.terms_complete = open_pickle(TERMS_COMPLETE_BACKUP_PATH)
@@ -230,9 +260,10 @@ class IlxSql():
         ilx_complete = []
         header = ['Index'] + list(self.fetch_terms().columns)
         for row in self.fetch_terms().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             row['synonyms'] = ilx2synonyms.get(row['ilx'])
-            row['existing_ids'] = ilx2existing_ids[row['ilx']] # if breaks we have worse problems
+            # if breaks we have worse problems
+            row['existing_ids'] = ilx2existing_ids[row['ilx']]
             row['annotations'] = ilx2annotations.get(row['ilx'])
             row['superclass'] = ilx2superclass.get(row['ilx'])
             ilx_complete.append(row)
@@ -275,7 +306,7 @@ class IlxSql():
         label2rows = defaultdict(list)
         header = ['Index'] + list(self.terms_complete.columns)
         for row in self.terms_complete.itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             label = self.local_degrade(row['label'])
             if not visited.get((label, row['type'], row['ilx'])):
                 label2rows[label].append(row)
@@ -288,7 +319,7 @@ class IlxSql():
         definition2rows = defaultdict(list)
         header = ['Index'] + list(self.terms.columns)
         for row in self.terms.itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             definition = self.local_degrade(row['definition'])
             if not definition or definition == ' ':
                 continue
@@ -301,7 +332,7 @@ class IlxSql():
         tid2row = {}
         header = ['Index'] + list(self.fetch_terms().columns)
         for row in self.fetch_terms().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             tid2row[row['tid']] = row
         return tid2row
 
@@ -309,16 +340,16 @@ class IlxSql():
         ilx2row = {}
         header = ['Index'] + list(self.fetch_terms().columns)
         for row in self.fetch_terms().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             ilx2row[row['ilx']] = row
         return ilx2row
 
-    def get_ilx2superclass(self, clean:bool=True):
+    def get_ilx2superclass(self, clean: bool = True):
         ''' clean: for list of literals only '''
         ilx2superclass = defaultdict(list)
         header = ['Index'] + list(self.fetch_superclasses().columns)
         for row in self.fetch_superclasses().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             if clean:
                 superclass = {
                     'tid': row['superclass_tid'],
@@ -329,12 +360,12 @@ class IlxSql():
                 ilx2superclass[row['term_ilx']].append(row)
         return ilx2superclass
 
-    def get_tid2annotations(self, clean:bool=True):
+    def get_tid2annotations(self, clean: bool = True):
         ''' clean: for list of literals only '''
         tid2annotations = defaultdict(list)
         header = ['Index'] + list(self.fetch_annotations().columns)
         for row in self.fetch_annotations().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             if clean:
                 annotation = {
                     'tid': row['tid'],
@@ -347,12 +378,12 @@ class IlxSql():
                 tid2annotations[row['tid']].append(row)
         return tid2annotations
 
-    def get_ilx2annotations(self, clean:bool=True):
+    def get_ilx2annotations(self, clean: bool = True):
         ''' clean: for list of literals only '''
         ilx2annotations = defaultdict(list)
         header = ['Index'] + list(self.fetch_annotations().columns)
         for row in self.fetch_annotations().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             if clean:
                 annotation = {
                     'tid': row['tid'],
@@ -365,28 +396,27 @@ class IlxSql():
                 ilx2annotations[row['term_ilx']].append(row)
         return ilx2annotations
 
-
-    def get_tid2synonyms(self, clean:bool=True):
+    def get_tid2synonyms(self, clean: bool = True):
         ''' clean: for list of literals only '''
         tid2synonyms = {}
         header = ['Index'] + list(self.fetch_synonyms().columns)
         for row in self.fetch_synonyms().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             if clean:
-                synonym = {'literal':row['literal'], 'type':row['type']}
+                synonym = {'literal': row['literal'], 'type': row['type']}
                 tid2synonyms[row['tid']].append(synonym)
             elif not clean:
                 tid2synonyms[row['tid']].append(row)
         return tid2synonyms
 
-    def get_ilx2synonyms(self, clean:bool=True):
+    def get_ilx2synonyms(self, clean: bool = True):
         ''' clean: for list of literals only '''
         ilx2synonyms = defaultdict(list)
         header = ['Index'] + list(self.fetch_synonyms().columns)
         for row in self.fetch_synonyms().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             if clean:
-                synonym = {'literal':row['literal'], 'type':row['type']}
+                synonym = {'literal': row['literal'], 'type': row['type']}
                 ilx2synonyms[row['ilx']].append(synonym)
             elif not clean:
                 ilx2synonyms[row['ilx']].append(row)
@@ -396,7 +426,7 @@ class IlxSql():
         iri2row = {}
         header = ['Index'] + list(self.fetch_existing_ids().columns)
         for row in self.fetch_existing_ids().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             iri2row[row['iri']] = row
         return iri2row
 
@@ -404,9 +434,9 @@ class IlxSql():
         tid2existing_ids = defaultdict(list)
         header = ['Index'] + list(self.fetch_existing_ids().columns)
         for row in self.fetch_existing_ids().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             if clean:
-                existing_id = {'iri':row['iri'], 'curie':row['curie']}
+                existing_id = {'iri': row['iri'], 'curie': row['curie']}
                 tid2existing_ids[row['tid']].append(existing_id)
             elif not clean:
                 tid2existing_ids[row['tid']].append(row)
@@ -416,9 +446,9 @@ class IlxSql():
         ilx2existing_ids = defaultdict(list)
         header = ['Index'] + list(self.fetch_existing_ids().columns)
         for row in self.fetch_existing_ids().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             if clean:
-                existing_id = {'iri':row['iri'], 'curie':row['curie']}
+                existing_id = {'iri': row['iri'], 'curie': row['curie']}
                 ilx2existing_ids[row['ilx']].append(existing_id)
             elif not clean:
                 ilx2existing_ids[row['ilx']].append(row)
@@ -428,7 +458,7 @@ class IlxSql():
         curie2row = {}
         header = ['Index'] + list(self.fetch_existing_ids().columns)
         for row in self.fetch_existing_ids().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
+            row = {header[i]: val for i, val in enumerate(row)}
             curie2row[row['curie']] = row
         return curie2row
 
@@ -436,8 +466,8 @@ class IlxSql():
         fragement2rows = defaultdict(list)
         header = ['Index'] + list(self.fetch_existing_ids().columns)
         for row in self.fetch_existing_ids().itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
-            if not row['curie']: # there are a few with no curies that will cause a false positive
+            row = {header[i]: val for i, val in enumerate(row)}
+            if not row['curie']:  # there are a few with no curies that will cause a false positive
                 continue
             fragment = row['curie'].split(':')[-1]
             fragement2rows[fragment].append(row)
