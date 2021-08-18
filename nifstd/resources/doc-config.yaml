@@ -30,6 +30,7 @@ skip:
     - docs/notes.org                 # not relevant
     - test/apinatomy/README.org      # insubstantial
     - resources/scigraph/README.org  # replaced by the nifstd scigraph readme
+    - resources/DatasetTemplate/README.md
 index:
   - Components
   - Ontology
@@ -65,10 +66,13 @@ titles:
   Ontology content: Ontology content
   NIF-Ontology/docs/brain-regions.html: Parcellation schemes
   pyontutils/nifstd/development/methods/README.html: Methods and techniques
+  pyontutils/nifstd/development/estim/README.html: Electrophysiology stimulation ontology
+  sparc-curation/docs/participants.html: Participants
   NIF-Ontology/docs/Neurons.html: Neuron Lang overview
   pyontutils/neurondm/docs/basic-model.html: Neuron Lang OWL conversion
   pyontutils/neurondm/docs/NeuronLangExample.html: Neuron Lang examples
   pyontutils/neurondm/docs/neurons_notebook.html: Neuron Lang setup
+  pyontutils/neurondm/docs/types.html: Neuron Lang experimental types
 
   SciGraph: SciGraph
   pyontutils/nifstd/scigraph/README.html: SciGraph user guide
@@ -94,4 +98,5 @@ titles:
   pyontutils/ttlser/README.html: ttlser readme
   ontquery/docs/tutorial.html: ontquery tutorial notebook
   orthauth/docs/guide.html: orthauth user guide
+  sparc-curation/docs/queries.html: SPARC competency queries
   sparc-curation/docs/background.html: null  # prevent broken links

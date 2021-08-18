@@ -40,5 +40,17 @@ def main():
             nif = nif_.split('neuinfo.org', 1)[-1]
             f.writelines(f'~{nif}$ {scr};\n')
 
+    ilg = (rdflib.Graph()
+           .parse(f'{prefix}/NIF-Ontology/ttl/generated/NPOKB-ILX-mapping.ttl', format='turtle')
+           .parse(f'{prefix}/NIF-Ontology/ttl/generated/PHENOTYPE-CORE-ILX-mapping.ttl', format='turtle')
+           .parse(f'{prefix}/NIF-Ontology/ttl/generated/methods-ILX-mapping.ttl', format='turtle')
+           .parse(f'{prefix}/NIF-Ontology/ttl/generated/modality-ILX-mapping.ttl', format='turtle')
+           .parse(f'{prefix}/NIF-Ontology/ttl/generated/swanson-ILX-mapping.ttl', format='turtle'))
+    with open('user-ilx-map.conf', 'wt') as f:
+        for user_, ilx in sorted(ilg.subject_objects(ilxtr.hasIlxId), key=lambda a:f'{len(a[1]):0>5}' + a[0]):
+            user = user_.split('interlex.org', 1)[-1]
+            f.writelines(f'~{user}$ {ilx};\n')
+
+
 if __name__ == '__main__':
     main()

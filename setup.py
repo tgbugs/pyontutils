@@ -1,4 +1,6 @@
 import re
+import os
+import sys
 from setuptools import setup
 
 
@@ -12,8 +14,33 @@ def find_version(filename):
 
 __version__ = find_version('pyontutils/__init__.py')
 
+
+def tangle_files(*files):
+    """ emacs org babel tangle blocks to files for release """
+
+    argv = [
+        'emacs',
+        '--batch',
+        '--quick',
+        '--directory', '.',
+        '--load', 'org',
+        '--load', 'ob-shell',
+        '--load', 'ob-python',
+     ] + [arg
+          for f in files
+          for arg in ['--eval', f'"(org-babel-tangle-file \\"{f}\\")"']]
+
+    os.system(' '.join(argv))
+
+
 with open('README.md', 'rt') as f:
     long_description = f.read()
+
+RELEASE = '--release' in sys.argv
+if RELEASE:
+    sys.argv.remove('--release')
+    tangle_files(
+        './docs/release.org',)
 
 tests_require = ['pytest']
 setup(

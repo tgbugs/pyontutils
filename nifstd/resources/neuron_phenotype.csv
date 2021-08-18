@@ -75,6 +75,13 @@ ilxtr:LocalAxonOnly,ilxtr:AxonPhenotype,,,,,model this as NegPhenotype(ilxtr:Rem
 ilxtr:RemoteAxonOnly,ilxtr:AxonPhenotype,,,,,model this as NegPhenotype(ilxtr:LocalAxon) except that this entails boutons/terminals,
 ilxtr:MotorPhenotype,ilxtr:ProjectionPhenotype,,,,,"motor neuron phenotype, motor projecting phenotype, muscle projecting phenotype, hasForwardConnectionPhenotype some myocyte, implies ",
 ilxtr:SensoryPhenotype,ilxtr:Phenotype,,,,,the implementation of the sensor in a sensory neuron is essentially arbitrary with respect to subcompartment and projection pattern,
+ilxtr:CorticoFugal,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
+ilxtr:CorticoThalamic,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
+ilxtr:CorticoPontine,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
+ilxtr:CorticoStriatal,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
+ilxtr:ThalamoCortical,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
+ilxtr:StriatoCortical,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
+ilxtr:CorticoSpinal,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
 ,,,,,,,
 ilxtr:PerforantPathwayAssociated,,,,,,Needs work,
 ilxtr:DirectPathway,,,,,,Needs work,

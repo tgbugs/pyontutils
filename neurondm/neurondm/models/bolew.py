@@ -18,7 +18,12 @@ class APIN(Sheet):
         else:
             e = value
 
-        return OntId(e.strip()) if ':' in e else e.strip()
+        id = OntId(e.strip()) if ':' in e else e.strip()
+        if id.prefix == 'ILX':
+            t = id.asInstrumented()
+            id = t.asPreferred()
+
+        return id
 
     @property
     def reduced(self):
@@ -52,17 +57,24 @@ class APIN(Sheet):
         for row in self.reduced:
             phenotypes = []
             label = None
+            id = None
             for predicate, objects in row:
                 if predicate == rdfs.label:
                     if objects:
                         label = objects[0]
 
                     continue
+                elif predicate == ilxtr.curie:
+                    if objects:
+                        id = objects[0]
+
+                    continue
+
                 for o in objects:
                     pheno = OntTerm(o).asPhenotype(predicate=predicate)
                     phenotypes.append(pheno)
 
-            yield label, phenotypes
+            yield id, label, phenotypes
 
 
 class BolserLewisNeuron(NeuronEBM):
@@ -75,8 +87,8 @@ def main():
     config = Config('bolser-lewis',
                     source_file=relative_path(__file__, no_wd_value=__file__))
     bags = list(a.bags)
-    for label, bag in bags:
-        BolserLewisNeuron(*bag, label=label, override=True)
+    for id, label, bag in bags:
+        BolserLewisNeuron(*bag, label=label, id_=id, override=True)
 
     Neuron.write()
     Neuron.write_python()

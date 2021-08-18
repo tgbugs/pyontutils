@@ -54,6 +54,7 @@ DICOM: http://uri.interlex.org/dicom/uris/terms/
 PAR: http://uri.interlex.org/fakeobo/uris/obo/PAR_
 PAXRAT: http://uri.interlex.org/paxinos/uris/rat/labels/
 PAXMUS: http://uri.interlex.org/paxinos/uris/mouse/labels/
+PAXSPN: http://uri.interlex.org/paxinos/uris/spine/labels/
 NDA.CDE: http://uri.interlex.org/NDA/uris/datadictionary/elements/
 ilxtr: http://uri.interlex.org/tgbugs/uris/readable/
 ilxti: http://uri.interlex.org/tgbugs/uris/indexes/

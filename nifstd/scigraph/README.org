@@ -2,6 +2,7 @@
 #+TITLE: Using SciGraph
 #+OPTIONS: num:nil
 #+STARTUP: showall
+#+property: header-args:bash :mkdirp "yes"
 
 # [[file:./README.html]]
 
@@ -578,10 +579,19 @@ into SciGraph.
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc-data
 <<&source-scigraph-functions>>
+
+# XXX temporary fix for scigraph brokeness
+mkdir -p <<&path-build-sparc-data()>>
+
+cp "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" <<&path-build-sparc-data()>>
+
+curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl | \
+     pypy3 -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-data()>>/curation-export.owl
+
 load-graph \
---path-build <<path-build-sparc-data()>> \
+--path-build <<&path-build-sparc-data()>> \
 --folder-name-graph <<folder-name-graph-sparc-data()>> \
---path-ontologies <<path-ontologies-sparc-data()>> \
+--path-ontologies <<&path-ontologies-sparc-data()>> \
 $@ \
 #+end_src
 **** deploy
@@ -594,7 +604,7 @@ $@ \
 <<&source-scigraph-functions>>
 deploy-graph \
 --server aws-scigraph-data \
---path-build <<path-build-sparc-data()>>
+--path-build <<&path-build-sparc-data()>>
 #+end_src
 **** load-deploy
 :properties:
@@ -618,7 +628,7 @@ deploy-graph \
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc-data
 <<&source-scigraph-functions>>
 build-services \
---path-build <<path-build-sparc-data()>> \
+--path-build <<&path-build-sparc-data()>> \
 --svc-host <<host-services-sparc-data()>> \
 --path-cypher-resources <<path-cypher-resources-sparc-data()>> \
 #+end_src
@@ -631,7 +641,7 @@ build-services \
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-data
 <<&source-scigraph-functions>>
 deploy-services \
---config <<path-build-sparc-data()>>/<<file-stem-services-output()>>.yaml \
+--config <<&path-build-sparc-data()>>/<<file-stem-services-output()>>.yaml \
 --server aws-scigraph-data
 #+end_src
 **** build-deploy
@@ -652,7 +662,7 @@ deploy-services \
 :end:
 **** load graph
 Set =path-build-sparc-data= here
-#+name: path-build-sparc-data
+#+name: &path-build-sparc-data
 : /tmp/scigraph-build/sparc-data
 
 Set =folder-name-graph-sparc-data= here
@@ -660,7 +670,7 @@ Set =folder-name-graph-sparc-data= here
 : sparc-data
 
 Set =path-ontologies-sparc-data= here
-#+name: path-ontologies-sparc-data
+#+name: &path-ontologies-sparc-data
 : ~/git/sparc-curation/resources/scigraph/ontologies-sparc-data.yaml
 
 **** build services config
@@ -671,6 +681,62 @@ Set =path-cypher-resources-sparc-data= here
 Set =host-services-sparc-data= here
 #+name: host-services-sparc-data
 : sparc-data.scicrunch.io
+** sparc-data-dev
+:properties:
+:visibility: folded
+:end:
+#+name: run-load-graph-sparc-data-dev
+#+header: :shebang "#!/usr/bin/env bash"
+#+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc-data-dev
+<<&source-scigraph-functions>>
+
+# XXX temporary fix for scigraph brokeness and dev graph
+PY_X=$(command -v pypy3 1>& 2 || command -v python)
+
+mkdir -p <<&path-build-sparc-data-dev()>>
+
+cat <<&path-ontologies-sparc-data()>> | \
+    sed 's/sparc-data/sparc-data-dev/g' > \
+    <<&path-build-sparc-data-dev()>>/ontologies-sparc-data-dev.yaml
+
+cat "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" | \
+    sed 's/sparc-data/sparc-data-dev/g' | \
+    sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-data-dev()>>/,g' > \
+    <<&path-build-sparc-data-dev()>>/sparc-data-dev.ttl
+    # TODO consider an option to exclude npo, curation-export, and protcur
+
+curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl | \
+     ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-data-dev()>>/curation-export.owl
+
+pushd <<&path-build-sparc-data-dev()>>
+if [ ! -f urinary-omega-tree-test.ttl ]; then
+    curl https://cassava.ucsd.edu/ApiNATOMY/ontologies/urinary-omega-tree-test.ttl -O
+fi
+popd
+
+for model_id in {bolser-lewis,bronchomotor,ard-arm-cardiac,sawg-distal-colon,vagus-nerve,scaffold-test}; do
+    cp ~/git/apinatomy-models/${model_id}/derived/${model_id}.ttl <<&path-build-sparc-data-dev()>>/;
+done
+
+load-graph \
+--path-build <<&path-build-sparc-data-dev()>> \
+--folder-name-graph <<folder-name-graph-sparc-data-dev()>> \
+--path-ontologies <<&path-ontologies-sparc-data-dev()>> \
+$@ \
+#+end_src
+**** load graph
+Set =path-build-sparc-data-dev= here
+#+name: &path-build-sparc-data-dev
+: /tmp/scigraph-build/sparc-data-dev
+
+Set =folder-name-graph-sparc-data-dev= here
+#+name: folder-name-graph-sparc-data-dev
+: sparc-data-dev
+
+Set =path-ontologies-sparc-data-dev= here
+#+name: &path-ontologies-sparc-data-dev
+: /tmp/scigraph-build/sparc-data-dev/ontologies-sparc-data-dev.yaml
+
 ** dev local ontology
 *** graph
 **** deploy
@@ -708,7 +774,7 @@ deploy-services --config <<path-build-sparc()>>/<<file-stem-services-output()>>.
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc-data-local
 <<&source-scigraph-functions>>
 deploy-graph \
---path-build <<path-build-sparc-data()>> \
+--path-build <<&path-build-sparc-data()>> \
 --folder-name-runtime <<folder-name-runtime-sparc-data-local()>>
 #+end_src
 *** services config
@@ -721,7 +787,7 @@ deploy-graph \
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc-data-local
 <<&source-scigraph-functions>>
 ./build-services \
---path-build <<path-build-sparc-data()>> \
+--path-build <<&path-build-sparc-data()>> \
 --path-cypher-resources <<path-cypher-resources-sparc-data()>> \
 --file-stem <<file-stem-sparc-data-local()>> \
 --folder-name-runtime <<folder-name-runtime-sparc-data-local()>> \
@@ -734,7 +800,7 @@ deploy-graph \
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-data-local
 <<&source-scigraph-functions>>
-deploy-services --config <<path-build-sparc-data()>>/<<file-stem-sparc-data-local()>>.yaml
+deploy-services --config <<&path-build-sparc-data()>>/<<file-stem-sparc-data-local()>>.yaml
 #+end_src
 **** build-deploy
 *** variables                                                      :noexport:
@@ -769,33 +835,33 @@ The easiest way to deploy SciGraph to RHEL-like systems is to build an RPM using
 If you are building on a system that does not have an RPM based package manager then
 you will need the second bit to prevent builds from failing due to missing dependencies.
 
-#+name: rpmmacros
-#+caption: [[file:${HOME}/.rpmmacros][~/.rpmmacros]]
-#+begin_src rpm-spec :tangle ~/.rpmmacros :tangle no
-%__arch_install_post \
-    [ "%{buildarch}" = "noarch" ] || QA_CHECK_RPATHS=1 ; \
-    case "${QA_CHECK_RPATHS:-}" in [1yY]*) /usr/lib/rpm/check-rpaths ;; esac \
-        echo no qa here
-    # /usr/lib/rpm/check-buildroot
-#+end_src
+# Apparently configuring ~/.rpmmacros on gentoo is no longer needed
+# because __arch_install_post is set to nil in all cases?
 
 #+name: run-compile-scigraph-rpm
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :results output
-pushd rpmbuild
-# pull changes if the local repo already exists
-if [ -d BUILD/SciGraph/.git ]; then
-    git --git-dir BUILD/SciGraph/.git pull
-fi
+function build-scigraph-rpm () {
+    pushd rpmbuild
+    # pull changes if the local repo already exists
+    if [ -d BUILD/SciGraph/.git ]; then
+        git -C BUILD/SciGraph pull
+        git -C BUILD/SciGraph remote add scicrunch https://github.com/SciCrunch/SciGraph.git
+        git -C BUILD/SciGraph fetch scicrunch
+        git -C BUILD/SciGraph checkout cypher-execute-fix
+        git -C BUILD/SciGraph stash
+    fi
 
-# build the rpm
-spectool -g -R SPECS/scigraph.spec
-rpmbuild --nodeps --define "_topdir `pwd`" -ba SPECS/scigraph.spec
+    # build the rpm
+    spectool -g -R SPECS/scigraph.spec
+    rpmbuild --nodeps --define "_topdir `pwd`" -ba SPECS/scigraph.spec
 
-# inspect the preinstall script
-rpm -qp --scripts RPMS/noarch/scigraph-9999-0.noarch.rpm
-popd
+    # inspect the preinstall script
+    rpm -qp --scripts RPMS/noarch/scigraph-9999-0.noarch.rpm
+    popd
+}
 #+end_src
+
 **** ontload only
 :properties:
 :visibility: folded
@@ -916,7 +982,14 @@ function compile-scigraph-git () {
 :properties:
 :visibility: folded
 :end:
-https://github.com/SciGraph/SciGraph/tree/master/docker
+The upstream docker file is
+https://github.com/SciGraph/SciGraph/tree/master/docker.
+
+A gentoo based image
+https://hub.docker.com/r/tgbugs/musl/tags?name=scigraph and its
+underlying file
+https://github.com/tgbugs/dockerfiles/blob/master/source.org#scigraph
+are also available.
 *** Deploy
 =SERVER= is the name in the .ssh/config
 **** RPM
@@ -937,14 +1010,15 @@ function run-deploy-scigraph-rpm () {
 
 #+begin_src bash
 run-deploy-scigraph-rpm --server aws-scigraph-data
---path-rpm ~/files/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm
+--path-rpm ~/git/pyontutils/nifstd/scigraph/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm
 #+end_src
 
 #+name: run-deploy-code-rpm
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-code-rpm
 # TODO backup the old rpm?
-rsync --rsh ssh ~/files/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm ${SERVER}:
+
+rsync --rsh ssh ~/git/pyontutils/nifstd/scigraph/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm ${SERVER}:
 ssh ${SERVER} '
     sudo <<rpm-install>>'
 ssh ${SERVER} '

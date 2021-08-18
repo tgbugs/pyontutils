@@ -53,6 +53,7 @@ import os
 import json
 import yaml
 import shutil
+import hashlib
 import subprocess
 from io import BytesIO
 from glob import glob
@@ -80,6 +81,7 @@ except NameError:
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
 
 COMMIT_HASH_HEAD_LEN = 8
+CONFIG_HASH_HEAD_LEN = 8
 
 bigleaves = 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl', 'chebislim.ttl', 'ero.owl'
 
@@ -87,6 +89,56 @@ Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
 class NotBuiltError(FileNotFoundError):
     pass
+
+
+
+def identity_json(blob, *, cls=None,
+                  cypher=hashlib.blake2b, encoding='utf-8', sort_lists=False):
+    """ Return the checksum (default blake2b) of the json string
+    serialize of a python dict, list, etc. This is a hacky substitute
+    for a properly specified algorithm for normalizing and hashing python
+    objects. """
+    # this function may be called without arguments, but if it is
+    # called with arguments then the signature changes so we know that
+    # we are in a different regieme
+    if sort_lists:
+        # reminder that json.JSONEncoder.default is not extensible for
+        # known types >_< SIGH
+        rank = {dict:0,
+                list:1,
+                str:2,
+                float:3,}
+        def key(e):
+            if isinstance(e, dict):
+                return rank[dict], sorted([list(t) for t in e.items()], key=key)
+            elif isinstance(e, list):
+                return rank[list], e  # should already be sorted
+            else:
+                return rank[type(e)], e
+
+        def sigh(blob):
+            if isinstance(blob, dict):
+                return {k: sigh(v) for k, v in blob.items()}
+            elif isinstance(blob, list) or isinstance(blob, tuple):
+                return sorted([sigh(e) for e in blob], key=key)
+            else:
+                return blob
+
+        blob = sigh(blob)
+
+    s = json.dumps(blob,
+                   indent=0,
+                   separators=(',', ':'),
+                   ensure_ascii=True,
+                   sort_keys=True,
+                   cls=cls)
+    snn = s.replace('\n', '')
+
+    b = snn.encode(encoding)
+    m = cypher()
+    m.update(b)
+    checksum = m.digest()
+    return checksum
 
 
 def make_catalog(itrips):
@@ -123,6 +175,8 @@ class ReproLoader:
                  remote_base, load_base, graphload_config_template, graphload_ontologies,
                  patch_config, patch, scigraph_commit, post_clone=lambda: None, check_built=False):
 
+        date_today = TODAY()
+
         load_from_repo=True
         local_base = jpth(git_local, repo_name)
         if load_from_repo:
@@ -138,13 +192,16 @@ class ReproLoader:
         else:
             ontology_commit = 'NONE'
 
+        config_path, config = self.make_graphload_config(graphload_config_template, graphload_ontologies, zip_location, date_today)
+        config_hash = identity_json(config, sort_lists=True).hex()
+
         (graph_path, zip_path, zip_command,
          wild_zip_path) = self._set_up_paths(zip_location, repo_name, branch,
-                                             scigraph_commit, ontology_commit)
+                                             scigraph_commit, ontology_commit,
+                                             config_hash, date_today)
 
-        (config, config_path,
-         ontologies) = self.make_graphload_config(graphload_config_template, graphload_ontologies,
-                                                  graph_path, remote_base, local_base, zip_location)
+        # NOTE config is modified in place
+        ontologies = self.configure_config(config, graph_path, remote_base, local_base, config_path)
 
         load_command = load_base.format(config_path=config_path)  # 'exit 1' to test
         print(load_command)
@@ -235,15 +292,16 @@ class ReproLoader:
         return repo, nob
 
     @staticmethod
-    def _set_up_paths(zip_location, repo_name, branch, scigraph_commit, ontology_commit):
+    def _set_up_paths(zip_location, repo_name, branch, scigraph_commit, ontology_commit, config_hash, date_today):
         # TODO consider dumping metadata in a file in the folder too?
         def folder_name(scigraph_commit, wild=False):
             return (repo_name +
                     '-' + branch +
                     '-graph' +
-                    '-' + ('*' if wild else TODAY()) +
+                    '-' + ('*' if wild else date_today) +
                     '-' + scigraph_commit[:COMMIT_HASH_HEAD_LEN] +
-                    '-' + ontology_commit)
+                    '-' + ontology_commit +
+                    '-' + config_hash[:CONFIG_HASH_HEAD_LEN])
 
         def make_folder_zip(wild=False):
             folder = folder_name(scigraph_commit, wild)
@@ -262,9 +320,8 @@ class ReproLoader:
 
     @staticmethod
     def make_graphload_config(graphload_config_template, graphload_ontologies,
-                              graph_path, remote_base, local_base, zip_location,
-                              config_path=None):
-        config_n = 'graphload-' + TODAY() + '.yaml'
+                              zip_location, date_today, config_path=None):
+        config_n = 'graphload-' + date_today + '.yaml'
         config_raw = config_n + '.raw'
         if graphload_ontologies is not None:
             with open(graphload_config_template, 'rt') as f1, open(graphload_ontologies, 'rt') as f2, open(zip_location / config_raw, 'wt') as out:  # LOL PYTHON
@@ -278,15 +335,22 @@ class ReproLoader:
         with open(zip_location / config_raw, 'rt') as f:
             config = yaml.safe_load(f)
 
-        if 'ontologies' not in config:
-            # FIXME log a warning?
-            config['ontologies'] = []
+        if config_path is None:
+            config_path = zip_location / config_n
 
+        return config_path, config
+
+    @staticmethod
+    def configure_config(config, graph_path, remote_base, local_base, config_path):  # lel
         config['graphConfiguration']['location'] = graph_path.as_posix()
         if isinstance(local_base, Path):
             lbasposix = local_base.as_posix()
         else:
             lbasposix = local_base
+
+        if 'ontologies' not in config:
+            # FIXME log a warning?
+            config['ontologies'] = []
 
         config['ontologies'] = [{k:v.replace(remote_base, lbasposix)
                                 if k == 'url'
@@ -294,14 +358,11 @@ class ReproLoader:
                                 for k, v in ont.items()}
                                 for ont in config['ontologies']]
 
-        if config_path is None:
-            config_path = zip_location / config_n
-
         with open(config_path, 'wt') as f:
             yaml.dump(config, f, default_flow_style=False)
 
         ontologies = [ont['url'] for ont in config['ontologies']]
-        return config, config_path, ontologies
+        return ontologies
 
 
 def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,

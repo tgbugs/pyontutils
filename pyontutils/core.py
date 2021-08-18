@@ -114,7 +114,7 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
             yield from yield_recursive(new_s, p, o, source_graph)
 
 
-def populateFromJsonLd(graph, path_or_blob):
+def populateFromJsonLd(graph, path_or_blob, pyld=False):
     regjsonld()
     def convert_element(blob,
                         _lu={'literal': rdflib.Literal,
@@ -143,11 +143,15 @@ def populateFromJsonLd(graph, path_or_blob):
             with open(path, 'rt') as f:
                 j = json.load(f)
 
-        #blob = jsonld.to_rdf(j)  # XXX this seems completely broken ???
+        if pyld:
+            blob = jsonld.to_rdf(j)  # XXX this seems completely broken ???
+
         def triples():
-            for dt in blob['@default']:
-                yield tuple(convert_element(e) for e in
-                            (dt['subject'], dt['predicate'], dt['object']))
+            for graph_id, dts in blob.items():
+                # includes all triples including @default but ignores context
+                for dt in dts:
+                    yield tuple(convert_element(e) for e in
+                                (dt['subject'], dt['predicate'], dt['object']))
 
         proc = jsonld.JsonLdProcessor()
         ctx = proc.process_context(proc._get_initial_context({}),
@@ -155,10 +159,12 @@ def populateFromJsonLd(graph, path_or_blob):
 
         # FIXME how to deal with non prefixed cases like definition
         curies = {k:v['@id'] for k, v in ctx['mappings'].items() if
-                v['_prefix']}
+                  v['_prefix']}
         graph.namespace_manager.populate_from(curies)
-        #graph.populate_from_triples(triples())  # pyld broken above
-        graph.parse(path, format='json-ld')
+        if pyld:
+            graph.populate_from_triples(triples())  # pyld broken above
+        else:
+            graph.parse(path, format='json-ld')
     finally:
         if fd is not None:
             os.close(fd)
