@@ -9,7 +9,8 @@ sllp = 'ilxtr:hasSomaLocatedInLayer'
 alp = 'ilxtr:hasAxonLocatedIn'
 dlp = 'ilxtr:hasDendriteLocatedIn'
 synp = 'ilxtr:hasAxonPresynapticElementIn'
-snsp = 'ilxtr:hasSensorySubceullarElementIn'  # XXX new, kind of like axon terminal but for dendrites
+snsp = 'ilxtr:hasSensorySubcellularElementIn'  # XXX new, kind of like axon terminal but for dendrites
+
 fconp = 'ilxtr:hasForwardConnectionPhenotype'
 
 ntkb = rdflib.Namespace(ilxtr[''] + 'neuron-type-keast-')
@@ -25,7 +26,7 @@ kNeuron = NeuronKeast2020
 
 
 def kl(n):
-    return f'Keast bladder neuron type {n}'
+    return f'Neuron population {n} of the Keast bladder model'
 
 
 def kd(n):
@@ -287,6 +288,9 @@ class Keast2020(LocalNameManager):
     # making it a superclass is probably better than
 
     ntk_1_fcon = Phenotype('ilxtr:neuron-type-keast-1', fconp)
+
+    # FIXME this is super confusing, but this id is equivalent to all
+    # neurons that bear the ilxtr:neuron-phenotype-sym-post phenotype
     sos_fcon = Phenotype('ilxtr:sympathetic-post-ganglionic', fconp)  # FIXME likely overly broad?
 
     # (para)?sympathetic colorings (until we can get deeper modelling correct)
@@ -353,13 +357,16 @@ def main():
     from pyontutils.utils import relative_path
     config = Config('keast-2020',
                     source_file=relative_path(__file__, no_wd_value=__file__))
+
     with Keast2020:
         needs_keast_namespace(config)
 
     config.write()
     config.write_python()
-    return config
+    return config,
 
 
 if __name__ == '__main__':
     main()
+else:
+    __globals__ = globals()

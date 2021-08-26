@@ -241,9 +241,14 @@ triples += (  # material entities
     # whether it was synthesized or not...
     #oc(OntTerm('NCBITaxon:1'), ilxtr.materialEntity),  # needed to accomodate deadness?
     oc(ilxtr.physiologicalSystem, ilxtr.materialEntity),
-    oc_(ilxtr.physiologicalSystem,
-        unionOf(OntTerm('NCBITaxon:1'),
-                restN(partOf, OntTerm('NCBITaxon:1')))),
+
+    # FIXME 'part of' some 'material entity' and 'immaterial entity' causes eternal
+    # pain here you need pato, ro, and methods-helper loaded to hit this condition
+    # see https://github.com/obophenotype/uberon/issues/1633#issuecomment-904256547
+    #oc_(ilxtr.physiologicalSystem,
+        #unionOf(OntTerm('NCBITaxon:1'),
+                #restN(partOf, OntTerm('NCBITaxon:1')))),
+
         #oec(ilxtr.materialEntity,  # FIXME in vitro...
             #restN(partOf, OntTerm('NCBITaxon:1'))
            #)),
