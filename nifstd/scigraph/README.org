@@ -584,6 +584,7 @@ into SciGraph.
 mkdir -p <<&path-build-sparc-data()>>
 
 cp "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" <<&path-build-sparc-data()>>
+sed -i 's/ilxtr:imports-dev/owl:imports/g' <<&path-build-sparc-data()>>/sparc-data.ttl
 
 curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl | \
      pypy3 -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-data()>>/curation-export.owl
@@ -691,7 +692,7 @@ Set =host-services-sparc-data= here
 <<&source-scigraph-functions>>
 
 # XXX temporary fix for scigraph brokeness and dev graph
-PY_X=$(command -v pypy3 1>& 2 || command -v python)
+PY_X=$(command -v pypy3 || command -v python)
 
 mkdir -p <<&path-build-sparc-data-dev()>>
 
@@ -701,6 +702,7 @@ cat <<&path-ontologies-sparc-data()>> | \
 
 cat "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" | \
     sed 's/sparc-data/sparc-data-dev/g' | \
+    sed 's/ilxtr:imports-dev/owl:imports/g' | \
     sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-data-dev()>>/,g' > \
     <<&path-build-sparc-data-dev()>>/sparc-data-dev.ttl
     # TODO consider an option to exclude npo, curation-export, and protcur
@@ -714,9 +716,11 @@ if [ ! -f urinary-omega-tree-test.ttl ]; then
 fi
 popd
 
-for model_id in {bolser-lewis,bronchomotor,ard-arm-cardiac,sawg-distal-colon,vagus-nerve,scaffold-test}; do
-    cp ~/git/apinatomy-models/${model_id}/derived/${model_id}.ttl <<&path-build-sparc-data-dev()>>/;
-done
+pushd ~/git/apinatomy-models/models/
+    for model_id in $(ls -d *); do
+        cp ${model_id}/derived/${model_id}.ttl <<&path-build-sparc-data-dev()>>/;
+    done
+popd
 
 load-graph \
 --path-build <<&path-build-sparc-data-dev()>> \
@@ -736,6 +740,91 @@ Set =folder-name-graph-sparc-data-dev= here
 Set =path-ontologies-sparc-data-dev= here
 #+name: &path-ontologies-sparc-data-dev
 : /tmp/scigraph-build/sparc-data-dev/ontologies-sparc-data-dev.yaml
+** sparc-sckan
+# FIXME it is going to be much easier to implement the sckan build in
+# release.org instead of doing it here
+*** graph
+**** load
+:properties:
+:visibility: folded
+:end:
+#+name: run-load-graph-sparc-sckan
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc-sckan
+<<&source-scigraph-functions>>
+
+PY_X=$(command -v pypy3 || command -v python)
+
+# XXX temporary fix for scigraph brokeness
+mkdir -p <<&path-build-sparc-sckan()>>
+
+# FIXME need to source ontologies from the git repo in a sane way and share with the blazegraph load
+cat "$(dirname <<&path-ontologies-sparc-sckan()>>)/sparc-data.ttl" | \
+sed 's/ilxtr:imports-\(big\|rel\)/owl:imports/g' | \
+sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-sckan()>>/,g' | \
+sed 's,sparc-data.ttl,file://<<&path-build-sparc-sckan()>>/sparc-sckan.ttl,g' | \
+sed 's,http://ontology.neuinfo.org/NIF/,https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/dev/,g' > \
+<<&path-build-sparc-sckan()>>/sparc-sckan.ttl
+
+# FIXME source these from kg release
+pushd ~/git/apinatomy-models/models/
+    for model_id in $(ls -d *); do
+        cp ${model_id}/derived/${model_id}.ttl <<&path-build-sparc-sckan()>>/;
+    done
+popd
+
+# TODO construct the published only version, probably from individual
+# ttls or from the materialized release
+curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl | \
+     ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export.owl
+
+# FIXME we need some of the ontload functionality for this, at the moment it is too rigid
+load-graph \
+--path-build <<&path-build-sparc-sckan()>> \
+--folder-name-graph <<folder-name-graph-sparc-sckan()>> \
+--path-ontologies <<&path-ontologies-sparc-sckan()>> \
+$@ \
+#+end_src
+**** deploy
+:properties:
+:visibility: folded
+:end:
+#+name: run-deploy-graph-sparc-sckan
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc-sckan
+<<&source-scigraph-functions>>
+deploy-graph \
+--server aws-scigraph-sckan \
+--path-build <<&path-build-sparc-sckan()>>
+#+end_src
+**** load-deploy
+:properties:
+:visibility: folded
+:end:
+#+name: run-load-deploy-graph-sparc-sckan
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-load-deploy-graph-sparc-sckan
+<<run-load-graph-sparc-sckan>>
+|| exit $?
+<<run-deploy-graph-sparc-sckan>>
+#+end_src
+
+*** variables                                                      :noexport:
+:properties:
+:visibility: folded
+:end:
+**** load graph
+Set =path-build-sparc-sckan= here
+#+name: &path-build-sparc-sckan
+: /tmp/scigraph-build/sparc-sckan
+
+Set =folder-name-graph-sparc-sckan= here
+#+name: folder-name-graph-sparc-sckan
+: sparc-sckan
+
+Set =path-ontologies-sparc-sckan= here
+#+name: &path-ontologies-sparc-sckan
+: ~/git/sparc-curation/resources/scigraph/ontologies-sparc-sckan.yaml
 
 ** dev local ontology
 *** graph
