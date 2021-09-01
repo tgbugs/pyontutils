@@ -164,8 +164,19 @@ NIFNEURMOR: http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-Morph
 NIFNEURNT:  http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-NT-Bridge.owl#
 
 # ApiNATOMY
-apinatomy:          https://apinatomy.org/uris/readable/
-apinatomy.elements: https://apinatomy.org/uris/elements/
-apinm.bolew:        https://apinatomy.org/uris/models/bolserLewisNew/ids/
-apinm.keast-test:   https://apinatomy.org/uris/models/keastSpinalTest/ids/
-apinm.keast:        https://apinatomy.org/uris/models/keast-spinal-full/ids/
+apinatomy: https://apinatomy.org/uris/readable/
+elements:  https://apinatomy.org/uris/elements/
+
+aacar: https://apinatomy.org/uris/models/ard-arm-cardiac/ids/
+bolew: https://apinatomy.org/uris/models/bolser-lewis/ids/
+kblad: https://apinatomy.org/uris/models/keast-bladder/ids/
+bromo: https://apinatomy.org/uris/models/bronchomotor/ids/
+scaft: https://apinatomy.org/uris/models/scaffold-test/ids/
+vagnr: https://apinatomy.org/uris/models/vagus-nerve/ids/
+sdcol: https://apinatomy.org/uris/models/sawg-distal-colon/ids/
+sstom: https://apinatomy.org/uris/models/sawg-stomach/ids/
+dlcon: https://apinatomy.org/uris/models/dev-layout-conn/ids/
+
+# identifiers
+PMID: http://www.ncbi.nlm.nih.gov/pubmed/
+doi: https://doi.org/
