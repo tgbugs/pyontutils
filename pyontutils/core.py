@@ -247,7 +247,12 @@ class OntRes(idlib.Stream):
                 gkwargs['path'] = self.path
 
             self._graph = self.Graph(**gkwargs)
-            self.populate_next(self._graph, **kwargs)
+            try:
+                self.populate_next(self._graph, **kwargs)
+            except BaseException as e:
+                self._graph = None
+                del self._graph
+                raise e
 
         return self._graph
 
@@ -372,12 +377,16 @@ class OntIdIri(OntRes):
         # TODO version iris etc.
 
     def _get(self, *, send_data=None, send_successor={'Accept': 'text/turtle'}):
-        if send_data is None:
-            return requests.get(self.iri, stream=True, headers=send_successor)  # worth a shot ...
+        if self.iri.startswith('file://'):  # requests transport adapters seem overly complex?
+            parsed = urlparse(self.iri)
+            return OntIdPath(parsed.path)._get()
         else:
-            return requests.post(self.iri, stream=True,
-                                 headers=send_successor,
-                                 data=send_data)
+            if send_data is None:
+                return requests.get(self.iri, stream=True, headers=send_successor)  # worth a shot ...
+            else:
+                return requests.post(self.iri, stream=True,
+                                    headers=send_successor,
+                                    data=send_data)
 
     @property
     def identifier(self):
@@ -1566,17 +1575,17 @@ class OntGraph(rdflib.Graph):
             yield from self.subjectGraph(bi)
 
     def metadata_unnamed(self):
-        yield from ((s, p, o) for s, p, o in self.metadata
+        yield from ((s, p, o) for s, p, o in self.metadata()
                     if isinstance(s, rdflib.BNode))
 
     @property
     def data(self):
         bis = tuple(self.boundIdentifiers)
-        meta_bnodes = tuple(e for t in metadata_unnamed for e in t
+        meta_bnodes = tuple(e for t in self.metadata_unnamed() for e in t
                             if isinstance(e, rdflib.BNode))
         meta_skip_subject = bis + meta_bnodes
         for s, p, o in self:
-            if s not in meta_skip_subject:
+            if s not in meta_skip_subject:  # FIXME conjunctive for performance
                 yield (s, p, o)
 
     @property

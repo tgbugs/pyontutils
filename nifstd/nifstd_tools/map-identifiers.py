@@ -36,6 +36,7 @@ def npokb_mapping():
             'markram-2015',
             'allen-cell-types',
     ):
+        # FIXME if the index id is already being used it is still added as a temp id incorrectly
         path = auth.get_path('ontology-local-repo') / f'ttl/generated/neurons/{eff}.ttl'
         org = OntResGit(path, ref='HEAD')  # HEAD is default but just for clarity set it explicitly here
         prev_graph = org.graph

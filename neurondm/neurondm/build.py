@@ -1268,7 +1268,7 @@ def make_devel():
         yield from cmb.restriction(ilxtr.isDelineatedBy, uS1)(paxS1)
 
         # missing labels
-        yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")
+        #yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")  # off by one for dopamine CHEBI:18243
         yield OntId('BFO:0000050').u, rdfs.label, rdflib.Literal("part of")
 
         # receptor roles

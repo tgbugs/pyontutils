@@ -175,8 +175,8 @@ class Keast2020(LocalNameManager):
     L5 = Phenotype('ilxtr:spinal-L5', slp)
     L6 = Phenotype('ilxtr:spinal-L6', slp)
     S1 = Phenotype('ilxtr:spinal-S1', slp)
-    IMG = Phenotype('ilxtr:IMG', slp)
-    PG = Phenotype('ilxtr:PG', slp)
+    IMG = Phenotype('UBERON:0005453', slp)  # ilxtr:IMG
+    PG = Phenotype('UBERON:0016508', slp)  # ilxtr:PG
 
     L1_dr = Phenotype('ilxtr:dr-L1', slp) # soma implies ax + dn
     L2_dr = Phenotype('ilxtr:dr-L2', slp)
@@ -184,9 +184,9 @@ class Keast2020(LocalNameManager):
     S1_dr = Phenotype('ilxtr:dr-S1', slp)
 
     # sort of nerves
-    L1_vr = Phenotype('ilxtr:vr-L1', alp)
-    L1_wr = Phenotype('ilxtr:wr-L1', alp)
-    L1_gr = Phenotype('ilxtr:gr-L1', alp)
+    L1_vr = Phenotype('ilxtr:vr-L1', alp)  # ventral root
+    L1_wr = Phenotype('ilxtr:wr-L1', alp)  # white ramus
+    L1_gr = Phenotype('ilxtr:gr-L1', alp)  # gray ramus
 
     L2_vr = Phenotype('ilxtr:vr-L2', alp)
     L2_wr = Phenotype('ilxtr:wr-L2', alp)
@@ -200,8 +200,8 @@ class Keast2020(LocalNameManager):
     S1_gr = Phenotype('ilxtr:gr-S1', alp)
     S1_vr = Phenotype('ilxtr:vr-S1', alp)
 
-    IMGax = Phenotype('ilxtr:IMG', alp)
-    PGax = Phenotype('ilxtr:PG', alp)
+    IMGax = Phenotype('UBERON:0005453', alp)
+    PGax = Phenotype('UBERON:0016508', alp)
 
     S1ax = Phenotype('ilxtr:sc-S1', alp)
 
@@ -212,8 +212,8 @@ class Keast2020(LocalNameManager):
     WMax = Phenotype('ilxtr:spinal-white-matter', alp)
 
     # sensory dendrite sort of nerves
-    IMGdn = Phenotype('ilxtr:IMG', dlp)
-    PGdn = Phenotype('ilxtr:PG', dlp)
+    IMGdn = Phenotype('UBERON:0005453', dlp)
+    PGdn = Phenotype('UBERON:0016508', dlp)
 
     # XXX FIXME I'm being something of a literalist here, and guessing that
     # the boxes that are drawn for these might not actually be what is intended
@@ -240,8 +240,8 @@ class Keast2020(LocalNameManager):
     URTdn = Phenotype('ilxtr:urethra', dlp)
 
     # synaptic locations
-    IMGsyn = Phenotype('ilxtr:IMG', synp)
-    PGsyn = Phenotype('ilxtr:PG', synp)
+    IMGsyn = Phenotype('UBERON:0005453', synp)
+    PGsyn = Phenotype('UBERON:0016508', synp)
 
     BNVWsyn = Phenotype('ilxtr:bladder-neck-vessel-wall', synp)
     BDVWsyn = Phenotype('ilxtr:bladder-dome-vessel-wall', synp)

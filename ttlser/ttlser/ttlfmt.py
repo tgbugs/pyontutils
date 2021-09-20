@@ -67,7 +67,7 @@ def prepare(filepath_or_stream, outpath=None, stream=False):
             infmt_guess = None
         if outpath is None:
             outpath = filepath_or_stream
-        print(filepath_or_stream)
+        sys.stderr.write(str(filepath_or_stream) + "\n")
 
     return dict(source=filepath_or_stream,
                 format_guess=infmt_guess,
@@ -94,7 +94,7 @@ def parse(source, format_guess, outpath, graph=None, infmt=None, graph_class=GRA
             a = next(iter(graph))
             return graph, outpath
         except (StopIteration, BadSyntax, JSONDecodeError) as e:
-            print('PARSING FAILED', format, source)
+            sys.stderr.write('PARSING FAILED {} {}\n'.format(format, source))
             if infmt:  # or format_guess != None:
                 raise e
             errors.append(e)
@@ -113,7 +113,7 @@ def serialize(graph, outpath, outfmt=defaults['--outfmt'],
 
     elif profile and type(outpath) != type(sys.stdout):
         *_, _out = outpath.rsplit('/', 1)
-        print('triple count for {_out}:'.format(_out=_out), len(graph))
+        sys.stderr.write('triple count for {_out}: {_len}\n'.format(_out=_out, _len=len(graph)))
 
     if outfmt == 'json-ld':
         kwargs = {'auto_compact': True}
@@ -123,11 +123,11 @@ def serialize(graph, outpath, outfmt=defaults['--outfmt'],
     out = graph.serialize(format=outfmt, encoding='utf-8', **kwargs)
 
     if nowrite:
-        print('FILE NOT WRITTEN {}'.format(outpath))
+        sys.stderr.write('FILE NOT WRITTEN {}\n'.format(outpath))
         return
 
     if profile:
-        print('PARSING Success', outpath)
+        sys.stderr.write('PARSING Success {}\n'.format(outpath))
     elif not isinstance(outpath, str):  # FIXME not a good test that it is stdout
         outpath.buffer.write(out)
     else:
