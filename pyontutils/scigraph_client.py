@@ -665,9 +665,9 @@ class DynamicBase(restService):
             -[:apinatomy:housingLyphs]->(housing)            // list of lyphs housing the trees
             -[:apinatomy:external*0..1]->(external)          // external ids for the housing lyphs
             RETURN path1, path2
-            
+
             UNION
-            
+
             MATCH path1 = (c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
             -[:apinatomy:annotates]->(soma:NamedIndividual)  // soma lyph
             -[:apinatomy:conveys]->(somaLink)                // link connecting soma to axon and dendrite
@@ -751,6 +751,227 @@ class DynamicBase(restService):
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/model-bundles/{start_id}').format(**kwargs)
         requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_neru_1_neupop_id(self, neupop_id, output='application/json'):
+        """ Return the housing regions and publications for neurulated groups. from: /dynamic/demos/apinat/neru-1/{neupop_id}
+
+            Arguments:
+            neupop_id: neuron population identifier
+
+            Query:
+            MATCH (neupop:Class{iri: $neupop_id})
+            -[a:apinatomy:annotates]->(neugrp:NamedIndividual{`https://apinatomy.org/uris/readable/description`: "dynamic"}) // FIXME HACK
+
+            // publications
+            WITH neugrp, a
+            MATCH path = (neugrp)
+            -[:apinatomy:publications]->(pub)
+            -[:type]->(:Class{iri: "https://apinatomy.org/uris/elements/External"})
+
+            WITH neugrp, a, path
+            MATCH (neugrp)
+            -[b:apinatomy:links]->(link)
+            -[c:apinatomy:fasciculatesIn*0..1]->(lyph_or_layer) // real lyphs convey things, layers do not
+            -[d:apinatomy:layerIn*0..1]->(lyph)
+            -[:apinatomy:conveys*0..1]->() // make sure we are at a real lyph
+
+            WITH lyph, a, b, c, d, path
+            MATCH (lyph)
+            -[e:apinatomy:external]->(region)
+            RETURN a, b, c, d, e, path
+
+            UNION
+
+            // this part usually only returns the soma housing lyph
+            MATCH (neupop:Class{iri: $neupop_id})
+            -[a:apinatomy:annotates]->(neugrp:NamedIndividual{`https://apinatomy.org/uris/readable/description`: "dynamic"}) // FIXME HACK
+            -[b:apinatomy:lyphs]->(lyph)
+            -[c:apinatomy:internalIn]->(e) // e is a hack to get columns to match
+            -[d:apinatomy:external*0..1]->(region)
+            // this variant shows the dead end lyphs that correspond to the fasciculatesIn links above
+            //-[c:apinatomy:internalIn*0..1]->(e)
+            //-[d:apinatomy:external*0..1]->(region)
+            return a, b, c, d, null AS e, null AS path
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'neupop_id': neupop_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest('neupop_id', **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/neru-1/{neupop_id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'neupop_id'}
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_neru_2_neupop_id(self, neupop_id, output='application/json'):
+        """ Return the housing regions and publications for neurulated groups. from: /dynamic/demos/apinat/neru-2/{neupop_id}
+
+            Arguments:
+            neupop_id: neuron population identifier
+
+            Query:
+            MATCH (neupop:Class{iri: $neupop_id})
+            -[a:apinatomy:annotates]->(neugrp:NamedIndividual{`https://apinatomy.org/uris/readable/description`: "dynamic"}) // FIXME HACK
+
+            // publications
+            WITH neugrp, a
+            MATCH path = (neugrp)
+            -[:apinatomy:publications]->(pub)
+            -[:type]->(:Class{iri: "https://apinatomy.org/uris/elements/External"}) // cannot be curied, dynamic endpoints will not expand it
+
+            WITH neugrp, a, path
+            MATCH (neugrp)
+            -[b:apinatomy:links]->(link)
+            -[c:apinatomy:fasciculatesIn*0..1]->(lyph_or_layer) // real lyphs convey things, layers do not
+            -[d:apinatomy:layerIn*0..1]->(lyph)
+            -[:apinatomy:conveys*0..1]->() // make sure we are at a real lyph
+
+            WITH neugrp, link, lyph, a, b, c, d, path
+            MATCH (lyph)
+            -[e:apinatomy:external]->(region)
+
+            // use apinatomy:next to extract ordering information
+            WITH neugrp, link, a, b, c, d, e, path
+            MATCH (link)
+            -[f:apinatomy:next*0..]->()
+            //-[f:apinatomy:next|apinatomy:nextChainStartLevels*0..]->()
+            // FIXME these should be collapsing into a single relationship
+            -[g:apinatomy:target*0..1]->()
+            -[h:apinatomy:rootOf*0..1]->()
+            -[i:apinatomy:levels*0..1]->()
+            <-[:apinatomy:links]-(neugrp)
+
+            RETURN a, b, c, d, e, f, g,h,i, path
+
+            UNION
+
+            // use :apinatomy:next to provider ordering for the links
+
+            // this part usually only returns the soma housing lyph
+            MATCH (neupop:Class{iri: $neupop_id})
+            -[a:apinatomy:annotates]->(neugrp:NamedIndividual{`https://apinatomy.org/uris/readable/description`: "dynamic"}) // FIXME HACK
+            -[b:apinatomy:lyphs]->(lyph)
+            -[c:apinatomy:internalIn]->(e) // e is a hack to get columns to match
+            -[d:apinatomy:external*0..1]->(region)
+            // this variant shows the dead end lyphs that correspond to the fasciculatesIn links above
+            //-[c:apinatomy:internalIn*0..1]->(e)
+            //-[d:apinatomy:external*0..1]->(region)
+            RETURN a, b, c, d, null AS e, null AS f, null AS g, null AS h, null AS i, null AS path
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'neupop_id': neupop_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest('neupop_id', **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/neru-2/{neupop_id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'neupop_id'}
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_neru_3_neupop_id(self, neupop_id, output='application/json'):
+        """ Return the housing regions and publications for neurulated groups. from: /dynamic/demos/apinat/neru-3/{neupop_id}
+
+            Arguments:
+            neupop_id: neuron population identifier
+
+            Query:
+            MATCH (neupop:Class{iri: $neupop_id})
+            -[a:apinatomy:annotates]->(neugrp:NamedIndividual{`https://apinatomy.org/uris/readable/description`: "dynamic"}) // FIXME HACK
+
+            // publications
+            WITH neugrp, a
+            MATCH path = (neugrp)
+            -[:apinatomy:publications]->(pub)
+            -[:type]->(:Class{iri: "https://apinatomy.org/uris/elements/External"}) // cannot be curied, dynamic endpoints will not expand it
+
+            WITH neugrp, a, path
+            MATCH (neugrp)
+            -[b:apinatomy:links]->(link)
+            -[c:apinatomy:fasciculatesIn*0..1]->(lyph_or_layer) // real lyphs convey things, layers do not
+            -[d:apinatomy:layerIn*0..1]->(lyph)
+            -[:apinatomy:conveys*0..1]->() // make sure we are at a real lyph
+
+            WITH neugrp, link, lyph, a, b, c, d, path
+            MATCH (lyph)
+            -[e:apinatomy:external]->(region)
+
+            // use apinatomy:next to extract ordering information
+            WITH neugrp, link, a, b, c, d, e, path
+            MATCH p2 = (link)
+            -[:apinatomy:conveyingLyph]->(cl)
+            -[:apinatomy:topology]->()
+
+            WITH neugrp, link, a, b, c, d, e, path, p2, cl
+            MATCH (cl)
+            -[x:apinatomy:inheritedExternal*0..1]->()
+
+            WITH neugrp, link, a, b, c, d, e, path, p2, x
+            MATCH (link)
+            -[f:apinatomy:next*0..]->()
+            //-[f:apinatomy:next|apinatomy:nextChainStartLevels*0..]->()
+            // FIXME these should be collapsing into a single relationship
+            -[g:apinatomy:target*0..1]->()
+            -[h:apinatomy:rootOf*0..1]->()
+            -[i:apinatomy:levels*0..1]->()
+            <-[:apinatomy:links]-(neugrp)
+
+            RETURN a, b, c, d, e, f, g,h,i, path, p2, x
+
+            UNION
+
+            // this part usually only returns the soma housing lyph
+            MATCH (neupop:Class{iri: $neupop_id})
+            -[a:apinatomy:annotates]->(neugrp:NamedIndividual{`https://apinatomy.org/uris/readable/description`: "dynamic"}) // FIXME HACK
+            -[b:apinatomy:lyphs]->(lyph)
+            -[c:apinatomy:internalIn]->()
+            -[d:apinatomy:external*0..1]->(region)
+            // this variant shows the dead end lyphs that correspond to the fasciculatesIn links above
+            //-[c:apinatomy:internalIn*0..1]->()
+            //-[d:apinatomy:external*0..1]->(region)
+            RETURN a, b, c, d, null AS e, null AS f, null AS g, null AS h, null AS i, null AS path, null as p2, null as x
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'neupop_id': neupop_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest('neupop_id', **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/neru-3/{neupop_id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'neupop_id'}
         output = self._get('GET', url, requests_params, output)
         return output if output else None
 
@@ -957,9 +1178,9 @@ class DynamicBase(restService):
             MATCH path3 = (nodeRoot)        // extract chain for axon vs dendrite
             -[:apinatomy:rootOf]->(chain)
             RETURN path1, path2, path3
-            
+
             UNION
-            
+
             MATCH path1 = (c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
             -[:apinatomy:annotates]->(soma:NamedIndividual)    // soma lyph
             -[:apinatomy:conveys]->(linkSoma)                  // link connecting soma to axon and dendrite
