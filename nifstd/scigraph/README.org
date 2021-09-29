@@ -469,7 +469,7 @@ git merge sparc
 <<&source-scigraph-functions>>
 load-graph-ontload \
 --path-build <<path-build-sparc()>> \
---path-ontologies <<path-ontologies-sparc()>> \
+--path-ontologies <<&path-ontologies-sparc()>> \
 --git-ref <<git-ref-sparc()>> \
 $@ \
 #+end_src
@@ -547,7 +547,7 @@ Set =path-build-sparc= here
 : /tmp/scigraph-build/sparc
 
 Set =path-ontologies-sparc= here
-#+name: path-ontologies-sparc
+#+name: &path-ontologies-sparc
 : ~/git/sparc-curation/resources/scigraph/ontologies-sparc.yaml
 
 Set =git-ref-sparc= here
@@ -741,13 +741,13 @@ Set =path-ontologies-sparc-data-dev= here
 #+name: &path-ontologies-sparc-data-dev
 : /tmp/scigraph-build/sparc-data-dev/ontologies-sparc-data-dev.yaml
 ** sparc-sckan
-# FIXME it is going to be much easier to implement the sckan build in
-# release.org instead of doing it here
 *** graph
 **** load
 :properties:
 :visibility: folded
 :end:
+# huh, this winds up being about a 7 minute build, and 1.4 gigs unzipped ...
+# FIXME for some reason the primary folder is duplicated? is that my doing?
 #+name: run-load-graph-sparc-sckan
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc-sckan
@@ -758,12 +758,27 @@ PY_X=$(command -v pypy3 || command -v python)
 # XXX temporary fix for scigraph brokeness
 mkdir -p <<&path-build-sparc-sckan()>>
 
-# FIXME need to source ontologies from the git repo in a sane way and share with the blazegraph load
+pushd <<&path-build-sparc-sckan()>>
+git clone ~/git/NIF-Ontology
+pushd NIF-Ontology
+popd; popd
+
+python -m pyontutils.ontload graph \
+--fix-imports-only \
+--org SciCrunch \
+NIF-Ontology \
+NIF \
+--git-local <<&path-build-sparc-sckan()>> \
+--branch dev \
+--graphload-ontologies <<&path-ontologies-sparc-sckan()>>
+
+# FIXME need a sane way to share the ontologies here with the blazegraph load
 cat "$(dirname <<&path-ontologies-sparc-sckan()>>)/sparc-data.ttl" | \
+sed 's,<https://raw.githubusercontent.com/SciCrunch/NIF.\+ttl/,<http://ontology.neuinfo.org/NIF/ttl/,' | \
 sed 's/ilxtr:imports-\(big\|rel\)/owl:imports/g' | \
 sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-sckan()>>/,g' | \
-sed 's,sparc-data.ttl,file://<<&path-build-sparc-sckan()>>/sparc-sckan.ttl,g' | \
-sed 's,http://ontology.neuinfo.org/NIF/,https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/dev/,g' > \
+sed 's,sparc-data,sparc-sckan,g' | \
+sed 's,http://ontology.neuinfo.org/NIF/,file://<<&path-build-sparc-sckan()>>/NIF-Ontology/,g' > \
 <<&path-build-sparc-sckan()>>/sparc-sckan.ttl
 
 # FIXME source these from kg release
@@ -773,16 +788,14 @@ pushd ~/git/apinatomy-models/models/
     done
 popd
 
-# TODO construct the published only version, probably from individual
-# ttls or from the materialized release
-curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl | \
-     ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export.owl
+curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export-published.ttl | \
+     ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export-published.owl
 
-# FIXME we need some of the ontload functionality for this, at the moment it is too rigid
 load-graph \
 --path-build <<&path-build-sparc-sckan()>> \
 --folder-name-graph <<folder-name-graph-sparc-sckan()>> \
 --path-ontologies <<&path-ontologies-sparc-sckan()>> \
+--git-ref <<git-ref-sparc-sckan()>> \
 $@ \
 #+end_src
 **** deploy
@@ -825,6 +838,10 @@ Set =folder-name-graph-sparc-sckan= here
 Set =path-ontologies-sparc-sckan= here
 #+name: &path-ontologies-sparc-sckan
 : ~/git/sparc-curation/resources/scigraph/ontologies-sparc-sckan.yaml
+
+Set =git-ref-sparc-sckan= here
+#+name: git-ref-sparc-sckan
+: dev
 
 ** dev local ontology
 *** graph

@@ -48,6 +48,7 @@ Options:
     -v --view-defaults              print out the currently configured default values
     -f --graph-config-out=GCO       output for graphload.yaml   [default: {auth.get_path('scigraph-graphload')}]
                                     only useful for `ontload config` ignored otherwise
+    -x --fix-imports-only           prepare graph build but only fix the import chain do not build
 """
 import os
 import json
@@ -69,7 +70,7 @@ from docopt import parse_defaults
 from joblib import Parallel, delayed
 from ttlser import CustomTurtleSerializer
 from pyontutils.core import OntGraph
-from pyontutils.utils import noneMembers, TODAY, setPS1, refile, TermColors as tc
+from pyontutils.utils import noneMembers, TODAY, setPS1, refile, TermColors as tc, log
 from pyontutils.namespaces import getCuries, OntCuries
 from pyontutils.hierarchies import creatTree
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, oboInOwl, dc
@@ -173,7 +174,8 @@ def getBranch(repo, branch):
 class ReproLoader:
     def __init__(self, zip_location, git_remote, org, git_local, repo_name, branch, commit,
                  remote_base, load_base, graphload_config_template, graphload_ontologies,
-                 patch_config, patch, scigraph_commit, post_clone=lambda: None, check_built=False):
+                 patch_config, patch, scigraph_commit, post_clone=lambda: None,
+                 fix_imports_only=False, check_built=False):
 
         date_today = TODAY()
 
@@ -204,22 +206,22 @@ class ReproLoader:
         ontologies = self.configure_config(config, graph_path, remote_base, local_base, config_path)
 
         load_command = load_base.format(config_path=config_path)  # 'exit 1' to test
-        print(load_command)
+        log.info(load_command)
 
         if load_from_repo:
             # replace raw github imports with ontology.neuinfor iris to simplify import chain
             # FIXME this is hardcoded and will not generalize ...
             fix_imports = ("find " + local_base +
                         (" -name '*.ttl' -exec sed -i"
-                            " 's/<http.\+\/ttl\//<http:\/\/ontology.neuinfo.org\/NIF\/ttl\//' {} \;"))
+                            " 's,<http.\+/ttl/,<http://ontology.neuinfo.org/NIF/ttl/,' {} \;"))
             os.system(fix_imports)
 
-        if load_from_repo:
+        if load_from_repo and not fix_imports_only:
             def reset_state(original_branch=nob):
                 repo.git.checkout('--', local_base)
                 original_branch.checkout()
         else:
-            reset_state = lambda x:x
+            reset_state = lambda : None
 
         with execute_regardless(reset_state):  # FIXME start this immediately after we obtain nob?
             # main
@@ -241,7 +243,9 @@ class ReproLoader:
                 pass
 
             maybe_zip_path = glob(wild_zip_path)
-            if not maybe_zip_path:
+            if fix_imports_only:
+                pass
+            elif not maybe_zip_path:
                 if check_built:
                     print('The graph has not been loaded.')
                     raise NotBuiltError('The graph has not been loaded.')
@@ -554,7 +558,7 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
             if ext == '.ttl':
                 infmt = 'turtle'
             else:
-                print(ext, local_filepath)
+                log.info((ext, local_filepath))
                 infmt = None
             if remote:
                 resp = requests.get(local_filepath)  # TODO nonblocking pull these out, fetch, run inner again until done
@@ -565,11 +569,11 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                         raw = f.read()
                 except FileNotFoundError as e:
                     if local_filepath.startswith('file://'):
-                        print('local_imports has already been run, skipping', local_filepath)
+                        log.info(f'local_imports has already been run, skipping {local_filepath}')
                         return
                         #raise ValueError('local_imports has already been run') from e
                     else:
-                        print(e)  # TODO raise a warning if the file cannot be matched
+                        log.exception(e)  # TODO raise a warning if the file cannot be matched
                         # seems like good practice to have any imported ontology under
                         # version control so all imports are guaranteed to have good
                         # provenance and not split the prior informaiton between the
@@ -578,6 +582,7 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                         # of the properly tracked files to load as they see fit, but
                         # not add to them (at least in pyontutils land)
                         raw = b''
+
             if oo in raw:  # we only care if there are imports or an ontology iri
                 scratch = OntGraph()
                 if infmt == 'turtle':
@@ -632,7 +637,7 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                         f.write(out)
 
     for start in ontologies:
-        print('START', start)
+        log.info(f'START {start}')
         done.append(start)
         inner(start)
     return sorted(triples)
@@ -786,6 +791,7 @@ def run(args):
     check_built = args['--check-built']
     debug = args['--debug']
     log = args['--logfile']  # TODO
+    fix_imports_only = args['--fix-imports-only']
 
     load_base = 'scigraph-load -c {config_path}'  # now _this_ is easier
 
@@ -822,24 +828,26 @@ def run(args):
                              commit, remote_base, load_base,
                              graphload_config_template, graphload_ontologies,
                              patch_config, patch, scigraph_commit,
-                             check_built=check_built)
+                             fix_imports_only=fix_imports_only,
+                             check_built=check_built,)
 
-        FILE_NAME_ZIP = Path(rl.zip_path).name
-        LATEST = Path(zip_location) / 'LATEST'
-        if LATEST.exists() and LATEST.is_symlink():
-            LATEST.unlink()
+        if not fix_imports_only:
+            FILE_NAME_ZIP = Path(rl.zip_path).name
+            LATEST = Path(zip_location) / 'LATEST'
+            if LATEST.exists() and LATEST.is_symlink():
+                LATEST.unlink()
 
-        LATEST.symlink_to(FILE_NAME_ZIP)
+            LATEST.symlink_to(FILE_NAME_ZIP)
 
-        itrips, config = rl.itrips, rl.config
+            itrips, config = rl.itrips, rl.config
 
-        if not ontologies:
-            ontologies = rl.ontologies
+            if not ontologies:
+                ontologies = rl.ontologies
 
-        print(services_zip)
-        print(rl.zip_path)
-        if '--local' in args:
-            return
+            print(services_zip)
+            print(rl.zip_path)
+            if '--local' in args:
+                return
 
     elif scigraph:
         (scigraph_commit, services_zip,
