@@ -241,13 +241,18 @@ def makeURIs(*prefixes):
 
 # namespaces
 
-(HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL, UBERON, BFO, SO, ilxtr,
- TEMP, TEMPRAW, ILX, PAXRAT, PAXMUS, tech, CL, ilxti, ilxtib, ilxtio,
-) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFSTD', 'NIFRID',
-                   'NIFTTL', 'UBERON', 'BFO', 'SO', 'ilxtr',
-                   'TEMP', 'TEMPRAW', 'ILX', 'PAXRAT', 'PAXMUS',
-                   'tech', 'CL', 'ilxti', 'ilxtib', 'ilxtio',
-                  )
+(HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL,
+ UBERON, BFO, SO, CL,
+ ilxtr, TEMP, TEMPRAW, ILX, PAXRAT, PAXMUS,
+ tech,  ilxti, ilxtib, ilxtio,
+ apinatomy, elements,
+) = makeNamespaces(
+    'HBA', 'MBA', 'NCBITaxon', 'NIFSTD', 'NIFRID', 'NIFTTL',
+    'UBERON', 'BFO', 'SO', 'CL',
+    'ilxtr', 'TEMP', 'TEMPRAW', 'ILX', 'PAXRAT', 'PAXMUS',
+    'tech', 'ilxti', 'ilxtib', 'ilxtio',
+    'apinatomy', 'elements',
+)
 
 ilxb = interlex_namespace('base/')
 

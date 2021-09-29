@@ -1529,8 +1529,17 @@ class OntGraph(rdflib.Graph):
         new_self.namespace_manager.populate_from(index_graph)
         return new_self
 
-    def _do_add_replace(self, add_replace_graph):
-        add_only_graph, remove_graph, same_graph = self.diffFromReplace(add_replace_graph)
+    def replaceIdentifiers(self, replace_pairs, new_replaces_old=True):
+        "given a list of new, old pairs, replace old with new"
+        replace_graph = [(s, new_replaces_old, o) for s, o in replace_pairs]
+        return self._do_add_replace(
+            replace_graph, include_input_triples=False,
+            new_replaces_old=new_replaces_old)
+
+    def _do_add_replace(self, add_replace_graph, include_input_triples=True,
+                        new_replaces_old=True):
+        add_only_graph, remove_graph, same_graph = self.diffFromReplace(
+            add_replace_graph, new_replaces_old=new_replaces_old)
 
         # the other semantics that could be used here
         # would be to do an in place modification of self
@@ -1539,7 +1548,9 @@ class OntGraph(rdflib.Graph):
         # NOTE the BNodes need to retain their identity across the 3 graphs
         # so that they reassemble correctly
         new_self = self.__class__(path=self.path)
-        [new_self.add(t) for t in add_replace_graph]
+        if include_input_triples:
+            [new_self.add(t) for t in add_replace_graph]
+
         [new_self.add(t) for t in add_only_graph]
         [new_self.add(t) for t in same_graph]
         return new_self
