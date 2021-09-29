@@ -176,6 +176,9 @@ vagnr: https://apinatomy.org/uris/models/vagus-nerve/ids/
 sdcol: https://apinatomy.org/uris/models/sawg-distal-colon/ids/
 sstom: https://apinatomy.org/uris/models/sawg-stomach/ids/
 dlcon: https://apinatomy.org/uris/models/dev-layout-conn/ids/
+splen: https://apinatomy.org/uris/models/spleen/ids/
+pancr: https://apinatomy.org/uris/models/pancreas/ids/
+smint: https://apinatomy.org/uris/models/pancreas/ids/
 
 # identifiers
 PMID: http://www.ncbi.nlm.nih.gov/pubmed/
