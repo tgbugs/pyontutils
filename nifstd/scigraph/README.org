@@ -758,6 +758,17 @@ PY_X=$(command -v pypy3 || command -v python)
 # XXX temporary fix for scigraph brokeness
 mkdir -p <<&path-build-sparc-sckan()>>
 
+# FIXME need a sane way to share the ontologies here with the blazegraph load
+cat "$(dirname <<&path-ontologies-sparc-sckan()>>)/sparc-data.ttl" | \
+sed 's,<https://raw.githubusercontent.com/SciCrunch/NIF.\+ttl/,<http://ontology.neuinfo.org/NIF/ttl/,' | \
+sed 's/ilxtr:imports-\(big\|rel\)/owl:imports/g' | \
+sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-sckan()>>/,g' | \
+sed 's,sparc-data,sparc-sckan,g' > \
+<<&path-build-sparc-sckan()>>/sparc-sckan.ttl
+
+# ontload handles this part recursively
+#sed 's,http://ontology.neuinfo.org/NIF/,file://<<&path-build-sparc-sckan()>>/NIF-Ontology/,g' > \
+
 pushd <<&path-build-sparc-sckan()>>
 git clone ~/git/NIF-Ontology
 pushd NIF-Ontology
@@ -771,15 +782,6 @@ NIF \
 --git-local <<&path-build-sparc-sckan()>> \
 --branch dev \
 --graphload-ontologies <<&path-ontologies-sparc-sckan()>>
-
-# FIXME need a sane way to share the ontologies here with the blazegraph load
-cat "$(dirname <<&path-ontologies-sparc-sckan()>>)/sparc-data.ttl" | \
-sed 's,<https://raw.githubusercontent.com/SciCrunch/NIF.\+ttl/,<http://ontology.neuinfo.org/NIF/ttl/,' | \
-sed 's/ilxtr:imports-\(big\|rel\)/owl:imports/g' | \
-sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-sckan()>>/,g' | \
-sed 's,sparc-data,sparc-sckan,g' | \
-sed 's,http://ontology.neuinfo.org/NIF/,file://<<&path-build-sparc-sckan()>>/NIF-Ontology/,g' > \
-<<&path-build-sparc-sckan()>>/sparc-sckan.ttl
 
 # FIXME source these from kg release
 pushd ~/git/apinatomy-models/models/
