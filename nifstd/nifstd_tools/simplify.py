@@ -110,3 +110,73 @@ def simplify(collapse, blob):
 
     #log.debug('\n' + pformat(blob['edges']))
     return blob  # note that this is in place modification so sort of supruflous
+
+
+# apinatomy helpers
+
+axon = 'SAO:280355188'
+dend = 'SAO:420754792'
+bag = 'apinatomy:BAG'
+top = 'apinatomy:topology*'
+ie = 'apinatomy:inheritedExternal*'
+ext = 'apinatomy:external'
+fasIn = 'apinatomy:fasciculatesIn'
+endIn = 'apinatomy:endsIn'
+layerIn = 'apinatomy:layerIn'
+
+
+def apinat_deblob(blob, remove_converge=False):
+    blob = simplify([['apinatomy:target', 'apinatomy:rootOf', 'apinatomy:levels'],
+                     ['apinatomy:conveyingLyph', 'apinatomy:topology'],
+                     ['apinatomy:conveys', 'apinatomy:source', 'apinatomy:sourceOf'],
+                     ['apinatomy:conveys', 'apinatomy:target', 'apinatomy:sourceOf'],
+                     ['apinatomy:cloneOf', 'apinatomy:inheritedExternal'],
+                     ['apinatomy:conveyingLyph', 'apinatomy:inheritedExternal'],], blob)
+    edges = blob['edges']
+    nindex = {n['id']:n for n in blob['nodes']}  # FIXME silent errors ;_;
+    for e in edges:
+        if e['pred'] in (
+                'apinatomy:target-apinatomy:rootOf-apinatomy:levels',
+                'apinatomy:conveys-apinatomy:source-apinatomy:sourceOf',
+                'apinatomy:conveys-apinatomy:target-apinatomy:sourceOf',):
+            e['pred'] = 'apinatomy:next*'
+        if e['pred'] == 'apinatomy:conveyingLyph-apinatomy:topology':
+            e['pred'] = 'apinatomy:topology*'
+        if e['pred'] in (
+                'apinatomy:conveyingLyph-apinatomy:inheritedExternal',
+                'apinatomy:cloneOf-apinatomy:inheritedExternal',):
+            e['pred'] = 'apinatomy:inheritedExternal*'
+        if pred(e, top):
+            # move topology to be a property not a node to make the layout cleaner
+            nindex[sub(e)]['topology'] = obj(e)
+
+    if remove_converge:
+        # remove topology edges
+        edges = blob['edges'] = [e for e in edges if not pred(e, top)]
+        # remove process type edges
+        edges = blob['edges'] = [e for e in edges if not (obj(e, axon) or obj(e, dend))]
+
+    blob['edges'] = [dict(s) for s in set(frozenset({k:v for k, v in d.items()
+                                                     if k != 'meta'}.items()) for d in blob['edges'])]
+    sos = set(sov for e in blob['edges'] for sov in (e['sub'], e['obj']))
+    blob['nodes'] = [n for n in blob['nodes'] if n['id'] in sos]
+    somas = [e for e in edges if e['pred'] == 'apinatomy:internalIn']
+    externals = [e for e in edges if e['pred'] == 'apinatomy:external']
+    ordering_edges = [e for e in edges if e['pred'] == 'apinatomy:next']
+    return blob, edges, somas, externals, ordering_edges
+
+
+def sub(e, match=None):
+    return e['sub'] == match if match is not None else e['sub']
+
+
+def pred(e, match=None):
+    return e['pred'] == match if match is not None else e['pred']
+
+
+def obj(e, match=None):
+    return e['obj'] == match if match is not None else e['obj']
+
+
+def ematch(blob, select, match, *matches, matchf=lambda ms: True):
+    return [e for e in blob['edges'] if select(e, match) and matchf(matches)]

@@ -52,7 +52,7 @@ from nifstd_tools.sheets_sparc import (hyperlink_tree,
                                        tag_row,
                                        open_custom_sparc_view_yml,
                                        YML_DELIMITER)
-from nifstd_tools.simplify import simplify, cleanBad
+from nifstd_tools.simplify import simplify, apinat_deblob, cleanBad
 from nifstd_tools import __version__
 
 log = makeSimpleLogger('ontree')
@@ -711,7 +711,12 @@ def server(api_key=None, verbose=False):
 
     @app.route(f'/{basename}/sparc/simple/dynamic/<path:path>', methods=['GET'])
     def route_sparc_simple_dynamic(path):
-        return sparc_dynamic(data_sgd, data_sgc, path, wgb, simplify)
+        if '/neru-' in path:
+            process = lambda x, blob: apinat_deblob(blob, remove_converge=True)[0]
+        else:
+            process = simplify
+
+        return sparc_dynamic(data_sgd, data_sgc, path, wgb, process)
 
     @app.route(f'/{basename}/sparc/dynamic/<path:path>', methods=['GET'])
     def route_sparc_dynamic(path):
