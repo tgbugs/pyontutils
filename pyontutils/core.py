@@ -1231,6 +1231,17 @@ class OntGraph(rdflib.Graph):
         #breakpoint()  # infinite loop
         print(self.ttl)
 
+    def debug_editor(self, command=None):
+        fd = None
+        try:
+            fd, _path = tempfile.mkstemp(suffix='.ttl')
+            path = Path(_path)
+            self.write(path)
+            aug.XopenPath(path).xopen(command=command)
+        finally:
+            if fd is not None:
+                os.close(fd)
+
     def matchNamespace(self, namespace, *, ignore_predicates=tuple()):
         """ find all uris that have namespace as their prefix """
         # FIXME can't we hit the cache for these?
@@ -1288,6 +1299,23 @@ class OntGraph(rdflib.Graph):
                 add.add(t)
 
         return add, rem, same
+
+    def subjectGraphClosure(self, subject, seen=None):
+        if seen is None:
+            seen = set()
+
+        def f (triple, graph):
+            s, predicate, object = triple
+            if s in seen:
+                return
+            else:
+                seen.add(s)
+
+            yield from self.subjectGraphClosure(s, seen=seen)
+
+        for s, p, o in self.subjectGraph(subject):
+            yield s, p, o
+            yield from self.transitiveClosure(f, (o, None, None))
 
     def subjectGraph(self, subject):
         # some days I am smart, as in years ago when working on neuron stuff
