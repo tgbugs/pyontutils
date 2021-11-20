@@ -226,3 +226,25 @@ class TestSCO(Simple, TestTtlser):  # TODO TestDet, but not ready yet
     goodpath = 'test/scogood.ttl'
     actualpath = 'test/scoactual.ttl'
     actualpath2 = 'test/scoactual2.ttl'
+
+
+class TestMultiBNode(unittest.TestCase):
+
+    format = 'nifttl'
+
+    def test_mb(self):
+        g = rdflib.Graph()
+        s1 = rdflib.URIRef('http://example.org/a')
+        s2 = rdflib.URIRef('http://example.org/b')
+        p = rdflib.URIRef('http://example.org/p')
+        o = rdflib.BNode()
+        oops = rdflib.Literal('oops!')
+        [g.add(t) for t in
+         ((s1, p, o),
+          (s2, p, o),
+          (o, p, oops),)]
+        ser = g.serialize(format=self.format)
+        g2 = rdflib.Graph()
+        g2.parse(data=ser)
+        assert oops in list(g.objects())
+        assert oops in list(g2.objects())

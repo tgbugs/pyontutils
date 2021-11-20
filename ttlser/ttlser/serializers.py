@@ -550,7 +550,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         try:
             recursable.sort(key=lambda t: self._globalSortKey(t[-1]))
         except TypeError as e:
-            raise e  # embed here if you encounter an issue
+            raise e  # break here if you encounter an issue
 
         # group bnodes with classes only if they have no refs
         noref = [subject for (isbnode, refs, subject) in recursable
@@ -558,15 +558,13 @@ class CustomTurtleSerializer(TurtleSerializer):
         sections[-1].extend(noref)
 
         # annotation targets
-        at = [subject for (isbnode, refs, subject) in recursable if not isbnode]
+        at = [subject for (isbnode, refs, subject) in recursable
+              if not isbnode or isbnode and refs > 1]
         sections.append(at)
 
         #bc = [(s, sorted(self.store[s::]))  # DEBUG
               #for s in self.store[:RDF.type:OWL.Class]
               #if isinstance(s, BNode)]
-
-        #from IPython import embed
-        #embed()
 
         return sections
 
