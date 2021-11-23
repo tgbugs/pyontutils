@@ -400,7 +400,7 @@ class CypherBase(restService):
         output = self._get('GET', url, requests_params, output)
         return output if output else {}
 
-    def execute(self, cypherQuery, limit, output='text/plain'):
+    def execute(self, cypherQuery, limit, output='text/plain', **kwargs_sigh):
         """ Execute an arbitrary Cypher query. from: /cypher/execute
 
             Arguments:
@@ -411,7 +411,7 @@ class CypherBase(restService):
                 application/json
         """
 
-        kwargs = {'cypherQuery': cypherQuery, 'limit': limit}
+        kwargs = {**kwargs_sigh, 'cypherQuery': cypherQuery, 'limit': limit}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/cypher/execute').format(**kwargs)
@@ -532,9 +532,9 @@ class Cypher(CypherBase):
         else:
             return iri
 
-    def execute(self, query, limit, output='text/plain'):
+    def execute(self, query, limit, output='text/plain', **kwargs):
         if output == 'text/plain':
-            out = super().execute(query, limit, output)
+            out = super().execute(query, limit, output, **kwargs)
             rows = []
             if out:
                 for raw in out.split('|')[3:-1]:
@@ -546,7 +546,7 @@ class Cypher(CypherBase):
             return rows
 
         else:
-            return super().execute(query, limit, output)
+            return super().execute(query, limit, output, **kwargs)
 
 
 class DynamicBase(restService):
