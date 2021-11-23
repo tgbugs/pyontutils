@@ -118,7 +118,8 @@ axon = 'SAO:280355188'
 dend = 'SAO:420754792'
 bag = 'apinatomy:BAG'
 top = 'apinatomy:topology*'
-ie = 'apinatomy:inheritedExternal*'
+ie = 'apinatomy:inheritedExternal'
+ies = 'apinatomy:inheritedExternal*'
 ext = 'apinatomy:external'
 fasIn = 'apinatomy:fasciculatesIn'
 endIn = 'apinatomy:endsIn'
@@ -126,6 +127,19 @@ layerIn = 'apinatomy:layerIn'
 
 
 def apinat_deblob(blob, remove_converge=False):
+    # FIXME I think we may be over or under simplifying just a bit
+    # somehow getting double links at the end of the chain
+
+    # FIXME issue here is that chain roots -> levels goes to all levels of the chain which is NOT
+    # what we want, TODO need to filter out cases where the target of levels is pointed to by next
+    # this is implemented downstream from here I think
+    blob['edges'] = [
+        e for e in blob['edges'] if not pred(e, 'apinatomy:levels') or
+        (pred(e, 'apinatomy:levels') and
+         not ematch(blob, (lambda ei, m: obj(ei, m) and pred(ei, 'apinatomy:next')), obj(e)))]
+
+    #[e for e in blob['edges'] if pred(e, 'apinatomy:rootOf')]
+
     blob = simplify([['apinatomy:target', 'apinatomy:rootOf', 'apinatomy:levels'],
                      ['apinatomy:conveyingLyph', 'apinatomy:topology'],
                      ['apinatomy:conveys', 'apinatomy:source', 'apinatomy:sourceOf'],
