@@ -60,7 +60,8 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
                                                   direction='OUTGOING'))
         nodes = Async()(deferred(gin)(i) for i in iris)
         imports = [(i, *[(e['obj'], 'owl:imports', e['sub'])
-                         for e in n['edges']])
+                         for e in n['edges']
+                         if not e['sub'].startswith('_:')])
                    for i, n in nodes if n]
         self.itrips = sorted(set(tuple(rdflib.URIRef(OntId(e).iri) for e in t)
                                  for i, *ts in imports if ts for t in ts))
