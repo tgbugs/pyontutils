@@ -707,6 +707,8 @@ class Sheet:
 
         self._reapply_uncommitted()
 
+        return self._meta, self.raw_values, grid
+
         #self._lol_g, self._lol_c = grid, cells_index  # WHAT! this causes the problem !?
         #import copy
         #self._lol_g, self._lol_c = copy.deepcopy(grid), copy.deepcopy(cells_index)  # as does this
