@@ -67,7 +67,7 @@ for an example of how to bootstrap a working dev environment. Alternately see
 pyontutils provides a set of scripts that are useful for maintaining and managing ontologies
 using git, and making them available via SciGraph. Note that if you choose the development
 installation option you will need to `ln -sT` the scripts to your preferred bin folder.
-For the full list please see the [documentation](http://ontology.doc/pyontutils/docstrings.html).
+For the full list please see the [documentation](http://ontology.neuinfo.org/docs/docstrings.html).
 1. [ttlfmt](./ttlser/ttlser/ttlfmt.py)
 	Reserialize ontology files using deterministic turtle ([spec](./ttlser/docs/ttlser.md)).
 2. [ontutils](./pyontutils/ontutils.py)
