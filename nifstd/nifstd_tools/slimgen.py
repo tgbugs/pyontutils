@@ -2,7 +2,7 @@
 """Generate slim ontology files
 
 Usage:
-    slimgen [options] (chebi|gene)...
+    slimgen [options] (chebi|gene|doid)...
     slimgen [options] all
 
 Options:
@@ -15,6 +15,7 @@ Options:
 from pyontutils import clifun as clif
 import nifstd_tools.chebi_slim
 import nifstd_tools.ncbigene_slim
+import nifstd_tools.doid_slim
 
 
 class Options(clif.Options):
@@ -25,7 +26,7 @@ class Main(clif.Dispatcher):
 
     def __call__(self):
         commands = [getattr(Main, c)() for c in
-                    (['chebi', 'gene']
+                    (['chebi', 'gene', 'doid']
                      if self.options.all else
                     self.options.commands)]
         lc = len(commands)
@@ -49,6 +50,9 @@ class Main(clif.Dispatcher):
     def gene():
         return nifstd_tools.ncbigene_slim.main
 
+    @staticmethod
+    def doid():
+        return nifstd_tools.doid_slim.main
 
 def main():
     from docopt import docopt, parse_defaults
