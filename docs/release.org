@@ -79,10 +79,10 @@ Tangle this block so you can source [[file:./../bin/python-release-functions.sh]
 #+CAPTION: run this to export all the things
 #+HEADER: :tangle ../bin/python-release-functions.sh :comments noweb
 #+BEGIN_SRC bash :eval never :noweb yes
-<<build-release>>
-<<push-release>>
+<<&build-release>>
+<<&push-release>>
 # TODO github-release
-<<final-release>>
+<<&final-release>>
 #+END_SRC
 ** Build release
 #+NAME: &vars-build-release
@@ -107,7 +107,7 @@ case $key in
 esac
 done
 
-local PYTHON_VERSION=${PYTHON_VERSION:-3.7}
+local PYTHON_VERSION=${PYTHON_VERSION:-3.9}
 local org=${POSITIONAL[0]}
 local repo=${POSITIONAL[1]}
 local folder=${POSITIONAL[2]}
@@ -129,7 +129,7 @@ fi
 echo $org $repo $folder $packagename $version $tag $CLONEFROM $ARTIFACT_FOLDER $BASE_PATH ${INTEGRATION_PACKAGES[@]}
 #+end_src
 
-#+NAME: build-release
+#+NAME: &build-release
 #+begin_src bash :eval never :exports code :noweb yes
 build-release () {
     # example
@@ -313,7 +313,7 @@ build-release () {
 #+end_src
 
 ** Push release
-#+NAME: push-release
+#+NAME: &push-release
 #+BEGIN_SRC bash :eval never :exports code
 function push-release () {
     # example
@@ -399,7 +399,7 @@ def github_release(org, repo, version, hashes, *assets, branch='master'):
 #+END_SRC
 
 ** Final release
-#+NAME: final-release
+#+NAME: &final-release
 #+CAPTION: on the release host final upload from previous block
 #+CAPTION: you will need to enter your password
 #+BEGIN_SRC bash :eval never :exports code
