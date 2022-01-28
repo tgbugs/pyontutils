@@ -23,7 +23,6 @@ import requests
 import htmlfn as hfn
 from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer, natsort
-from ttlser.utils import regjsonld
 from pyontutils import combinators as cmb
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import (refile,
@@ -115,7 +114,6 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
 
 
 def populateFromJsonLd(graph, path_or_blob, pyld=False):
-    regjsonld()
     def convert_element(blob,
                         _lu={'literal': rdflib.Literal,
                              'IRI': rdflib.URIRef,

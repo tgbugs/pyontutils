@@ -35,6 +35,9 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Operating System :: POSIX :: Linux',
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft :: Windows',
@@ -44,7 +47,7 @@ setup(
     python_requires='>=3.5',
     tests_require=tests_require,
     install_requires=[
-        'rdflib>=5.0.0.dev0',
+        'rdflib>=6.0.2',
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
                     'ttlfmt': ttlfmt_require,
