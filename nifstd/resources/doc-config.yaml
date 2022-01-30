@@ -25,9 +25,10 @@ skip:
     - pyontutils/iterio.py           # insubstantial
   sparc-curation:
     - README.md                      # insubstantial
-    - docs/apinatomy.org             # rendered under sparc
+    #- docs/apinatomy.org             # rendered under sparc
     - docs/developer-guide.org       # rendered under sparc
     - docs/notes.org                 # not relevant
+    - docs/sckan/queries.org         # symlink dupe from parent folder
     - test/apinatomy/README.org      # insubstantial
     - resources/scigraph/README.org  # replaced by the nifstd scigraph readme
     - resources/DatasetTemplate/README.md
@@ -92,11 +93,21 @@ titles:
   Specifications: Specifications
   pyontutils/ttlser/docs/ttlser.html: Deterministic turtle specification
 
+  SCKAN: SCKAN
+  sparc-curation/docs/apinatomy.html: ApiNATOMY build process
+  sparc-curation/docs/queries.html: SPARC competency queries
+  sparc-curation/docs/release.html: SPARC SCKAN release process
+  sparc-curation/docs/sckan/README.html: SCKAN readme
+  sparc-curation/docs/sckan/overview.html: SCKAN overview
+  sparc-curation/docs/sckan/welcome.html: SCKAN docker image welcome
+  sparc-curation/docs/sckan/tutorial.html: SCKAN tutorial
+  sparc-curation/docs/sckan/examples.html: SCKAN examples
+  sparc-curation/docs/sckan/scratch.html: SCKAN scratch
+
   Other: Other
   augpathlib/README.html: augpathlib readme
   pyontutils/htmlfn/README.html: htmlfn readme
   pyontutils/ttlser/README.html: ttlser readme
   ontquery/docs/tutorial.html: ontquery tutorial notebook
   orthauth/docs/guide.html: orthauth user guide
-  sparc-curation/docs/queries.html: SPARC competency queries
   sparc-curation/docs/background.html: null  # prevent broken links
