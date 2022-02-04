@@ -34,7 +34,6 @@ from concurrent.futures import ProcessPoolExecutor
 from docopt import docopt, parse_defaults
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
-from ttlser.utils import regjsonld
 
 
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
@@ -62,7 +61,6 @@ def prepare(filepath_or_stream, outpath=None, stream=False):
             infmt_guess = 'ttl'
         elif filetype in ('json', 'jsonld'):
             infmt_guess = 'json-ld'
-            regjsonld()
         else:
             infmt_guess = None
         if outpath is None:
@@ -201,9 +199,6 @@ def main():
         outfmt = 'rktttl'
     else:
         outfmt = args['--outfmt']
-
-    if outfmt == 'json-ld' or infmt == 'json-ld':
-        regjsonld()
 
     outpath = args['--output']
     files = args['<file>']
