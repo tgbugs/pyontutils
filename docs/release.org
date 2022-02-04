@@ -171,8 +171,12 @@ build-release () {
     pushd "${folder}" || return $?  # or subfolder
 
     if [[ $(git tag -l ${tag}) ]]; then
-        echo "${tag} has already been released for this repo!"
-        return 1
+        gsh=$(git rev-parse --short HEAD)
+        initpath=$(grep -l __version__ $(ls */__init__.py))
+        version=${version}+${gsh}
+        tag=${tag}+${gsh}
+        echo "running with ${tag} ${version} instead"
+        # FIXME need to make sure that we prevent releases in this case
     fi
 
     if [[ -n ${BRANCH} ]]; then
@@ -182,6 +186,11 @@ build-release () {
         git checkout -f master  # just like clean -dfx this should wipe changes just in case
     fi
     #git checkout ${version}  # only if all tests are go and release is tagged
+
+    if [ -n ${initpath} ]; then  # apply local version after checkout
+        sed -i '/__version__/d' "${initpath}"  # handle bad semantics for find_version
+        echo "__version__ = '${version}'" >> "${initpath}"
+    fi
 
     ## build release artifacts
     PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $REST  # pass $REST along eg for --release
