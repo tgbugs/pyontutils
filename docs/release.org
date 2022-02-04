@@ -100,6 +100,7 @@ case $key in
     -i|--install-package) local INTEGRATION_PACKAGES+=("$2"); shift; shift ;;
     --python)             local PYTHON_VERSION="$2"; shift; shift ;;
     --tag-no-rename)      local TAG_NO_RENAME=YES; shift ;;
+    --tag-prefix)         local TAG_PREFIX=YES; shift ;;
     --keep-artifacts)     local KEEP_ARTIFACTS=YES; shift ;;
     --no-test)            local NO_TEST=YES; shift;;
     --debug)              local DEBUG=YES; shift ;;
@@ -116,17 +117,22 @@ local version=${POSITIONAL[4]}
 local REST=${POSITIONAL[@]:5}  # remaining position passed along
 echo $REST
 
-if [[ ${folder} == ${packagename} || -n ${TAG_NO_RENAME} ]]; then
-    local tag=${version}
-else
+if [[ ${folder} == *"/"* || -n ${TAG_PREFIX} ]]; then
     local tag=${packagename}-${version}
+    local clone_target=${repo}-${packagename}  # prevent git lock collisions
+    folder="${clone_target}/${folder#*/}"
+else
+    local tag=${version}
+    local clone_target=${repo}
 fi
 
 # TODO make sure no vars are null
 
-: ${BASE_PATH:=/tmp}  # allow override for cases where /tmp causes test failure
+: ${BASE_PATH:=/tmp/python-releases}  # allow override for cases where /tmp causes test failure
 
-echo $org $repo $folder $packagename $version $tag $CLONEFROM $ARTIFACT_FOLDER $BASE_PATH ${INTEGRATION_PACKAGES[@]}
+[ -d "${BASE_PATH}" ] || mkdir -p "${BASE_PATH}"
+
+echo $org $repo $clone_target $folder $packagename $version $tag $CLONEFROM $ARTIFACT_FOLDER $BASE_PATH ${INTEGRATION_PACKAGES[@]}
 #+end_src
 
 #+NAME: &build-release
@@ -147,11 +153,11 @@ build-release () {
     fi
     mkdir -p ${TEST_PATH}
 
-    if [ -d ${repo} ]; then
-        pushd ${repo}
+    if [ -d ${clone_target} ]; then
+        pushd ${clone_target}
         rurl="$(git remote get-url origin)"
         if [[ -z ${CLONEFROM} && ! $rurl =~ "https://" && ! $rurl =~ "git@" ]]; then
-            git remote set-url origin https://github.com/${org}/${repo}.git
+            git remote set-url origin https://github.com/${org}/${repo}.git ${clone_target}
         elif [[ -n ${CLONEFROM} && "$rurl" != "${CLONEFROM}" ]]; then
             git remote set-url origin "${CLONEFROM}"
         fi
@@ -161,9 +167,9 @@ build-release () {
         popd
     else
         if [[ -n ${CLONEFROM} ]]; then
-            git clone ${CLONEFROM} ${repo}
+            git clone ${CLONEFROM} ${clone_target}
         else
-            git clone https://github.com/${org}/${repo}.git
+            git clone https://github.com/${org}/${repo}.git ${clone_target}
         fi
     fi
     # TODO __version__ check against ${version}
@@ -175,6 +181,7 @@ build-release () {
         initpath=$(grep -l __version__ $(ls */__init__.py))
         version=${version}+${gsh}
         tag=${tag}+${gsh}
+        echo "${tag} has already been released for this repo!"
         echo "running with ${tag} ${version} instead"
         # FIXME need to make sure that we prevent releases in this case
     fi
@@ -232,6 +239,8 @@ build-release () {
         # naieve little rm is kept in the dark, so we yell
         # into the 'void' just to make sure
         touch Pipfile
+        # FIXME need a way to do concurrent builds on different python versions
+        # running pipenv --rm breaks that
         pipenv --rm  # clean any existing env
         pipenv --python $PYTHON_VERSION  # for some reason 3.6 lingers in some envs
         if [[ -n ${DEBUG} ]]; then
@@ -315,8 +324,8 @@ build-release () {
         else
             echo "$(color yellow)release build was cloned from a specific branch$(color off) ${BRANCH}"
         fi
-        echo "$(color ltyellow)therefore removing the build artifacts to prevent$(color off)"
-        echo "$(color ltyellow)accidental releases built from a private source$(color off)"
+        echo "$(color ltyellow)removing the build artifacts from ${folder}/dist$(color off)"
+        echo "$(color ltyellow)to prevent release from a private source$(color off)"
     fi
 }
 #+end_src
