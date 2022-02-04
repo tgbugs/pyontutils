@@ -430,15 +430,18 @@ function final-release () {
 #+END_SRC
 ** TODO Next version                                               :noexport:
 #+NAME: release-next
-#+HEADER: :shebang "#!/usr/bin/env python3.7"
+#+HEADER: :shebang "#!/usr/bin/env python3"
 #+begin_src python :tangle ./../bin/release-next :tangle-mode (identity #o755)
 import setuptools
-from distutils.version import LooseVersion
+from setuptools.dist import Distribution
+from setuptools.command.egg_info import manifest_maker, FileList, log as eilog
+from packaging.version import parse as parse_version
 import importlib.util
 from urllib.parse import urlparse
 import requests
 import augpathlib as aug
 
+eilog.set_threshold(99)
 
 last_output = [None]
 def fake_setup(*args, **kwargs):
@@ -448,73 +451,112 @@ def fake_setup(*args, **kwargs):
 setuptools.setup = fake_setup
 
 
-class Version(LooseVersion):
-    def next(self, increment='current'):
-        nv = [_ for _ in self.version]
-        if increment == 'current':
-            nv[-1] = nv[-1] + 1
-
-        elif increment == 'minor':
-            if 'dev' in nv:
-                nv = nv[:3]
+def vinc(thing, prefix=None):
+    if isinstance(thing, tuple):
+        return (*thing[:-1], vinc(thing[-1]))
+    elif isinstance(thing, str):
+        raise TypeError("don't know how to increment a string")
+    else:
+        if thing is None:
+            if prefix is not None:
+                return prefix, 0
             else:
-                if 'post' in nv:
-                   nv = nv[:3]
+                return 0
+        else:
+            return thing + 1
 
-                nv[-1] = nv[-1] + 1
+def current_state(ver):
+    if ver.local is not None: return 'local'
+    if ver.post is not None: return 'post'
+    if ver.pre is not None: return ver.pre[0]
+    if ver.dev is not None: return 'dev'
+    return 'release'
 
-        elif increment == 'dev':
-            if 'post' in nv:
-                nv = nv[:3]
 
-            nv[-1] = nv[-1] + 1
-            if 'dev' not in nv:
-                nv.extend(['dev', 0])
+def logic(cstate, next_phase, rel_comp='release'):
+    # if I want to go to major dev ? need modifier
+    # TODO True -> toggle relese dev
+    if next_phase == 'current': return cstate
+    elif next_phase == 'dev':
+        if cstate == 'dev': return cstate
+        elif cstate in ('release', 'post', 'local'): return next_phase
+        else: raise ValueError('cannot go to dev from a prerelease')
+    elif next_phase == 'pre':  # this will bump a -> b -> rc since current will not
+        if cstate == 'dev': return 'a'
+        elif cstate == 'a': return 'b'
+        elif cstate == 'b': return 'rc'
+        elif cstate == 'rc': return 'rc'
+        elif cstate in ('release', 'post', 'local'):
+            return rel_comp, 'a'
+        else: raise ValueError(f'wat c: {cstate} n: {next_phase}')
+    elif next_phase in ('a', 'b', 'rc'):
+        if cstate == 'dev': return next_phase
+        elif cstate in ('a', 'b', 'rc') and cstate > next_phase:
+            raise ValueError(f'cannot go back or skip a release c: {cstate} > n: {next_phase}')
+        else: return rel_comp, next_phase
+    elif next_phase == 'release':
+        if cstate in ('dev', 'a', 'b', 'rc'): return None  # truncate
+        else: return next_phase
+    elif next_phase in ('major', 'minor', 'micro'): return next_phase
+    elif next_phase == 'post':
+        if cstate == 'release': return next_phase
+        else: raise ValueError(f'can only post from release not from {cstate}')
+    elif next_phase == 'local': return next_phase
+    else: raise ValueError(f'wat c: {cstate} n: {next_phase}')
 
-        elif increment == 'post':
-            raise NotImplementedError('TODO')
 
-        s = ''
-        oe = None
-        for e in nv:
-            if isinstance(oe, int):
-                s += '.'
+def cons_next(d, ver, next):
+    # mutates in place
+    if next in ('a', 'b', 'rc'):
+        vp = ver.pre
+        vn = vinc(vp[-1] if isinstance(vp, tuple) else vp)
+        d.update(dict(pre=(next, vn)))
+    elif next in ('dev', 'post'):
+        d[next] = next, vinc(getattr(ver, next))
+    elif next in ('release', 'major', 'minor', 'micro'):
+        # FIXME this i
+        release = d['release']
+        if next == 'release':
+            release = (*release[:-1], vinc(release[-1]))
+        # FIXME index error or extent shorter version to that?
+        elif next == 'major':
+            release = vinc(release[0]), *[0 for _ in release[1:]]
+        elif next == 'minor':
+            release = (*release[:1], vinc(release[1]), *[0 for _ in release[2:]])
+        elif next == 'micro':
+            release = (*release[:2], vinc(release[2]), *[0 for _ in release[3:]])
+        else: raise ValueError('hmr?')
 
-            oe = e
-            if isinstance(e, int):
-                e = str(e)
+        d['release'] = tuple(release)
+    elif next == 'local':
+        d.update(ver._version._asdict())
+        d['local'] = vinc(ver.local),
+    elif next is None:
+        pass  # truncate to release from dev and pre
+    else:
+        raise ValueError('wat')
 
-            s += e
 
-        return self.__class__(s)
+def next_version(ver, next_phase='current', rel_comp='release'):
+    cstate = current_state(ver)
+    next = logic(cstate, next_phase, rel_comp)
+    d = dict(epoch=ver.epoch,
+             release=ver.release,
+             dev=None,
+             pre=None,
+             post=None,
+             local=None,)
+    if isinstance(next, tuple):
+        dowhatnow, next = next
+        cons_next(d, ver, dowhatnow)
+        cons_next(d, ver, next)
+    else:
+        cons_next(d, ver, next)
 
-    def _cmp(self, other):
-        if isinstance(other, str):
-            other = LooseVersion(other)
-
-        sversion = [_ for _ in self.version]
-        oversion = [_ for _ in other.version]
-        ls = len(sversion)
-        lo = len(oversion)
-        # FIXME .post0 vs .1
-        if lo < ls:
-            oversion.extend([0] * (ls - lo))
-        elif ls < lo:
-            sversion.extend([0] * (lo - ls))
-
-        # 0.0.1.1 comes ... after 0.0.1.post1 ???
-        for v in [sversion, oversion]:
-            if 'dev' in v:
-                v[v.index('dev')] = -4
-            elif 'post' in v:
-                v[v.index('post')] = 1
-
-        if sversion == oversion:
-            return 0
-        if sversion < oversion:
-            return -1
-        if sversion > oversion:
-            return 1
+    _nver = ver._version._replace(**d)
+    newver = ver.__class__('0')
+    newver._version = _nver
+    return newver
 
 
 class SetupPath(aug.RepoPath):
@@ -538,23 +580,92 @@ class SetupPath(aug.RepoPath):
         return self._setup_kwargs
 
     @property
+    def pypi_json(self):
+        if not hasattr(self, '_pypi_json'):
+            self._pypi_request = requests.get(f'https://pypi.org/pypi/{self.arg_packagename}/json')
+            self._pypi_json = self._pypi_request.json()
+
+        return self._pypi_json
+
+    @property
+    def github_json(self):
+        if not hasattr(self, '_github_json'):
+            self._github_request = requests.get(self.remote_uri_api('/releases'))
+            self._github_json = self._github_request.json()
+
+        return self._github_json
+
+    @property
     def version_latest_pypi(self):
-        return Version(self.pypi_json['info']['version'])
+        return parse_version(self.pypi_json['info']['version'])
+        #return Version(self.pypi_json['info']['version'])
 
     @property
     def version_latest_released(self):
         # git, pypi, tag??
-        vers = sorted(Version(_) for _ in self.pypi_json['releases'])
+        vers = sorted(parse_version(_) for _ in self.pypi_json['releases'])
+        #vers = sorted(Version(_) for _ in self.pypi_json['releases'])
         return vers[-1]
 
-    def version_next(self, increment='current'):
-        # major middle minor dev post  # or something
+    @property
+    def version_latest_github(self):
+        lpn = len(self.arg_packagename) + 1 if self.tag_prefix else 0
+        version = self.tag_latest_github[lpn:]
+        return parse_version(version)
+
+    @property
+    def tag_latest_github(self):
+        gj = self.github_json
+        if self.tag_prefix:
+            these = [r for r in gj if self.arg_packagename in r['tag_name']]
+        else:
+            these = [r for r in gj if r['tag_name'][0] in '0123456789']
+
+        latest = these[0]
+        return latest['tag_name']
+
+    def version_next(self, next_phase='current', rel_comp='release'):
         # FIXME
-        return self.version_latest_pypi.next(increment=increment)
+        vlp = self.version_latest_pypi
+        vlr = self.version_latest_released
+        assert vlp == vlr, f'wat {vlp} != {vlr}'
+        return next_version(vlp, next_phase=next_phase, rel_comp='release')
+
+    @property
+    def tag_prefix(self):
+        # TODO tag_prefix_anyway
+        tag_prefix = False  # if for some reason we want to regularize version tagging that can go in the repo
+        return self.setup_file.parent != self.working_dir or tag_prefix
+
+    @property
+    def tag(self):
+        # the logic is that if module folder name == package name or we override via tag no rename
+        # then there is no prefix expected, otherwise the prefix is ALWAYS the package name
+
+        # FIXME there is no good way to do this without having it specified somewhere in
+        # the repo that some package has priority for prefixless versions
+        # also if someone renames the outer folder, which is entirely allowed and possible
+        # then the tag will change, however I think I can do better because the logic is
+        # actually about whether setup.py is in the root of the repo NOT whether names
+        # match ... HRM
+
+        if self.tag_prefix:
+            match_version = self.arg_packagename + '-*'
+        else:
+            match_version = '[0-9]*'
+
+        return self.repo.git.describe('--abbrev=0', '--tags', f'--match={match_version}')
+
+    @property
+    def version_tag(self):
+        lpn = len(self.arg_packagename) + 1 if self.tag_prefix else 0
+        version = self.tag[lpn:]
+        return parse_version(version)
 
     @property
     def version_repo(self):
-        return Version(self.setup_kwargs['version'])
+        return parse_version(self.setup_kwargs['version'])
+        #return Version(self.setup_kwargs['version'])
 
     @property
     def version_new(self):
@@ -565,6 +676,32 @@ class SetupPath(aug.RepoPath):
         # want *, repo skips a version
         return self.version_repo
         raise NotImplementedError('TODO')
+
+    @property
+    def release_files(self):
+        # use to get the list of files that will be included in a release
+        # so that we can limit the log to only those files
+        mm = manifest_maker(Distribution())
+        mm.distribution.script_name = 'setup.py'  # FIXME check path on this one
+        mm.manifest = 'MANIFEST.in'
+        mm.filelist = FileList()
+        with self.folder:
+            mm.add_defaults()
+            mm.read_template()
+            mm.add_license_files()
+
+        mm.prune_file_list()
+        mm.filelist.files += ['MANIFEST.in']
+        mm.filelist.sort()
+        mm.filelist.remove_duplicates()
+        return mm.filelist.files
+
+    def commits_since_last_release(self):
+        log = self.repo.git.log("--format='%aI %an %h %s'",
+                                f'{self.tag}..HEAD',
+                                '--', *[(self.folder / f) for f in self.release_files])
+        entries = [e[1:-1] for e in log.split('\n')]
+        return entries
 
     @property
     def module_init_file(self):
@@ -594,15 +731,10 @@ class SetupPath(aug.RepoPath):
             for f in self.glob('setup.py'):
                 return self
 
+        if self.parent == self:
+            raise ValueError('No setup.py found.')
+
         return self.parent.folder
-
-    @property
-    def pypi_json(self):
-        if not hasattr(self, '_pypi_json'):
-            self._pypi_request = requests.get(f'https://pypi.org/pypi/{self.arg_packagename}/json')
-            self._pypi_json = self._pypi_request.json()
-
-        return self._pypi_json
 
     @property
     def arg_org(self):
@@ -633,24 +765,56 @@ class SetupPath(aug.RepoPath):
     def command(self):
         rest = self.arg_rest
         rest = ' ' + self.rest if rest else ''
-        return f'build-release {self.arg_org} {self.arg_repo} {self.arg_folder} {self.arg_packagename} {self.version_new}{rest}'
+        return (
+            f'build-release {self.arg_org} {self.arg_repo} {self.arg_folder} '
+            f'{self.arg_packagename} {self.version_new}{rest}')
 
 
 SetupPath._bind_flavours()
 
 
 def main():
-   sp = SetupPath('.')  # options.path
-   print(sp.version_next())
-   print(sp.command)
-   spn = SetupPath('~/git/rdflib').expanduser()
-   asdf = sorted([Version(_) for _ in spn.pypi_json['releases'].keys()])
-   print(asdf)
-   print([v.next('current') for v in asdf])
-   print([v.next('dev') for v in asdf])
-   print([v.next('minor') for v in asdf])
-   #breakpoint()
+    import sys
+    from pprint import pprint
 
+    def wnv(v, n):
+        try:
+            return next_version(v, n)
+        except Exception as e:
+            return 'ERROR', v, n, e
+
+    #sp = SetupPath('.')  # options.path
+    sps = sys.argv[1]
+    sp = SetupPath(sps)  # options.path
+    cslr = sp.commits_since_last_release()
+    print('commits since release', len(cslr))
+    print('next                 ', sp.version_next())
+    print('repo module version  ', sp.version_repo)
+    print('latest release pypi  ', sp.version_latest_pypi)
+    print('latest release github', sp.version_latest_github)
+    print('latest repo tag      ', sp.version_tag)  # should not update until after github release?
+    print(sp.command)
+    print('\n'.join(cslr))
+    # TODO need an auto version bump and commit command
+    test = False
+    if test:
+        spn = SetupPath('~/git/rdflib').expanduser()
+        asdf = sorted([parse_version(_) for _ in spn.pypi_json['releases'].keys()])
+        pprint(asdf)
+        pprint([wnv(v, 'current') for v in asdf])
+        pprint([wnv(v, 'dev') for v in asdf])  # FIXME dev and pre implicitly bump to release but some may need to spec
+        pprint([wnv(v, 'pre') for v in asdf])
+        pprint([wnv(v, 'a') for v in asdf])
+        pprint([wnv(v, 'b') for v in asdf])
+        pprint([wnv(v, 'rc') for v in asdf])
+        pprint([wnv(v, 'release') for v in asdf])
+        pprint([wnv(v, 'micro') for v in asdf])
+        pprint([wnv(v, 'minor') for v in asdf])
+        pprint([wnv(v, 'major') for v in asdf])
+        pprint([wnv(v, 'post') for v in asdf])
+        pprint([wnv(v, 'local') for v in asdf])
+
+    #breakpoint()
 
 if __name__ == '__main__':
     main()
