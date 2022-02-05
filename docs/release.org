@@ -178,8 +178,11 @@ build-release () {
 
     if [[ $(git tag -l ${tag}) ]]; then
         gsh=$(git rev-parse --short HEAD)
-        initpath=$(grep -l __version__ $(ls */__init__.py))
-        version=${version}+${gsh}
+        verspath=$(grep -l '__version__.\+=' $(ls */*.py))
+        # this commit count doesn't quite match the one we get
+        # from the python code which checks only files in sdist
+        commit_count=$(git rev-list ${tag}..HEAD -- . | wc -l)
+        version=${version}+${commit_count}.${gsh}
         tag=${tag}+${gsh}
         echo "${tag} has already been released for this repo!"
         echo "running with ${tag} ${version} instead"
@@ -194,9 +197,9 @@ build-release () {
     fi
     #git checkout ${version}  # only if all tests are go and release is tagged
 
-    if [ -n ${initpath} ]; then  # apply local version after checkout
-        sed -i '/__version__/d' "${initpath}"  # handle bad semantics for find_version
-        echo "__version__ = '${version}'" >> "${initpath}"
+    if [[ -n ${verspath} ]]; then  # apply local version after checkout
+        sed -i '/__version__/d' "${verspath}"  # handle bad semantics for find_version
+        echo "__version__ = '${version}'" >> "${verspath}"
     fi
 
     ## build release artifacts
