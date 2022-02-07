@@ -1,3 +1,4 @@
+import ast
 import copy
 import pickle
 import itertools
@@ -215,6 +216,10 @@ def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet
     result = ss.values().get(spreadsheetId=SPREADSHEET_ID, range=sheet_name).execute()
     values = result.get('values', [])
 
+    results_formula = ss.values().get(spreadsheetId=SPREADSHEET_ID, range=sheet_name,
+                                      valueRenderOption='FORMULA').execute()
+    values_formula = results_formula.get('values', [])
+
     if fetch_grid:
         rm = len(values)
         cm = max([len(c) for c in values])
@@ -238,7 +243,7 @@ def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet
         grid = {}
         cells_index = {}
 
-    return values, grid, cells_index
+    return values, values_formula, grid, cells_index
 
 
 def get_cells_from_grid(grid, title, filter_cell):
@@ -328,12 +333,26 @@ class Cell:
             return v
 
     @property
+    def value_formula(self):
+        # XXX HACK not kept in sync DO NOT USE THIS IF YOU MODIFY THE SHEET
+        return self.sheet._values_formula[self.row_index][self.column_index]
+
+    @property
     def grid(self):
         return self.sheet.get_cell(self.row_index, self.column_index)
 
     @property
     def hyperlink(self):
-        return self.grid.get('hyperlink', None)
+        # FIXME see if we can get this in some other way than the grid e.g. via ValueRenderOption=FORMULA
+        if self.grid:
+            return self.grid.get('hyperlink', None)
+        else:
+            vf = self.value_formula
+            prefix = '=HYPERLINK'
+            if vf.startswith(prefix):
+                tup_str = vf[len(prefix):]
+                link, text = ast.literal_eval(tup_str)
+                return link
 
     @property
     def atag(self):
@@ -681,7 +700,7 @@ class Sheet:
 
         self.metadata()
 
-        values, grid, cells_index = get_sheet_values(
+        values, values_formula, grid, cells_index = get_sheet_values(
             self.name,
             self.sheet_name,
             spreadsheet_service=self._spreadsheet_service,
@@ -693,6 +712,13 @@ class Sheet:
         self._values = [list(r) for r in
                         zip(*itertools.zip_longest(*self.raw_values,
                                                    fillvalue=''))]
+
+        # FIXME XXX WARNING values_formula is NOT KEPT IN SYNC RIGHT NOW
+        self.raw_values_formula = values_formula
+        self._values_formula = [
+            list(r) for r in
+            zip(*itertools.zip_longest(*self.raw_values_formula,
+                                       fillvalue=''))]
         try:
             self.byCol = byCol(self.values, to_index=self.index_columns)
         except ValueError as e:
