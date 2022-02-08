@@ -531,7 +531,7 @@ class Column:
             # FIXME multi column primary keys ??
             # FIXME normalization ??
             col = self.sheet.index_columns[0]
-            row_header_column_index = self.sheet.byCol.header.index(col)
+            row_header_column_index = getattr(self.sheet.row_object(0), col)().column_index
             # urg the perf
             return [r[row_header_column_index] for r in self.sheet.values]
 
@@ -733,7 +733,7 @@ class Sheet:
 
         self._reapply_uncommitted()
 
-        return self._meta, self.raw_values, grid
+        return self._meta, self.raw_values, self.raw_values_formula, grid
 
         #self._lol_g, self._lol_c = grid, cells_index  # WHAT! this causes the problem !?
         #import copy
