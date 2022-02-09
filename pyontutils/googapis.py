@@ -70,10 +70,11 @@ class Main(Dispatcher):
 
         if self.options.drive:
             suffixes = []
-            if suffix:
-                suffixes.append(suffix)
 
             suffixes += ['.' + s for s in self.options.drive_scope]
+
+            if suffix and not suffixes:
+                suffixes.append(suffix)
 
             if not suffixes:
                 suffixes = '',

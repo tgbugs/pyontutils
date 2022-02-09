@@ -650,6 +650,15 @@ class Sheet:
 
     _saf = None  # SIGH
     def _setup(self):
+        if not hasattr(Sheet, '_Sheet__drive_service_ro'):
+            service = _get_oauth_service(
+                api='drive', version='v3',
+                SCOPES=['https://www.googleapis.com/auth/drive.metadata.readonly'],
+                service_account_file=self._saf)
+            Sheet.__drive_service_ro = service.files()
+
+        self._drive_service = Sheet.__drive_service_ro
+
         if self.readonly:
             if not hasattr(Sheet, '_Sheet__spreadsheet_service_ro'):
                 # I think it is correct to keep this ephimoral
@@ -679,6 +688,15 @@ class Sheet:
         # on the fly for each sheet?
         return self._meta
 
+    def metadata_file(self):
+        resp = (self._drive_service
+                .get(fileId=self._sheet_id(),
+                     supportsAllDrives=True,
+                     fields='*')
+                .execute())
+        self._meta_file = resp
+        return self._meta_file
+
     def _fetch_from_other_sheet(self, other):
         """ fix for rate limits when testing """
         self._meta = copy.deepcopy(other._meta)
@@ -699,6 +717,7 @@ class Sheet:
             fetch_grid = self.fetch_grid
 
         self.metadata()
+        self.metadata_file()
 
         values, values_formula, grid, cells_index = get_sheet_values(
             self.name,
@@ -733,7 +752,7 @@ class Sheet:
 
         self._reapply_uncommitted()
 
-        return self._meta, self.raw_values, self.raw_values_formula, grid
+        return self._meta, self._meta_file, self.raw_values, self.raw_values_formula, grid
 
         #self._lol_g, self._lol_c = grid, cells_index  # WHAT! this causes the problem !?
         #import copy
