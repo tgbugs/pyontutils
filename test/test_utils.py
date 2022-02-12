@@ -1,5 +1,7 @@
 import ast
 import unittest
+from datetime import datetime
+from pyontutils import utils
 from pyontutils.utils import injective_dict, Async, deferred, listIn, asStr
 
 
@@ -77,3 +79,10 @@ class TestAstString(unittest.TestCase):
         asdf = asStr(ast.parse("f'''i am a format docstring {_ddconf}'''"),
                     prior=ast.parse("_ddconf='another-string'\n").body,)
         assert ast.literal_eval(asdf) == "i am a format docstring 'another-string'"
+
+
+class TestDateFormats(unittest.TestCase):
+    def test_isoformat(self):
+        now = datetime.now()
+        utils.isoformat(now)
+
