@@ -11,7 +11,6 @@ import mimetypes
 import subprocess
 import idlib
 import rdflib
-from pyld import jsonld
 from inspect import getsourcefile
 from pathlib import Path, PurePath
 from itertools import chain
@@ -114,6 +113,7 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
 
 
 def populateFromJsonLd(graph, path_or_blob, pyld=False):
+    from pyld import jsonld
     def convert_element(blob,
                         _lu={'literal': rdflib.Literal,
                              'IRI': rdflib.URIRef,

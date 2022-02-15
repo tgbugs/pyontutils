@@ -50,12 +50,12 @@ def needs_keast_namespace(config):
     # FIXME spinal cord white matter axons are missing from these bags
 
     # neuron populations
-    neuron_1 = [kNeuron(PG, n_bl, BDWsyn, BNWsyn, para_post, id_=ntkb['1'], **kld(1))]  # pos
-    neuron_2 = [kNeuron(PG, n_bl, synloc, sym_post, ntk_2_ent) for synloc in (BDWsyn, BNWsyn)]  # sos # FIXME smooth muslce only
-    neuron_3 = [kNeuron(IMG, BDWsyn, BNWsyn, id_=ntkb['3'], **kld(3))]  # sos # FIXME smooth muscle only
+    neuron_1 = [kNeuron(PG, n_bl, BDWsyn, BNWsyn, para, post, id_=ntkb['1'], **kld(1))]  # pos
+    neuron_2 = [kNeuron(PG, n_bl, synloc, sym, post, ntk_2_ent) for synloc in (BDWsyn, BNWsyn)]  # sos # FIXME smooth muslce only
+    neuron_3 = [kNeuron(IMG, BDWsyn, BNWsyn, sym, post, id_=ntkb['3'], **kld(3))]  # sos # FIXME smooth muscle only
 
     neuron_4 = []  # sos
-    with Neuron(n_ps, PGax, n_bl):
+    with Neuron(n_ps, PGax, n_bl, sym, post):
         for soma_location_id in four_soma_locs:
             somaloc = Phenotype(soma_location_id, slp)
             for exits_via in ((L6_gr,), (S1ax, S1_gr,)):
@@ -65,7 +65,7 @@ def needs_keast_namespace(config):
                     neuron_4.append(n4)
 
     neuron_5 = []  # pre
-    with Neuron(VII, n_ps, PGax, PGsyn, ntk_1_fcon):
+    with Neuron(VII, n_ps, PGax, PGsyn, ntk_1_fcon, para, pre):
         for somaloc, ventral_root_exit in zip((L6,    S1),
                                               (L6_vr, S1_vr)):
             n5 = kNeuron(somaloc, ventral_root_exit, ntk_5_ent)
@@ -79,7 +79,7 @@ def needs_keast_namespace(config):
     neuron_6 = []  # sre
     neuron_7 = []  # sre
     neuron_8 = []  # sre
-    with Neuron(VII, WMax, sos_fcon):
+    with Neuron(VII, WMax, sos_fcon, sym, pre):
         for i, somaloc in enumerate((L1, L2)):
             soma_index = i + 2  # L1 aligns to the 3rd the sypathetic ganglion
             # which is of course the L1 sypathetic ganglion, but it is
@@ -101,7 +101,7 @@ def needs_keast_namespace(config):
                     neuron_8.append(n8)
 
     neuron_9 = []  # slm
-    with Neuron(IX, WMax, n_pu, URTsyn):
+    with Neuron(IX, WMax, n_pu, URTsyn, motor):
         for somaloc, ventral_root_exit in zip((L5,    L6),
                                               (L5_vr, L6_vr)):
             n9 = kNeuron(somaloc, ventral_root_exit, ntk_9_ent)
@@ -110,7 +110,7 @@ def needs_keast_namespace(config):
     neuron_10 = []  # fos
     neuron_11 = []  # fos
     neuron_12 = []  # fos
-    with Neuron(Isyn, IIsyn, Vsyn, VIIsyn, Xsyn):  # 10 11 12 XXX layers are wrong, intersection has to come before phenotype
+    with Neuron(Isyn, IIsyn, Vsyn, VIIsyn, Xsyn, sens):  # 10 11 12 XXX layers are wrong, intersection has to come before phenotype
         for somaloc in (L6_dr, S1_dr):
             n10 = kNeuron(somaloc, n_ps_dn, PGdn, n_bl_dn, ntk_10_ent, )  # TODO a bunch of other sensory terminals
             neuron_10.append(n10)
@@ -140,7 +140,7 @@ def needs_keast_namespace(config):
     fos = first_order_sensory = [neuron_10, neuron_11, neuron_12]
     slm = somatic_lower_motor = [neuron_9]
 
-    pre = parasympathetic_pre_ganglionic = [neuron_5]
+    _pre = parasympathetic_pre_ganglionic = [neuron_5]
     pos = parasympathetic_post_ganglionic = [neuron_1]
     # para pre -> has soma located in some not sympathetic chain and projects to some ganglion that is also projected to by some sym pre
     # para post -> has reverse connection phenotype some para pre
@@ -294,10 +294,21 @@ class Keast2020(LocalNameManager):
     sos_fcon = Phenotype('ilxtr:sympathetic-post-ganglionic', fconp)  # FIXME likely overly broad?
 
     # (para)?sympathetic colorings (until we can get deeper modelling correct)
-    para_pre = Phenotype('ilxtr:neuron-phenotype-para-pre')
-    para_post = Phenotype('ilxtr:neuron-phenotype-para-post')
-    sym_pre = Phenotype('ilxtr:neuron-phenotype-sym-pre')
-    sym_post = Phenotype('ilxtr:neuron-phenotype-sym-post')
+    #para_pre = Phenotype('ilxtr:neuron-phenotype-para-pre')
+    #para_post = Phenotype('ilxtr:neuron-phenotype-para-post')
+    #sym_pre = Phenotype('ilxtr:neuron-phenotype-sym-pre')
+    #sym_post = Phenotype('ilxtr:neuron-phenotype-sym-post')
+
+    para = Phenotype('ilxtr:ParasympatheticPhenotype')
+    sym = Phenotype('ilxtr:SympatheticPhenotype')
+    pre = Phenotype('ilxtr:PreGanglionicPhenotype')
+    post = Phenotype('ilxtr:PostGanglionicPhenotype')
+
+    sens = Phenotype('ilxtr:SensoryPhenotype')
+    motor = Phenotype('ilxtr:MotorPhenotype')
+    #intrin = Phenotype('ilxtr:IntrinsicPhenotype')
+
+
 
     # phenotypes over layers do not compose well because the
     # intersection of the layer is ambiguous with regard to which

@@ -1501,8 +1501,15 @@ class graphBase:
         out += f'from {cls.__import_name__} import *\n\n'
 
         all_types = set(type(n) for n in cls.neurons())
+        def getfe(c):  # handle repl case (SIGH)
+            # FIXME this will cause errors when we try to read the class back in
+            try:
+                return Path(inspect.getfile(c)).exists()
+            except TypeError:
+                return False
+
         _subs = [inspect.getsource(c) for c in subclasses(Neuron)
-                 if c in all_types and Path(inspect.getfile(c)).exists()
+                 if c in all_types and getfe(c)
                  and c.__name__ not in __all__]
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
         #log.debug(str(all_types))
