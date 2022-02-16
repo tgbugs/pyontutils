@@ -25,7 +25,29 @@ class NeuronKeast2020(Neuron):  # FIXME should be an EBM but something is a bit 
 kNeuron = NeuronKeast2020
 
 
+def ambig(name):
+    return f'{name} of Keast bladder model'
+
+
+labels = {
+1: ambig('pelvic ganglion parasympathetic neuron'),
+2: ambig('pelvic ganglion sympathetic neuron'),
+3: ambig('inferior mesenteric ganglion neuron'),
+4: ambig('sympathetic chain ganglion neuron'),
+5: ambig('parasympathetic spinal preganglionic neuron'),
+6: 'sympathetic preganglionic neuron innervating pelvic ganglion neuron',
+7: 'sympathetic preganglionic neuron innervating inferior mesenteric ganglion neuron',
+8: 'sympathetic preganglionic neuron innervating sympathetic chain ganglion neuron',
+9: 'urethral rhabdosphincter motor neuron',
+10: 'L6-S1 sensory neurons innervating bladder',
+11: 'L1-L2 sensory neurons innervating bladder',
+12: 'sensory neuron innervating urethral rhabdosphincter',}
+
+
 def kl(n):
+    if n in labels:
+        return labels[n]
+
     return f'Neuron population {n} of the Keast bladder model'
 
 
