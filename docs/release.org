@@ -119,11 +119,12 @@ echo $REST
 
 if [[ ${folder} == *"/"* || -n ${TAG_PREFIX} ]]; then
     local tag=${packagename}-${version}
-    local clone_target=${repo}-${packagename}  # prevent git lock collisions
+    local clone_target=${repo}-${packagename}-${PYTHON_VERSION}  # prevent git lock collisions
     folder="${clone_target}/${folder#*/}"
 else
     local tag=${version}
-    local clone_target=${repo}
+    local clone_target=${repo}-${PYTHON_VERSION}
+    folder=${clone_target}
 fi
 
 # TODO make sure no vars are null
@@ -146,7 +147,7 @@ build-release () {
 
     cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
 
-    TEST_PATH=${BASE_PATH}/release-testing/${packagename}  # allow multiple builds at the same time
+    TEST_PATH=${BASE_PATH}/release-testing/${PYTHON_VERSION}-${packagename}  # allow multiple builds at the same time
 
     if [ -d ${repo} ]; then
         rm -r ${TEST_PATH}
