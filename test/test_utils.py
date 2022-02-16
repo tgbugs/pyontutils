@@ -1,6 +1,6 @@
 import ast
 import unittest
-from datetime import datetime
+from datetime import datetime, date
 from pyontutils import utils
 from pyontutils.utils import injective_dict, Async, deferred, listIn, asStr
 
@@ -84,5 +84,6 @@ class TestAstString(unittest.TestCase):
 class TestDateFormats(unittest.TestCase):
     def test_isoformat(self):
         now = datetime.now()
-        utils.isoformat(now)
-
+        n = utils.isoformat(now)
+        today = date.today()
+        t = utils.isoformat(today)
