@@ -1026,7 +1026,7 @@ class Edge(tuple):
         elif not hasattr(self, '_blob'):
             self._blob = {k:e for k, e in
                           zip(('sub', 'pred', 'obj'),
-                              [hm._qhrm(e) for e in self]
+                              [nm._qhrm(e) for e in self]
                               if nm is not None else
                               self)}
 
