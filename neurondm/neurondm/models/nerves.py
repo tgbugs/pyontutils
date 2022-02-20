@@ -25,6 +25,7 @@ class Row(RowBase):
     def entailed_molecular_phenotypes(self):
         return []
 
+
 class FromNLP(Sheet):
     name = 'nlp-pns'
 
@@ -39,12 +40,13 @@ class NervesEBM(CutsV1, FromNLP):
 
 def main():
 
-    sheets.Row = Row  # monkey batch
+    sheets.Row = Row  # monkey patch
 
     ner = NervesEBM()
     ros = [ner.row_object(i + 1) for i, r in enumerate(ner.values[1:])]
     config = Config('nerves')
     _final = [r.neuron_cleaned(context=NeuronNerves(Species.Human)) for r in ros if r.include()]
+    # FIXME TODO add references
     final = _final
     [f._sigh() for f in final]
     config.write()

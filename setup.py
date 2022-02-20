@@ -5,11 +5,14 @@ from setuptools import setup
 
 
 def find_version(filename):
-    _version_re = re.compile(r"__version__ = '(.*)'")
+    _version_re = re.compile(r"__version__ = ['\"](.*)['\"]")
+    last = None  # match python semantics
     for line in open(filename):
         version_match = _version_re.match(line)
         if version_match:
-            return version_match.group(1)
+            last = version_match.group(1)
+
+    return last
 
 
 __version__ = find_version('pyontutils/__init__.py')
@@ -60,6 +63,10 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        #'Programming Language :: Python :: 3.11',  # lxml issues
+        'Programming Language :: Python :: Implementation :: CPython',
+        'Programming Language :: Python :: Implementation :: PyPy',
         'Operating System :: POSIX :: Linux',
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft :: Windows',

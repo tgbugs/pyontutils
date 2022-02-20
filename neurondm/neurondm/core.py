@@ -56,6 +56,7 @@ __all__ = [
     'EntailedPhenotype',
     'NegEntailedPhenotype',
     'LogicalPhenotype',
+    'EntailedLogicalPhenotype',
     'Neuron',
     'NeuronCUT',
     'NeuronEBM',
