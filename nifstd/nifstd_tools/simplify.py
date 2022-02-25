@@ -124,9 +124,10 @@ ext = 'apinatomy:external'
 fasIn = 'apinatomy:fasciculatesIn'
 endIn = 'apinatomy:endsIn'
 layerIn = 'apinatomy:layerIn'
+onts = 'apinatomy:ontologyTerms'
 
 
-def apinat_deblob(blob, remove_converge=False):
+def apinat_deblob(blob, remove_converge=False, ontology_terms_predicate=onts):
     # FIXME I think we may be over or under simplifying just a bit
     # somehow getting double links at the end of the chain
 
@@ -175,7 +176,7 @@ def apinat_deblob(blob, remove_converge=False):
     sos = set(sov for e in blob['edges'] for sov in (e['sub'], e['obj']))
     blob['nodes'] = [n for n in blob['nodes'] if n['id'] in sos]
     somas = [e for e in edges if e['pred'] == 'apinatomy:internalIn']
-    externals = [e for e in edges if e['pred'] == 'apinatomy:external']
+    externals = [e for e in edges if e['pred'] == ontology_terms_predicate]
     ordering_edges = [e for e in edges if e['pred'] == 'apinatomy:next']
     return blob, edges, somas, externals, ordering_edges
 
