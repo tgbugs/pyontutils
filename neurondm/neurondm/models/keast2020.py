@@ -247,19 +247,28 @@ class Keast2020(LocalNameManager):
 
     # nerves
     n_bl = Phenotype('ilxtr:nerve-bladder', alp)
-    n_hg = Phenotype('ilxtr:nerve-hypogastric', alp)
-    n_ls = Phenotype('ilxtr:nerve-lumbar-splanic', alp)
-    n_ps = Phenotype('ilxtr:nerve-pelvic-splanic', alp)
-    n_pu = Phenotype('ilxtr:nerve-pudendal', alp)
+    #n_hg = Phenotype('ilxtr:nerve-hypogastric', alp)
+    #n_ls = Phenotype('ilxtr:nerve-lumbar-splanic', alp)
+    #n_ps = Phenotype('ilxtr:nerve-pelvic-splanic', alp) # splanchnic
+    #n_pu = Phenotype('ilxtr:nerve-pudendal', alp)
+    n_hg = Phenotype('UBERON:0005303', alp)
+    n_ls = Phenotype('UBERON:0018683', alp)
+    n_ps = Phenotype('UBERON:0018675', alp)
+    n_pu = Phenotype('UBERON:0011390', alp)
 
     # sensory ??ents
     n_bl_dn = Phenotype('ilxtr:nerve-bladder', dlp)
-    n_hg_dn = Phenotype('ilxtr:nerve-hypogastric', dlp)
-    n_ls_dn = Phenotype('ilxtr:nerve-lumbar-splanic', dlp)
-    n_ps_dn = Phenotype('ilxtr:nerve-pelvic-splanic', dlp)
-    n_pu_dn = Phenotype('ilxtr:nerve-pudendal', dlp)
+    #n_hg_dn = Phenotype('ilxtr:nerve-hypogastric', dlp)
+    #n_ls_dn = Phenotype('ilxtr:nerve-lumbar-splanic', dlp)
+    #n_ps_dn = Phenotype('ilxtr:nerve-pelvic-splanic', dlp)
+    #n_pu_dn = Phenotype('ilxtr:nerve-pudendal', dlp)
+    n_hg_dn = Phenotype('UBERON:0005303', dlp)
+    n_ls_dn = Phenotype('UBERON:0018683', dlp)
+    n_ps_dn = Phenotype('UBERON:0018675', dlp)
+    n_pu_dn = Phenotype('UBERON:0011390', dlp)
 
-    URTdn = Phenotype('ilxtr:urethra', dlp)
+    #URTdn = Phenotype('ilxtr:urethra', dlp)
+    URTdn = Phenotype('UBERON:0000057', dlp)
 
     # synaptic locations
     IMGsyn = Phenotype('UBERON:0005453', synp)
@@ -271,7 +280,8 @@ class Keast2020(LocalNameManager):
     BDWsyn = Phenotype('ilxtr:bladder-dome-wall', synp)
     BNWsyn = Phenotype('ilxtr:bladder-neck-wall', synp)
 
-    URTsyn = Phenotype('ilxtr:urethra', synp)
+    #URTsyn = Phenotype('ilxtr:urethra', synp)
+    URTsyn = Phenotype('UBERON:0000057', synp)
 
     BNST = Phenotype('UBERON:0001880', slp)
     CeA = Phenotype( 'UBERON:0002883', slp)  # central amygdala
