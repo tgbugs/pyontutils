@@ -1862,7 +1862,9 @@ class makeGraph:
     def del_namespace(self, prefix):
         try:
             self.namespaces.pop(prefix)
-            self.g.store._IOMemory__namespace.pop(prefix)
+            attr = f'_{self.g.store.__class__.__name__}__namespace'
+            internal_dict = getattr(self.g.store, attr)
+            internal_dict.pop(prefix)
         except KeyError:
             print('Namespace (%s) does not exist!' % prefix)
             pass
