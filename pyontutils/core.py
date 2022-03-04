@@ -151,9 +151,12 @@ def populateFromJsonLd(graph, path_or_blob, pyld=False):
                     yield tuple(convert_element(e) for e in
                                 (dt['subject'], dt['predicate'], dt['object']))
 
+        if '@context' in j:
+            inctx = j['@context']
+        else:
+            inctx = {}
         proc = jsonld.JsonLdProcessor()
-        ctx = proc.process_context(proc._get_initial_context({}),
-                                j['@context'], {})
+        ctx = proc.process_context(proc._get_initial_context({}), inctx, {})
 
         # FIXME how to deal with non prefixed cases like definition
         curies = {k:v['@id'] for k, v in ctx['mappings'].items() if
