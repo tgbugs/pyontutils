@@ -761,6 +761,22 @@ Set =path-ontologies-sparc-data-dev= here
 :properties:
 :visibility: folded
 :end:
+
+# TODO figure out how to generate this via python or similar for all our loads I think?
+#+begin_src ttl
+@prefix ilxtr: <http://uri.interlex.org/tgbugs/uris/readable/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ilxtr:build-prov rdfs:label "build provenace record" ;
+    ilxtr:build-id ilxtr:build-id/??? ;
+    ilxtr:build-epoch 0 ;
+    ilxtr:build-datetime "0000-00-00T00:00:00.000000000Z" ;
+    ilxtr:build-date "0000-00-00" ;
+    ilxtr:build-time "00:00:00.000000000Z" ;
+    ilxtr:build-system "???" ;
+    ilxtr:build-type "SciGraph|Blazegraph" .
+#+end_src
+
 # huh, this winds up being about a 7 minute build, and 1.4 gigs unzipped ...
 # FIXME for some reason the primary folder is duplicated? is that my doing?
 #+name: run-load-graph-sparc-sckan
@@ -785,10 +801,12 @@ sed 's,sparc-data,sparc-sckan,g' > \
 #sed 's,http://ontology.neuinfo.org/NIF/,file://<<&path-build-sparc-sckan()>>/NIF-Ontology/,g' > \
 
 pushd <<&path-build-sparc-sckan()>>
-git clone ~/git/NIF-Ontology
+git clone ~/git/NIF-Ontology # FIXME this fails if repo exists
+# TODO need to add logic to stash and pull
 pushd NIF-Ontology
 popd; popd
 
+# FIXME this fails if a previous load was run and not cleaned up
 python -m pyontutils.ontload graph \
 --fix-imports-only \
 --org SciCrunch \
@@ -962,12 +980,13 @@ you will need the second bit to prevent builds from failing due to missing depen
 # because __arch_install_post is set to nil in all cases?
 
 #+name: run-compile-scigraph-rpm
-#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (or #o755)
 #+begin_src bash :results output
 function build-scigraph-rpm () {
     pushd rpmbuild
     # pull changes if the local repo already exists
     if [ -d BUILD/SciGraph/.git ]; then
+        git -C BUILD/SciGraph stash
         git -C BUILD/SciGraph pull
         git -C BUILD/SciGraph remote add scicrunch https://github.com/SciCrunch/SciGraph.git
         git -C BUILD/SciGraph fetch scicrunch
@@ -1342,6 +1361,7 @@ local PATH_RUNTIME=${PATH_RUNTIME:-<<path-runtime()>>}
 local FOLDER_NAME_RUNTIME=${FOLDER_NAME_RUNTIME:-<<folder-name-runtime()>>}
 #+end_src
 
+# FIXME FILE_NAME_ZIP makes bad assumptions about the symlink always only being a file name not a full path
 #+name: &local-deploy-command
 #+caption: &local-deploy-command
 #+header: :comments noweb
@@ -1416,6 +1436,7 @@ function deploy-graph () {
         rsync --rsh ssh "${PATH_ZIP}" "${SERVER_AS_SCIGRAPH}:${PATH_RUNTIME}" || return $?
         ssh ${SERVER_AS_SCIGRAPH} "pushd \"${PATH_RUNTIME}\"; unzip -n \"${FILE_NAME_ZIP}\"" || return $?
 
+        # FIXME if this fails it is extremely difficult/annoying to restart
         ssh -t ${SERVER} "$(typeset -f service-manager); service-manager scigraph stop" || return $?
 
         ssh ${SERVER_AS_SCIGRAPH} "
