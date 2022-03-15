@@ -26,7 +26,7 @@ kNeuron = NeuronKeast2020
 
 
 def ambig(name):
-    return f'{name} of Keast bladder model'
+    return f'{name} (kblad)'
 
 
 labels = {
@@ -35,12 +35,12 @@ labels = {
 3: ambig('inferior mesenteric ganglion neuron'),
 4: ambig('sympathetic chain ganglion neuron'),
 5: ambig('parasympathetic spinal preganglionic neuron'),
-6: 'sympathetic preganglionic neuron innervating pelvic ganglion neuron',
-7: 'sympathetic preganglionic neuron innervating inferior mesenteric ganglion neuron',
-8: 'sympathetic preganglionic neuron innervating sympathetic chain ganglion neuron',
+6: ambig('sympathetic preganglionic neuron innervating pelvic ganglion neuron'),
+7: ambig('sympathetic preganglionic neuron innervating inferior mesenteric ganglion neuron'),
+8: ambig('sympathetic preganglionic neuron innervating sympathetic chain ganglion neuron'),
 9: 'urethral rhabdosphincter motor neuron',
-10: 'L6-S1 sensory neurons innervating bladder',
-11: 'L1-L2 sensory neurons innervating bladder',
+10: 'L6-S1 sensory neuron innervating bladder',
+11: 'L1-L2 sensory neuron innervating bladder',
 12: 'sensory neuron innervating urethral rhabdosphincter',}
 
 
@@ -109,17 +109,17 @@ def needs_keast_namespace(config):
             with Neuron(somaloc, *common[somaloc]):
                 with Neuron(n_ls, *common67[somaloc]):
                     # 6
-                    n6 = kNeuron(IMGax, n_hg, PGsyn, ntk_6_ent, )
-                    neuron_6.append(n6)  # TODO fcon
+                    n6 = kNeuron(IMGax, n_hg, PGsyn, ntk_6_ent, ntk_2_fcon)
+                    neuron_6.append(n6)
                     # 7
-                    n7 = kNeuron(IMGsyn, ntk_7_ent, )
-                    neuron_7.append(n7)  # TODO fcon
+                    n7 = kNeuron(IMGsyn, ntk_7_ent, ntk_3_fcon)
+                    neuron_7.append(n7)
 
                 # 8
                 for syn_index, synloc in enumerate(four_soma_locs):
                     axons_in = syn_chain_axons_in(syn_index, soma_index)
                     syn = Phenotype(synloc, synp)
-                    n8 = kNeuron(syn, *axons_in, ntk_8_ent)
+                    n8 = kNeuron(syn, *axons_in, ntk_8_ent, ntk_4_fcon)
                     neuron_8.append(n8)
 
     neuron_9 = []  # slm
@@ -320,6 +320,9 @@ class Keast2020(LocalNameManager):
     # making it a superclass is probably better than
 
     ntk_1_fcon = Phenotype('ilxtr:neuron-type-keast-1', fconp)
+    ntk_2_fcon = Phenotype('ilxtr:neuron-type-keast-2', fconp)
+    ntk_3_fcon = Phenotype('ilxtr:neuron-type-keast-3', fconp)
+    ntk_4_fcon = Phenotype('ilxtr:neuron-type-keast-4', fconp)
 
     # FIXME this is super confusing, but this id is equivalent to all
     # neurons that bear the ilxtr:neuron-phenotype-sym-post phenotype
