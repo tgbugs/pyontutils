@@ -61,8 +61,8 @@ hasSomaPhenotype,,,Expresses a relationship between a neuron type and some pheno
 ,,,,,,,,
 hasAxonLocatedIn,"LocationOfAxonArborization, LocationOfLocalAxonArborization",,,,,hasProcessLocatedIn,,"asymmetric, irreflexive"
 #projectsThrough,,,,,"has weak semantics, axons in and presynatical terminals in are ok for traditional tracing experiments, fasciculates with?",,,
-hasPresynapticElementIn,,,,,"projectsTo does not work because of dendrodentritic synapses, for the same reason this cannot be a subProperty of hasAxonLocatedIn",hasProcessLocatedIn,,"asymmetric, irreflexive"
-hasPresynapticTerminalsIn,,,,,Are there cases where there are boutons that form on dendrites?,hasPresynapticElementIn,,
+hasPresynapticElementIn,,,,,"DO NOT USE, AMBIGUOUS! projectsTo does not work because of dendrodentritic synapses, for the same reason this cannot be a subProperty of hasAxonLocatedIn",hasProcessLocatedIn,,"asymmetric, irreflexive"
+hasPresynapticTerminalsIn,,,,,"DO NOT USE, AMBIGUOUS! Are there cases where there are boutons that form on dendrites?",hasPresynapticElementIn,,
 hasAxonPresynapticElementIn,,,,,,"hasPresynapticElementIn,hasAxonLocatedIn",,
 hasSensorySubcellularElementIn,,,Expresses a relationship between a neuron and a nervous system region where that neuron has a part which is involved in the direct detection of sensory stimuli.,,"This is the equivalent of axon terminals for sensory dendrites in the peripheral nervous system. Not 100% sure on the modeling, but some mechanosensory neurons this would be the anatomcal region(s) where the Pacinian corpuscle are located.",hasDendriteLocatedIn,,"asymmetric, irreflexive"
 hasCircuitRolePhenotype,,,,,needs work,hasPhenotype,,"asymmetric, irreflexive"

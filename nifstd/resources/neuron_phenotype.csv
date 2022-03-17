@@ -54,12 +54,12 @@ ilxtr:RodMorphologicalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologic
 ilxtr:DiscMorphologicalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ,,,,,,,
 ,,,,,,,
-ilxtr:DenseAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
-ilxtr:SparseAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
-ilxtr:DescendingAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
-ilxtr:HorizontalAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
-ilxtr:LargeAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
-ilxtr:SmallAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
+ilxtr:DenseAxonPhenotype,ilxtr:AxonPhenotype,,,,,,hasAxonMorphologicalPhenotype
+ilxtr:SparseAxonPhenotype,ilxtr:AxonPhenotype,,,,,,hasAxonMorphologicalPhenotype
+ilxtr:DescendingAxonPhenotype,ilxtr:AxonPhenotype,,,,,,hasAxonMorphologicalPhenotype
+ilxtr:HorizontalAxonPhenotype,ilxtr:AxonPhenotype,,,,,,hasAxonMorphologicalPhenotype
+ilxtr:LargeAxonPhenotype,ilxtr:AxonPhenotype,,,,,,hasAxonMorphologicalPhenotype
+ilxtr:SmallAxonPhenotype,ilxtr:AxonPhenotype,,,,,,hasAxonMorphologicalPhenotype
 ,,,,,,,
 ilxtr:IvyPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:MediumSpinyPhenotype,"ilxtr:MorphologicalPhenotype,ilxtr:SpinyPhenotype",,,,,we really should be able to deal with spines in a convenient way,hasMorphologicalPhenotype

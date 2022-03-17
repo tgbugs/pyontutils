@@ -146,7 +146,7 @@ class CutsV1(Cuts):
                 else:
                     raise ValueError(cell)  # wat
                 return
-            elif header == 'Status':
+            elif header == 'Status 1.0':
                 # TODO
                 if cell == 'Yes':
                     do_release = True
@@ -525,6 +525,10 @@ class Row(sheets.Row):
         al = self.alignment_label().value
         return self.sheet.existing.get(al if al else self.label().value)
 
+    def status(self):
+        # column header renamed without warning
+        return self.status_1_0()
+
     def include(self):
         return self.status().value == 'Yes'
 
@@ -605,7 +609,8 @@ class Row(sheets.Row):
         pes = self.asPhenotypes()
         return self.neuron_class(*pes, label=self.label().value)
 
-    def neuron_cleaned(self, context=nullcontext):
+    def neuron_cleaned(self, context=nullcontext()):
+        # FIXME WARNING nullcontext behavior seems to have changed at some point !?
         conditional_entailed_predicates = (
             (ilxtr.hasSomaLocatedInLayer, (False or self.curie().value == 'NIFEXT:55')),  # martinotti cell
         )
@@ -725,7 +730,7 @@ def main():
             yield '' if value is None else value  # completely overwrite the sheet
 
     breakpoint()
-    rows = [list(replace(r, 'Status', 'definition', 'synonyms', 'PMID')) for r in reviewC]
+    rows = [list(replace(r, 'Status 1.0', 'definition', 'synonyms', 'PMID')) for r in reviewC]
     #resp = update_sheet_values('neurons-cut', 'Roundtrip', rows)
     if __name__ == '__main__':
         breakpoint()
@@ -733,6 +738,7 @@ def main():
 
 def main():
     #cv1 = CutsV1Lite()
+    sheets.Row = Row
     CutsV1.fetch_grid = False
     cv1 = CutsV1()
     hrm = [cv1.row_object(i) for i, r in enumerate(cv1.values)
