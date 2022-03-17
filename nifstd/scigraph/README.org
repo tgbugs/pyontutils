@@ -794,6 +794,7 @@ cat "$(dirname <<&path-ontologies-sparc-sckan()>>)/sparc-data.ttl" | \
 sed 's,<https://raw.githubusercontent.com/SciCrunch/NIF.\+ttl/,<http://ontology.neuinfo.org/NIF/ttl/,' | \
 sed 's/ilxtr:imports-\(big\|rel\)/owl:imports/g' | \
 sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-sckan()>>/,g' | \
+sed 's,https://cassava.ucsd.edu/sparc/preview/exports/,file://<<&path-build-sparc-sckan()>>/,g' | \
 sed 's,sparc-data,sparc-sckan,g' > \
 <<&path-build-sparc-sckan()>>/sparc-sckan.ttl
 
@@ -807,6 +808,7 @@ pushd NIF-Ontology
 popd; popd
 
 # FIXME this fails if a previous load was run and not cleaned up
+# XXX this should probably be run prior to calling release.org --build --sckan --no-blaze
 python -m pyontutils.ontload graph \
 --fix-imports-only \
 --org SciCrunch \
@@ -816,15 +818,19 @@ NIF \
 --branch dev \
 --graphload-ontologies <<&path-ontologies-sparc-sckan()>>
 
-# FIXME source these from kg release
-pushd ~/git/apinatomy-models/models/
-    for model_id in $(ls -d *); do
-        cp ${model_id}/derived/${model_id}.ttl <<&path-build-sparc-sckan()>>/;
-    done
+# XXX release.org --sckan --no-load # FIXME circularity still a bit of an issue
+_sckanl="$(ls -d /tmp/build/release-*-sckan | sort -u | tail -n 1)"
+pushd "${_sckanl}"
+cp -a data/*.ttl <<&path-build-sparc-sckan()>>/
 popd
 
-curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export-published.ttl | \
-     ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export-published.owl
+pushd <<&path-build-sparc-sckan()>>
+cat curation-export-published.ttl |
+${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export-published.owl
+popd
+
+#curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export-published.ttl | \
+#     ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export-published.owl
 
 load-graph \
 --path-build <<&path-build-sparc-sckan()>> \
