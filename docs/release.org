@@ -454,6 +454,20 @@ function final-release () {
 #+NAME: release-next
 #+HEADER: :shebang "#!/usr/bin/env python3"
 #+begin_src python :tangle ./../bin/release-next :tangle-mode (identity #o755)
+"""python package release workflows
+
+Usage:
+    release-next [options]
+    release-next info [options] <path>
+    release-next bump [current dev pre a b rc release micro minor major post local] [options] <path>
+
+Options:
+    -p --pretend            do a dry run to see what would be done
+    -c --component=PHASE    which component to bump
+    -t --test               run tests
+    -d --debug              debug mode
+    -h --help               show this
+"""
 import setuptools
 from setuptools.dist import Distribution
 from setuptools.command.egg_info import manifest_maker, FileList, log as eilog
@@ -462,6 +476,7 @@ import importlib.util
 from urllib.parse import urlparse
 import requests
 import augpathlib as aug
+from pyontutils import clifun as clif
 
 eilog.set_threshold(99)
 
@@ -536,7 +551,7 @@ def cons_next(d, ver, next):
     elif next in ('dev', 'post'):
         d[next] = next, vinc(getattr(ver, next))
     elif next in ('release', 'major', 'minor', 'micro'):
-        # FIXME this i
+        # FIXME this incorrect?
         release = d['release']
         if next == 'release':
             release = (*release[:-1], vinc(release[-1]))
@@ -576,8 +591,11 @@ def next_version(ver, next_phase='current', rel_comp='release'):
         cons_next(d, ver, next)
 
     _nver = ver._version._replace(**d)
-    newver = ver.__class__('0')
-    newver._version = _nver
+    _newver = ver.__class__('0')
+    _newver._version = _nver
+    # have to stringify so _key updates so comparisons are valid
+    # yay for leaking implementation details
+    newver = ver.__class__(str(_newver))
     return newver
 
 
@@ -651,7 +669,7 @@ class SetupPath(aug.RepoPath):
         vlp = self.version_latest_pypi
         vlr = self.version_latest_released
         assert vlp == vlr, f'wat {vlp} != {vlr}'
-        return next_version(vlp, next_phase=next_phase, rel_comp='release')
+        return next_version(vlp, next_phase=next_phase, rel_comp=rel_comp)
 
     @property
     def tag_prefix(self):
@@ -690,7 +708,7 @@ class SetupPath(aug.RepoPath):
         #return Version(self.setup_kwargs['version'])
 
     @property
-    def version_new(self):
+    def _version_new(self):  # XXX unused
         # TODO cases dev normal
         # want dev release but repo is at an unreleased normal
         # want normal, already released this one
@@ -791,6 +809,20 @@ class SetupPath(aug.RepoPath):
             f'build-release {self.arg_org} {self.arg_repo} {self.arg_folder} '
             f'{self.arg_packagename} {self.version_new}{rest}')
 
+    def bump(self, next_phase='current', rel_comp='release', pretend=False):
+        nv = self.version_next(next_phase=next_phase, rel_comp=rel_comp)
+        if nv == self.version_repo:
+            raise ValueError(f'already bumped to {nv} (though maybe not committed?)')
+        breakpoint()
+        if pretend:
+            print('would bump module', self.module_init_file,
+                  'for package name', self.setup_kwargs['name'],
+                  'from', self.version_repo,
+                  'to', nv)
+            return
+        # make the change in __init__ (or wherever)
+        # commit the change
+        # do NOT PUSH the change
 
 SetupPath._bind_flavours()
 
@@ -798,6 +830,12 @@ SetupPath._bind_flavours()
 def main():
     import sys
     from pprint import pprint
+    options, *ad = Options.setup(__doc__, version='release 0.0.0')
+    main = Main(options)
+    if main.options.debug:
+        print(main.options)
+
+    out = main()
 
     def wnv(v, n):
         try:
@@ -805,21 +843,8 @@ def main():
         except Exception as e:
             return 'ERROR', v, n, e
 
-    #sp = SetupPath('.')  # options.path
-    sps = sys.argv[1]
-    sp = SetupPath(sps)  # options.path
-    cslr = sp.commits_since_last_release()
-    print('commits since release', len(cslr))
-    print('next                 ', sp.version_next())
-    print('repo module version  ', sp.version_repo)
-    print('latest release pypi  ', sp.version_latest_pypi)
-    print('latest release github', sp.version_latest_github)
-    print('latest repo tag      ', sp.version_tag)  # should not update until after github release?
-    print(sp.command)
-    print('\n'.join(cslr))
     # TODO need an auto version bump and commit command
-    test = False
-    if test:
+    if options.test:
         spn = SetupPath('~/git/rdflib').expanduser()
         asdf = sorted([parse_version(_) for _ in spn.pypi_json['releases'].keys()])
         pprint(asdf)
@@ -837,6 +862,58 @@ def main():
         pprint([wnv(v, 'local') for v in asdf])
 
     #breakpoint()
+    return out
+
+
+class Options(clif.Options):
+
+    _phases = ('current', 'dev', 'pre', 'a', 'b', 'rc',
+               'release', 'micro', 'minor', 'major', 'post', 'local')
+
+    @property
+    def path(self):
+        return SetupPath(self._args['<path>'])
+
+    @property
+    def next_phase(self):
+        for phase in self._phases:
+            if phase in self._args and self._args[phase]:
+                return phase
+
+        return 'current'
+
+    @property
+    def rel_comp(self):
+        if self.component:
+            if self.component not in self._phases:
+                raise ValueError(f'Bad phase {self.component}')
+
+            return self.component
+        else:
+            return 'release'
+
+
+class Main(clif.Dispatcher):
+    def info(self):
+        sp = self.options.path
+        cslr = sp.commits_since_last_release()
+        print('commits since release', len(cslr))
+        print('next                 ', sp.version_next())
+        print('repo module version  ', sp.version_repo)
+        print('latest release pypi  ', sp.version_latest_pypi)
+        print('latest release github', sp.version_latest_github)
+        print('latest repo tag      ', sp.version_tag)  # should not update until after github release?
+        print(sp.command)
+        print('\n'.join(cslr))
+
+    def bump(self):
+        sp = self.options.path
+        sp.bump(
+            next_phase=self.options.next_phase,
+            rel_comp=self.options.rel_comp,
+            pretend=self.options.pretend,
+        )
+
 
 if __name__ == '__main__':
     main()
