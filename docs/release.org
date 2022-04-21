@@ -458,8 +458,8 @@ function final-release () {
 
 Usage:
     release-next [options]
-    release-next info [options] <path>
-    release-next bump [current dev pre a b rc release micro minor major post local] [options] <path>
+    release-next info [options] [<path>...]
+    release-next bump [current dev pre a b rc release micro minor major post local] [options] [<path>...]
 
 Options:
     -p --pretend            do a dry run to see what would be done
@@ -467,6 +467,7 @@ Options:
     -t --test               run tests
     -d --debug              debug mode
     -h --help               show this
+    -n --no-network         no network calls
 """
 import setuptools
 from setuptools.dist import Distribution
@@ -604,7 +605,11 @@ class SetupPath(aug.RepoPath):
 
     @property
     def setupfu(self):
+        # FIXME sometimes this can fail if there are nested setup.py files !??!
+        # and the base path is relative !??! temp workaround is to resolve all
+        # paths before use, but there is still a bug
         with self.folder:
+            #print('cwd', aug.AugmentedPath.cwd(), '\nsf', self.setup_file)
             spec = importlib.util.spec_from_file_location('setup', self.setup_file)
             setup = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(setup)
@@ -623,6 +628,10 @@ class SetupPath(aug.RepoPath):
     def pypi_json(self):
         if not hasattr(self, '_pypi_json'):
             self._pypi_request = requests.get(f'https://pypi.org/pypi/{self.arg_packagename}/json')
+            if not self._pypi_request.ok:
+                # new package with no existing releases
+                return
+
             self._pypi_json = self._pypi_request.json()
 
         return self._pypi_json
@@ -631,45 +640,61 @@ class SetupPath(aug.RepoPath):
     def github_json(self):
         if not hasattr(self, '_github_json'):
             self._github_request = requests.get(self.remote_uri_api('/releases'))
+            if not self._github_request.ok:
+                return  # e.g. hit rate limit when testing
+
             self._github_json = self._github_request.json()
 
         return self._github_json
 
     @property
     def version_latest_pypi(self):
-        return parse_version(self.pypi_json['info']['version'])
+        pj = self.pypi_json
+        if pj:
+            return parse_version(pj['info']['version'])
         #return Version(self.pypi_json['info']['version'])
 
     @property
     def version_latest_released(self):
         # git, pypi, tag??
-        vers = sorted(parse_version(_) for _ in self.pypi_json['releases'])
-        #vers = sorted(Version(_) for _ in self.pypi_json['releases'])
-        return vers[-1]
+        pj = self.pypi_json
+        if pj:
+            vers = sorted(parse_version(_) for _ in pj['releases'])
+            #vers = sorted(Version(_) for _ in self.pypi_json['releases'])
+            return vers[-1]
 
     @property
     def version_latest_github(self):
         lpn = len(self.arg_packagename) + 1 if self.tag_prefix else 0
-        version = self.tag_latest_github[lpn:]
-        return parse_version(version)
+        tlg = self.tag_latest_github
+        if tlg:
+            version = tlg[lpn:]
+            return parse_version(version)
 
     @property
     def tag_latest_github(self):
         gj = self.github_json
-        if self.tag_prefix:
-            these = [r for r in gj if self.arg_packagename in r['tag_name']]
-        else:
-            these = [r for r in gj if r['tag_name'][0] in '0123456789']
+        if gj:
+            if self.tag_prefix:
+                these = [r for r in gj if self.arg_packagename in r['tag_name']]
+            else:
+                these = [r for r in gj if r['tag_name'][0] in '0123456789']
 
-        latest = these[0]
-        return latest['tag_name']
+            if these:
+                latest = these[0]
+                return latest['tag_name']
 
     def version_next(self, next_phase='current', rel_comp='release'):
         # FIXME
         vlp = self.version_latest_pypi
         vlr = self.version_latest_released
         assert vlp == vlr, f'wat {vlp} != {vlr}'
-        return next_version(vlp, next_phase=next_phase, rel_comp=rel_comp)
+        if vlp is not None:
+            return next_version(vlp, next_phase=next_phase, rel_comp=rel_comp)
+        elif self.version_repo:
+            return self.version_repo
+        else:
+            return parse_version('0.0.0.dev0')  # FIXME hardcoded default zeroth version
 
     @property
     def tag_prefix(self):
@@ -694,13 +719,17 @@ class SetupPath(aug.RepoPath):
         else:
             match_version = '[0-9]*'
 
-        return self.repo.git.describe('--abbrev=0', '--tags', f'--match={match_version}')
+        try:
+            return self.repo.git.describe('--abbrev=0', '--tags', f'--match={match_version}')
+        except self._git.exc.GitCommandError as e:
+            pass  # no tag for this version
 
     @property
     def version_tag(self):
         lpn = len(self.arg_packagename) + 1 if self.tag_prefix else 0
-        version = self.tag[lpn:]
-        return parse_version(version)
+        if self.tag:
+            version = self.tag[lpn:]
+            return parse_version(version)
 
     @property
     def version_repo(self):
@@ -737,9 +766,17 @@ class SetupPath(aug.RepoPath):
         return mm.filelist.files
 
     def commits_since_last_release(self):
+        try:
+            rfs = [(self.folder / f) for f in self.release_files]
+        except FileNotFoundError as e:  # no MANIFEST.in usually
+            print(e)
+            rfs = [self.folder]
+
+        _tag = self.tag
+        tag = _tag if _tag else ''
         log = self.repo.git.log("--format='%aI %an %h %s'",
-                                f'{self.tag}..HEAD',
-                                '--', *[(self.folder / f) for f in self.release_files])
+                                f'{tag}..HEAD',
+                                '--', *rfs)
         entries = [e[1:-1] for e in log.split('\n')]
         return entries
 
@@ -801,18 +838,20 @@ class SetupPath(aug.RepoPath):
         # TODO
         return ''
 
-    @property
-    def command(self):
+    def command(self, next_phase='current', rel_comp='release'):
         rest = self.arg_rest
         rest = ' ' + self.rest if rest else ''
+        nv = self.version_next(next_phase, rel_comp)
         return (
             f'build-release {self.arg_org} {self.arg_repo} {self.arg_folder} '
-            f'{self.arg_packagename} {self.version_new}{rest}')
+            f'{self.arg_packagename} {nv}{rest}')
 
     def bump(self, next_phase='current', rel_comp='release', pretend=False):
         nv = self.version_next(next_phase=next_phase, rel_comp=rel_comp)
-        if nv == self.version_repo:
-            raise ValueError(f'already bumped to {nv} (though maybe not committed?)')
+        if nv == self.version_latest_released:  # we should never hit this branch
+            raise ValueError(f'already released {nv}')
+        elif nv == self.version_repo:
+            raise ValueError(f'already bumped to {nv} but not released (though maybe not committed?)')
         breakpoint()
         if pretend:
             print('would bump module', self.module_init_file,
@@ -834,6 +873,10 @@ def main():
     main = Main(options)
     if main.options.debug:
         print(main.options)
+
+    if main.options.no_network:
+        SetupPath._github_json = None
+        SetupPath._pypi_json = None
 
     out = main()
 
@@ -871,8 +914,12 @@ class Options(clif.Options):
                'release', 'micro', 'minor', 'major', 'post', 'local')
 
     @property
-    def path(self):
-        return SetupPath(self._args['<path>'])
+    def paths(self):
+        if self._args['<path>']:
+            # FIXME without the .resolve() weird bugs appear
+            return [SetupPath(p).resolve() for p in self._args['<path>']]
+        else:
+            return [SetupPath.cwd()]
 
     @property
     def next_phase(self):
@@ -895,24 +942,27 @@ class Options(clif.Options):
 
 class Main(clif.Dispatcher):
     def info(self):
-        sp = self.options.path
-        cslr = sp.commits_since_last_release()
-        print('commits since release', len(cslr))
-        print('next                 ', sp.version_next())
-        print('repo module version  ', sp.version_repo)
-        print('latest release pypi  ', sp.version_latest_pypi)
-        print('latest release github', sp.version_latest_github)
-        print('latest repo tag      ', sp.version_tag)  # should not update until after github release?
-        print(sp.command)
-        print('\n'.join(cslr))
+        for sp in self.options.paths:
+            cslr = sp.commits_since_last_release()
+            print('path                 ', sp)
+            print('package              ', sp.setup_kwargs['name'])
+            print('commits since release', len(cslr))
+            print('next                 ', sp.version_next(self.options.next_phase, self.options.rel_comp))
+            print('repo module version  ', sp.version_repo)
+            print('latest release pypi  ', sp.version_latest_pypi)
+            print('latest release github', sp.version_latest_github)
+            print('latest repo tag      ', sp.version_tag)  # should not update until after github release?
+            print(sp.command(self.options.next_phase, self.options.rel_comp))
+            print('\n'.join(cslr))
+            print()
 
     def bump(self):
-        sp = self.options.path
-        sp.bump(
-            next_phase=self.options.next_phase,
-            rel_comp=self.options.rel_comp,
-            pretend=self.options.pretend,
-        )
+        for sp in self.options.paths:
+            sp.bump(
+                next_phase=self.options.next_phase,
+                rel_comp=self.options.rel_comp,
+                pretend=self.options.pretend,
+            )
 
 
 if __name__ == '__main__':
