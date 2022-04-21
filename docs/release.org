@@ -501,7 +501,7 @@ def logic(cstate, next_phase, rel_comp='release'):
     if next_phase == 'current': return cstate
     elif next_phase == 'dev':
         if cstate == 'dev': return cstate
-        elif cstate in ('release', 'post', 'local'): return next_phase
+        elif cstate in ('release', 'post', 'local'): return rel_comp, next_phase
         else: raise ValueError('cannot go to dev from a prerelease')
     elif next_phase == 'pre':  # this will bump a -> b -> rc since current will not
         if cstate == 'dev': return 'a'
