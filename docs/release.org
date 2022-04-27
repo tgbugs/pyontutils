@@ -85,8 +85,11 @@ Tangle this block so you can source [[file:./../bin/python-release-functions.sh]
 <<&final-release>>
 #+END_SRC
 ** Build release
+#+name: &default-python-version
+: 3.9
+
 #+NAME: &vars-build-release
-#+begin_src bash :eval never :exports code
+#+begin_src bash :eval never :exports code :noweb yes
 local POSITIONAL=()
 local INTEGRATION_PACKAGES=()
 while [[ $# -gt 0 ]]
@@ -104,11 +107,11 @@ case $key in
     --keep-artifacts)     local KEEP_ARTIFACTS=YES; shift ;;
     --no-test)            local NO_TEST=YES; shift;;
     --debug)              local DEBUG=YES; shift ;;
-    ,*)                   local POSITIONAL+=("$1"); shift ;;
+    ,*)                    local POSITIONAL+=("$1"); shift ;;
 esac
 done
 
-local PYTHON_VERSION=${PYTHON_VERSION:-3.9}
+local PYTHON_VERSION=${PYTHON_VERSION:-<<&default-python-version()>>}
 local org=${POSITIONAL[0]}
 local repo=${POSITIONAL[1]}
 local folder=${POSITIONAL[2]}
@@ -336,7 +339,7 @@ build-release () {
 
 ** Push release
 #+NAME: &push-release
-#+BEGIN_SRC bash :eval never :exports code
+#+BEGIN_SRC bash :eval never :exports code :noweb yes
 function push-release () {
     # example
     # push-release folder   software_releases_path    packagename version
@@ -349,6 +352,8 @@ function push-release () {
     shift
     local version=$1
     shift
+    local PYTHON_VERSION=${PYTHON_VERSION:-<<&default-python-version()>>}
+    folder=${folder}-${PYTHON_VERSION}
 
     # NOTE Always deploy from ${folder}/dist NOT from ARTIFACT_FOLDER
     # This prevents accidental release of testing builds
