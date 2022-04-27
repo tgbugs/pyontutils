@@ -102,10 +102,25 @@ class ListRanker:
         self.vals = []
         self.nodes = []  # list helper nodes
         l = self.node
-        while l:
+        previous = set()
+        #count = 0
+        #enough = 99999
+        while l:  # infinite loop posibility
             item = self.serializer.store.value(l, RDF.first)
             self.add(item, l)
+            # if there is a self referential node anywhere in a list
+            # beyond the first element this goes infinite
+            previous.add(l)
             l = self.serializer.store.value(l, RDF.rest)
+            if l in previous:  # cyclical reference case
+                break
+            # XXX beware lists where there are multiple rdf:rest
+            # values for a node, I don't think they will break
+            # serialization, but they may produce unexpected ranking
+            #count += 1
+            #if count > enough:
+                #print(self.serializer.store)
+                #breakpoint()
         self.vis_vals = [v for v in self.vals if not isinstance(v, BNode)]
         self.bvals = [v for v in self.vals if isinstance(v, BNode)]
 
