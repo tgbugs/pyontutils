@@ -4,6 +4,7 @@ import unittest
 import pytest
 import orthauth as oa
 from pyontutils import sheets
+from pyontutils.config import auth
 
 # TODO move some of this to orthauth directly
 # no SCOPES
