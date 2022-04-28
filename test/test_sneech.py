@@ -11,6 +11,9 @@ from pyontutils.namespaces import rdf
 from pyontutils.integration_test_helper import Repo
 from .common import temp_path
 
+skipif_no_ont = pytest.mark.skipif(
+    auth.get_path('ontology-local-repo') is not None,
+    reason='Skipping due to missing ontology repo')
 temp_path_aug = aug.AugmentedPath(temp_path)
 sfy = pl.Path(__file__).parent / 'sneech-file.yaml'
 sft = pl.Path(__file__).parent / 'sneech-file.ttl'
@@ -36,6 +39,7 @@ class SneechenatorTest(snch.Sneechenator):
         return {s:tuple() for s in squares}
 
 
+@skipif_no_ont
 class TestFile(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -89,6 +93,7 @@ class TestWrangler(unittest.TestCase):
             assert False, g.debug()
 
 
+@skipif_no_ont
 class TestSneechenator(unittest.TestCase):
     _test_class = SneechenatorTest
 
@@ -129,6 +134,7 @@ class TestSneechenator(unittest.TestCase):
         b = snchr.COMMENCE(sneech_file=snchf, path_out=of)
 
 
+@skipif_no_ont
 @pytest.mark.skipif('CI' in os.environ, reason='alt mapped endpoint not available in prod')
 class TestInterLex(TestSneechenator):
     _test_class = snch.InterLexSneechenator
