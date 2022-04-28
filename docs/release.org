@@ -352,8 +352,16 @@ function push-release () {
     shift
     local version=$1
     shift
+
     local PYTHON_VERSION=${PYTHON_VERSION:-<<&default-python-version()>>}
-    folder=${folder}-${PYTHON_VERSION}
+    local repo=${folder%/*}  # XXX this more or less matches current conventions
+    if [[ ${folder} == *"/"* ]]; then
+        local clone_target=${repo}-${packagename}-${PYTHON_VERSION}  # prevent git lock collisions
+        folder="${clone_target}/${folder#*/}"
+    else
+        local clone_target=${repo}-${PYTHON_VERSION}
+        folder=${clone_target}
+    fi
 
     # NOTE Always deploy from ${folder}/dist NOT from ARTIFACT_FOLDER
     # This prevents accidental release of testing builds
