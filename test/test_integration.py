@@ -140,7 +140,7 @@ mains = {'scigraph':None,
          'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
 #['ilxcli', '--help'],
          'obo_io':(['obo-io', '-t', 'ttl', nsmethodsobo.as_posix()]
-                   if nsmethodsobo.exists() else None),
+                   if nsmethodsobo.exists() else ['obo-io', '--help']),
 'ttlfmt':[['ttlfmt', test_ttl],
           ['ttlfmt', '--version'],
          ],
