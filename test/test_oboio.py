@@ -3,7 +3,7 @@ import shutil
 import unittest
 import pytest
 from pyontutils import obo_io as oio
-from .common import temp_path
+from .common import temp_path, skipif_no_net
 
 obo_test_string = """format-version: 1.2
 ontology: uberon/core
@@ -147,6 +147,7 @@ class TestOboIo(unittest.TestCase):
         assert obo1 == obo2 == obo3 != obor1
         assert obor1 == obor3
 
+    @skipif_no_net
     @pytest.mark.skipif(not shutil.which('robot'), reason='robot not installed')
     def test_robot_rt(self):
         of = oio.OboFile(data=obo_test_string)
