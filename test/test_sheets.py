@@ -306,6 +306,8 @@ class TestSheets(unittest.TestCase):
         # haven't implemented conversion of cell values to strings yet
         test_value = [[str(c) for c in r] for r in _test_value]
 
+        oic = self.sheet.index_columns
+        self.sheet.index_columns = tuple()
         self.sheet.values = test_value
         assert self.sheet.uncommitted()  # FIXME this needs to be run by default every test
         assert ovalues != test_value  # FIXME this needs to be run by default every test
@@ -318,6 +320,7 @@ class TestSheets(unittest.TestCase):
             assert self.sheet.values == tv1
         finally:
             self.sheet.update(ovalues)
+            self.sheet.index_columns = oic
             self.sheet.commit()
             self.sheet_ro.fetch()
             tv2 = self.sheet_ro.values
@@ -336,6 +339,8 @@ class TestSheets(unittest.TestCase):
         # haven't implemented conversion of cell values to strings yet
         test_value = [[str(c) for c in r] for r in _test_value]
 
+        oic = self.sheet.index_columns
+        self.sheet.index_columns = tuple()
         self.sheet.values = test_value
         assert self.sheet.uncommitted()  # FIXME this needs to be run by default every test
         assert ovalues != test_value  # FIXME this needs to be run by default every test
@@ -349,6 +354,7 @@ class TestSheets(unittest.TestCase):
         finally:
             # FIXME need to delete the new rows not just return to the size of the old values
             self.sheet.update(ovalues)
+            self.sheet.index_columns = oic
             self.sheet.commit()
             self.sheet_ro.fetch()
             tv2 = self.sheet_ro.values

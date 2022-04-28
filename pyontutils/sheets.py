@@ -432,7 +432,7 @@ class Row:
             breakpoint()
             raise e
 
-        return [python_identifier(v)
+        return ['' if v == CELL_DID_NOT_EXIST else python_identifier(v)
                 for v in self.sheet.values[0]
                 # FIXME really bad semantics here
                 if v != CELL_REMOVED]
@@ -491,6 +491,7 @@ class Column:
         self.column_index = column_index
         self.index = self.column_index
         self._trouble = {}
+        # XXX index cols can be out of sync if the 0th row is rewritten
         if self.sheet.index_columns:  # FIXME primary key for row ???
             for row_index, name in enumerate(self.header):
                 def f(ri=row_index):
@@ -531,7 +532,15 @@ class Column:
             # FIXME multi column primary keys ??
             # FIXME normalization ??
             col = self.sheet.index_columns[0]
-            row_header_column_index = getattr(self.sheet.row_object(0), col)().column_index
+            try:
+                row_header_column_index = getattr(self.sheet.row_object(0), col)().column_index
+            except AttributeError as e:
+                # the 0th row does not have a cell matching the index column
+                # the index column is specified by the class and is not dynamic
+                # the caller must handle this case explicitly because index
+                # columns are not dynamic
+                raise e
+
             # urg the perf
             return [r[row_header_column_index] for r in self.sheet.values]
 

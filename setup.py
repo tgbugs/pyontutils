@@ -4,10 +4,15 @@ import sys
 from setuptools import setup
 
 
+def abspath(relpath, _dir=os.path.dirname(__file__)):
+    return os.path.join(_dir, relpath)
+
+
 def find_version(filename):
+    abs_filename = abspath(filename)
     _version_re = re.compile(r"__version__ = ['\"](.*)['\"]")
     last = None  # match python semantics
-    for line in open(filename):
+    for line in open(abs_filename):
         version_match = _version_re.match(line)
         if version_match:
             last = version_match.group(1)
@@ -21,6 +26,7 @@ __version__ = find_version('pyontutils/__init__.py')
 def tangle_files(*files):
     """ emacs org babel tangle blocks to files for release """
 
+    abs_files = [abspath(f) for f in files]
     argv = [
         'emacs',
         '--batch',
@@ -30,7 +36,7 @@ def tangle_files(*files):
         '--load', 'ob-shell',
         '--load', 'ob-python',
      ] + [arg
-          for f in files
+          for f in abs_files
           for arg in ['--eval', f'"(org-babel-tangle-file \\"{f}\\")"']]
 
     os.system(' '.join(argv))

@@ -859,12 +859,13 @@ def run(args):
             return
 
     elif config:
-        graph_path = Path(args['<graph_path>']).resolve()
+        #graph_path = Path(args['<graph_path>']).resolve()
         config_path = Path(args['--graph-config-out']).resolve()
-        local_base = Path(git_local, repo_name).resolve()
-        ReproLoader.make_graphload_config(graphload_config_template, graphload_ontologies,
-                                          graph_path, remote_base, local_base,
-                                          zip_location, config_path)
+        #local_base = Path(git_local, repo_name).resolve()
+        date_today = TODAY()
+        ReproLoader.make_graphload_config(
+            graphload_config_template, graphload_ontologies,
+            zip_location, date_today, config_path)
 
     elif imports:
         # TODO mismatch between import name and file name needs a better fix
