@@ -3,9 +3,10 @@
  {'curies': ['../nifstd/scigraph/curie_map.yaml',  # git
              '{:user-config-path}/pyontutils/curie_map.yaml',  # config
              '{:user-data-path}/pyontutils/curie_map.yaml',  # pip install --user
+             '{:cwd}/share/pyontutils/curie_map.yaml',  # ebuild testing
              '{:prefix}/share/pyontutils/curie_map.yaml',  # system
              '/usr/share/pyontutils/curie_map.yaml',  # pypy3
-             '{:cwd}/share/pyontutils/curie_map.yaml',],  # ebuild testing
+             ],
   'git-local-base': '../..',
   'git-remote-base': 'https://github.com/',
   'ontology-local-repo': {'default': '../../NIF-Ontology',
