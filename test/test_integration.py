@@ -139,7 +139,7 @@ mains = {'scigraph':None,
                          '--jobs', '1'],  # hits the network
          'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
 #['ilxcli', '--help'],
-         'obo_io':['obo-io', '-t', 'ttl', nsmethodsobo],
+         'obo_io':(['obo-io', '-t', 'ttl', nsmethodsobo] if nsmethodsobo.exists() else None),
 'ttlfmt':[['ttlfmt', test_ttl],
           ['ttlfmt', '--version'],
          ],

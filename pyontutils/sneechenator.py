@@ -140,6 +140,12 @@ class SnchFile:
         for bn in graph[s:snchn['include']:]:
             try:
                 path = aug.RepoPath(next(graph[bn:snchn.path:]))
+                if not path.exists():
+                    # XXX note that the file must exist on the file
+                    # system when this is called, the snchn:path
+                    # cannot take a path and a git ref where the path
+                    # would exist if the ref were checked out
+                    raise FileNotFoundError(path)
             except StopIteration:
                 iri = next(graph[bn:snchn.iri:])
                 for string_path in graph[iri:snchn.hasLocalPath:]:

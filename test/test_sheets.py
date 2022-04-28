@@ -144,7 +144,9 @@ class SheetToTest(sheets.Sheet):
     fetch_grid = True
 
 
-@pytest.mark.skipif('CI' in os.environ, reason='Google API creds required.')
+@pytest.mark.skipif(auth.get_path('google-api-store-file-readonly') is None and
+                    auth.get_path('google-api-service-account-file') is None,
+                    reason='Google API creds required.')
 class TestSheets(unittest.TestCase):
 
     @classmethod
