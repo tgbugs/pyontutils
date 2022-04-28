@@ -121,7 +121,7 @@ test_owl = _test_owl.as_posix()
 _temp_git = aug.RepoPath(temp_path) / 'git-test'
 temp_git = _temp_git.as_posix()
 
-nsmethodsobo = (glb / 'methodsOntology/source-material/ns_methods.obo').as_posix()
+nsmethodsobo = glb / 'methodsOntology/source-material/ns_methods.obo'
 
 
 ### build mains
@@ -139,7 +139,8 @@ mains = {'scigraph':None,
                          '--jobs', '1'],  # hits the network
          'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
 #['ilxcli', '--help'],
-         'obo_io':(['obo-io', '-t', 'ttl', nsmethodsobo] if nsmethodsobo.exists() else None),
+         'obo_io':(['obo-io', '-t', 'ttl', nsmethodsobo.as_posix()]
+                   if nsmethodsobo.exists() else None),
 'ttlfmt':[['ttlfmt', test_ttl],
           ['ttlfmt', '--version'],
          ],
