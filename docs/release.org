@@ -150,12 +150,12 @@ build-release () {
 
     cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
 
-    TEST_PATH=${BASE_PATH}/release-testing/${PYTHON_VERSION}-${packagename}  # allow multiple builds at the same time
+    TEST_PATH="${BASE_PATH}/release-testing/${PYTHON_VERSION}-${packagename}"  # allow multiple builds at the same time
 
     if [ -d ${repo} ]; then
-        rm -r ${TEST_PATH}
+        rm -rf "${TEST_PATH}"
     fi
-    mkdir -p ${TEST_PATH}
+    mkdir -p "${TEST_PATH}"
 
     if [ -d ${clone_target} ]; then
         pushd ${clone_target}
