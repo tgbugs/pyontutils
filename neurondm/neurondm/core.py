@@ -979,6 +979,8 @@ class Config:
             ppath.mkdir(parents=True)
 
         og.write()
+        og.g.path = path
+        self._written_graph = og.g  # FIXME HACK
         self.part_of_graph.write()
         log.debug(f'Neurons ttl file written to {path}')
 
