@@ -21,6 +21,7 @@ import augpathlib as aug
 import requests
 import htmlfn as hfn
 from rdflib.extras import infixowl
+from funowl.converters.functional_converter import to_python as parse_funowl
 from ttlser import CustomTurtleSerializer, natsort
 from pyontutils import combinators as cmb
 from pyontutils import closed_namespaces as cnses
@@ -192,6 +193,8 @@ class OntRes(idlib.Stream):
 
     Graph = None  # this is set below after OntGraph is created (derp)
 
+    _imports_class = None  # XXX assigned after OntResIri is defined
+
     @staticmethod
     def fromStr(string):
         if re.match(r'^(https?)://', string):
@@ -259,7 +262,11 @@ class OntRes(idlib.Stream):
 
     @property
     def identifier_bound(self):
-        return next(self.graph[:rdf.type:owl.Ontology])
+        try:
+            return next(self.graph[:rdf.type:owl.Ontology])
+        except StopIteration:
+            # TODO maybe warn?
+            pass
 
     @property
     def identifier_version(self):
@@ -267,28 +274,54 @@ class OntRes(idlib.Stream):
             version iri supplied as the identifi
             the id to get
         """
-        return next(self.graph[self.identifier_bound:owl.versionIRI])
+        try:
+            return next(self.graph[self.identifier_bound:owl.versionIRI])
+        except StopIteration:
+            # TODO maybe warn?
+            pass
 
     @property
     def imports(self):
         for object in self.graph[self.identifier_bound:owl.imports]:
             # TODO switch this for _res_remote_class to abstract beyond just owl
-            yield OntResIri(object)  # this is ok since files will be file:///
+            yield self._imports_class(object)  # this is ok since files will be file:///
 
     @property
     def import_chain(self):
-        yield from self._import_chain({OntResIri(self.identifier_bound)})
+        yield from self._process_import_chain(
+            {self.identifier_bound}, 'imports')
 
-    def _import_chain(self, done):
-        imps = list(self.imports)
-        Async()(deferred(lambda r: r.metadata().graph)(_) for _ in imps)
+    def _process_import_chain(self, done, imps_attr='imports'):
+        # FIXME this has to split local and remote because
+        # we need to share done, but we can't share out_cls nor imps_attr
+        if not hasattr(self, imps_attr):
+            # failover when imports_local hits a non-local import
+            # FIXME beware local -> remote -> local issues
+            imps_attr = 'imports'
+
+        imps = list(getattr(self, imps_attr))
+
+        def internal(r):
+            try:
+                log.debug(f'fetching graph for {r}')
+                (r.metadata().graph
+                 if hasattr(r, '_metadata_class')
+                 else r.graph)
+            except Exception as e:
+                msg = f'something failed for {r}'
+                raise Exception(msg) from e
+
+        Async()(deferred(internal)(_) for _ in imps)
+
         for resource in imps:
-            if resource in done:
+            _idb = resource.identifier_bound
+            rid = _idb if _idb is not None else resource.identifier
+            if rid in done:
                 continue
 
-            done.add(resource)
             yield resource
-            yield from resource.metadata()._import_chain(done)
+            done.add(rid)
+            yield from resource._process_import_chain(done, imps_attr)
 
     def __eq__(self, other):
         raise NotImplementedError
@@ -302,6 +335,8 @@ class OntRes(idlib.Stream):
 
 class OntMeta(OntRes):
     """ only the header of an ontology, e.g. the owl:Ontology section for OWL2 """
+
+    _imports_class = None  # XXX assigned after OntMetaIri is defined
 
     # headers all the way down data -> ontology header -> response header -> iri
 
@@ -318,10 +353,13 @@ class OntMeta(OntRes):
             # rdflib xml parsing uses an incremental parser that
             # constructs its own file object and byte stream
             data = b''.join(gen)
-            graph.parse(data=data)
+            graph.parse(data=data, format=self.format)
 
-        elif self.format == 'text/owl-functional':  # FIXME TODO
-            log.error(f'TODO cannot parse owl functional syntax yet {self}')
+        elif self.format == 'text/owl-functional':
+            # FIXME funowl could work with iterio I think?
+            data = b''.join(gen)
+            fo = parse_funowl(data)
+            fo.to_rdf(graph)
 
         else:
             itio = IterIO(gen)
@@ -352,12 +390,46 @@ class OntMeta(OntRes):
         generator = self._populate_next(graph, *args, **kwargs)
         list(generator)  # express the generator without causing a StopIteration
 
+    def __lt__(self, other):
+        # FIXME this is ... complicated and currently incorrectly/incomplete/confusing
+        # FIXME this is also super confusing beause it sorts on the invisible id bound
+        # instead of on identifier
+        sib = self.identifier_bound
+        oib = other.identifier_bound
+        if sib and oib:
+            return sib < oib
+
+        # compare only matched id types
+        si = self.identifier
+        oi = other.identifier
+        if si and oi:
+            return si < oi
+
+        return False
+
     def __eq__(self, other):
-        # FIXME this is ... complicated
-        return self.identifier_bound == other.identifier_bound
+        # FIXME this is ... complicated and currently incorrectly/incomplete/confusing
+        # the current behavior results in cases where you can have two files with
+        # different local names but that have the same bound id and they will be
+        # considered to be "equal" which is ... not helpful, and possibly confusing
+        # because there are so many ways you could compare these
+        sib = self.identifier_bound
+        oib = other.identifier_bound
+        if sib and oib:
+            return sib == oib
+
+        # compare only matched id types
+        si = self.identifier
+        oi = other.identifier
+        if si and oi:
+            return si == oi
+
+        return False
 
     def __hash__(self):
-        return hash((self.__class__, self.identifier_bound))
+        # use identity bnode for these, the metadata is small enough
+        idbn = self.graph.identity()
+        return hash((self.__class__, idbn))
 
 
 class OntResOnt(OntRes):
@@ -369,7 +441,9 @@ class OntResOnt(OntRes):
         return self.metadata().identifier_bound == other.metadata().identifier_bound
 
     def __hash__(self):
-        return hash((self.__class__, self.metadata().identifier_bound))
+        # assumes that people are good citizens and change their
+        # metadata when they change the data section
+        return hash((self.__class__, self.metadata()))
 
 
 class OntIdIri(OntRes):
@@ -552,10 +626,12 @@ class OntMetaIri(OntMeta, OntIdIri):
             # making it easier to parse ... HRM this seems like it might
             # be a more robust approach ... though annoying for the greppers
 
-        elif first.startswith(b'<?xml'):
+        elif first.startswith(b'<?xml'):  # FIXME owl xml
+            # FIXME overlapping start and end patterns
             start = b'<owl:Ontology'
-            stop = b'</owl:Ontology>'
-            sentinel = b'TODO'
+            stop = b'</owl:Ontology>|<owl:Ontology rdf:about=".+"/>'
+            #stop = b'</owl:Ontology>'  # use with uberon-bridge-to-nifstd.owl to test sent before stop
+            sentinel = b'<!--|<owl:Class'
             self.format = 'application/rdf+xml'
 
         elif first.startswith(b'@prefix') or first.startswith(b'#lang rdf/turtle'):
@@ -569,9 +645,10 @@ class OntMetaIri(OntMeta, OntIdIri):
 
         elif first.startswith(b'Prefix(:='):
             # FIXME regex will likely cause issues here
-            start = b'\nOntology'
-            stop = b')\n\n'  # FIXME I don't think owl functional syntax actually has a proper header :/
-            sentinel = b'TODO'
+            start = b'\nOntology\('
+            stop = b'\n[^OA]'  # XXX owl functional syntax actually has a proper header :/
+            # so for now we use a hueristic matching the first line that doesn't start with Annotation?
+            sentinel = b'\n#'
             self.format = 'text/owl-functional'
         else:
             'text/owl-manchester'
@@ -583,24 +660,26 @@ class OntMetaIri(OntMeta, OntIdIri):
         yield self.format  # we do this because self.format needs to be accessible before loading the graph
 
         close_rdf = b'\n</rdf:RDF>\n'
+        close_fun = b'\n)'
         searching = False
         header_data = b''
         for chunk in chain((first,), gen):
             if not searching:
-                start_end_index = conventions_type.findStart(chunk)
-                if start_end_index is not None:
+                start_start_index, start_end_index = conventions_type.findStart(chunk)
+                if start_start_index is not None:
                     searching = True
                     # yield content prior to start since it may include a stop
                     # that we don't actually want to stop at
-                    header_first_chunk = chunk[:start_end_index]
+                    header_first_chunk = chunk[:start_start_index]
                     if yield_response_gen:
                         header_data += header_first_chunk
 
                     yield header_first_chunk
-                    chunk = chunk[start_end_index:]
+                    chunk = chunk[start_start_index:]
 
             if searching: #and stop in chunk:  # or test_chunk_ends_with_start_of_stop(stop, chunk)
-                stop_end_index = conventions_type.findStop(chunk)
+                stop_start_index, stop_end_index = conventions_type.findStop(chunk)
+                # FIXME need to handle the case where we hit the sentinel before we hit stop
                 if stop_end_index is not None:
                     # FIXME edge case where a stop crosses a chunk boundary
                     # if stop is short enough it may make sense to do a naieve contains check
@@ -615,6 +694,8 @@ class OntMetaIri(OntMeta, OntIdIri):
                     if yield_response_gen:
                         if self.format == 'application/rdf+xml':
                             header_data += close_rdf
+                        elif self.format == 'text/owl-functional':
+                            header_data += close_fun
 
                         self._graph_sideload(header_data)
                         chunk = chunk[stop_end_index:]
@@ -624,6 +705,8 @@ class OntMetaIri(OntMeta, OntIdIri):
                         # if we are not continuing then close the xml tags
                         if self.format == 'application/rdf+xml':
                             yield close_rdf
+                        elif self.format == 'text/owl-functional':
+                            yield close_fun
 
                         resp.close()
                         if filelike is not None:
@@ -640,11 +723,12 @@ class OntMetaIri(OntMeta, OntIdIri):
 
                     yield chunk
 
+            # FIXME sentinel could be in the same chunk as stop
             else:  # and this is why you need the walrus operator :/ but then no < 3.8 >_<
-                sent_end_index = conventions_type.findSentinel(chunk)
-                if sent_end_index is not None:
+                sent_start_index, sent_end_index = conventions_type.findSentinel(chunk)
+                if sent_start_index is not None:
                     #sent_end_index = chunk.index(sentinel) + len(sentinel)
-                    header_last_chunk = chunk[:sent_end_index]
+                    header_last_chunk = chunk[:sent_start_index]
                     if yield_response_gen:
                         header_data += header_last_chunk
 
@@ -652,15 +736,19 @@ class OntMetaIri(OntMeta, OntIdIri):
                     if yield_response_gen:
                         if self.format == 'application/rdf+xml':
                             header_data += close_rdf
+                        elif self.format == 'text/owl-functional':
+                            header_data += close_fun
 
                         self._graph_sideload(header_data)
-                        chunk = chunk[sent_end_index:]
+                        chunk = chunk[sent_start_index:]
                         yield resp, chain((chunk,), gen)
 
                     else:
                         # if we are not continuing then close the xml tags
                         if self.format == 'application/rdf+xml':
                             yield close_rdf
+                        elif self.format == 'text/owl-functional':
+                            yield close_fun
 
                         resp.close()
                         if filelike is not None:
@@ -692,6 +780,9 @@ class OntMetaIri(OntMeta, OntIdIri):
                     filelike.close()
 
             return
+
+
+OntMeta._imports_class = OntMetaIri
 
 
 class OntResIri(OntIdIri, OntResOnt):
@@ -767,7 +858,9 @@ class OntResIri(OntIdIri, OntResOnt):
             graph.parse(self.identifier, format=self.format)
 
         elif self.format == 'text/owl-functional':  # FIXME TODO
-            log.error(f'TODO cannot parse owl functional syntax yet {self}')
+            data = b''.join(gen)
+            fo = parse_funowl(data)
+            fo.to_rdf(graph)
 
         else:
             itio = IterIO(gen)
@@ -775,7 +868,11 @@ class OntResIri(OntIdIri, OntResOnt):
             graph.parse(source=itio, format=self.format)
 
 
+OntRes._imports_class = OntResIri
+
+
 class OntIdPath(OntRes):
+
     # FIXME should this be an instrumented path?
     # should OntResIri be an instrumented iri?
     def __init__(self, path):
@@ -800,6 +897,36 @@ class OntIdPath(OntRes):
         return resp
 
     headers = OntIdIri.headers
+
+    def imports_catalog(self):
+        raise NotImplementedError('TODO')
+
+    @property
+    def imports_local(self):
+        url = urlparse(self.identifier_bound)
+        url_path = Path(url.path)
+        path = self.path.resolve()
+        matched = [part for upart, part in
+                   zip(reversed(url_path.parts), reversed(path.parts))
+                   if upart == part]
+        lm = len(matched)
+        remote_base = Path(*url_path.parts[:-lm])
+        local_base = Path(*path.parts[:-lm])
+        remote_prefix = url._replace(path=remote_base.as_posix()).geturl()
+        local_prefix = local_base.as_posix()
+        replace = remote_prefix, local_prefix
+        for ori in self.imports:
+            id = str(ori.identifier)
+            lp = id.replace(*replace)
+            if id == lp:
+                # no obvious local path, TODO use the catalog
+                yield ori
+            else:
+                yield self.__class__(Path(lp))
+
+    @property
+    def import_chain_local(self):
+        yield from self._process_import_chain({self.identifier_bound}, 'imports_local')
 
 
 class OntMetaPath(OntIdPath, OntMeta):

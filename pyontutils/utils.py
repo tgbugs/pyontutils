@@ -404,7 +404,7 @@ def async_getter(function, listOfArgs):
         for args in listOfArgs:
             future = loop.run_in_executor(None, function, *args)
             futures.append(future)
-        print('Futures compiled')
+        log.debug('Futures compiled')
         responses = []
         for f in futures:
             responses.append(await f)
@@ -473,7 +473,7 @@ def Async(rate=None, debug=False, collector=None):  # ah conclib
             for wrapped_func_or_limgen in generator:
                 future = loop.run_in_executor(executor, wrapped_func_or_limgen)
                 futures.append(future)
-            print('Futures compiled')
+            log.debug('Futures compiled')
             responses = []
             for f in futures:
                 if rate:
