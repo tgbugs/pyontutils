@@ -31,8 +31,10 @@ def _ontology_data_files():
         from augpathlib import RepoPath as Path
         ### KILL IT WITH FIRE
         try:
-            from neurondm.core import auth  ### this is ok
-        except ValueError:
+            from neurondm.core import auth  ### this is NOT ok
+        except Exception:
+            # can't catch an error that you can never import because
+            # it will be raised before you can import it ... SIGH
             import orthauth as oa
             from pyontutils.config import auth as pauth
             auth = oa.configure(Path('neurondm/auth-config.py').resolve(), include=pauth)
@@ -48,7 +50,7 @@ def _ontology_data_files():
         elif olr.repo.active_branch.name != auth.get('neurons-branch'):
             # FIXME yes indeed having to call Config in a way that is
             # invoked at import time is REALLY REALLY BAD :/
-            raise ValueError('git is on the wrong branch!'
+            raise ValueError('git is on the wrong branch! '
                              f'{olr.repo.active_branch}')
         ###
 

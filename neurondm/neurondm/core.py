@@ -158,7 +158,12 @@ class LabelMaker:
             if phen in self._convention_lookup:
                 return phen.__class__._rank, self._convention_lookup[phen]
             else:
-                return phen.__class__._rank, getattr(phen, self._label_property)
+                label = getattr(phen, self._label_property)
+                if isinstance(label, tuple):
+                    # duplicate labels issues
+                    msg = f'bad label {label!r} for {phen}'
+                    raise TypeError(msg)
+                return phen.__class__._rank, label
 
         self._key = _key
 
@@ -1784,6 +1789,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                     t = OntTerm(p)
                     if t.label:
                         l = t.label
+                        if isinstance(l, tuple) or isinstance(l, list):
+                            log.warning(f'multiple labels for {t.curie}: {l}')
+                            _l = l
+                            l = l[0]
                     else:
                         l = t.curie
                 else:
@@ -1914,6 +1923,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         if not l:
             return t.curie
+
+        if isinstance(l, tuple) or isinstance(l, list):
+            log.warning(f'multiple labels for {t.curie}: {l}')
+            _l = l
+            l = l[0]
 
         return (l
                 .replace('phenotype', '')
