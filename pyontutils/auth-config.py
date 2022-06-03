@@ -1,9 +1,9 @@
 {'config-search-paths': ['{:user-config-path}/pyontutils/config.yaml',],
  'auth-variables':
  {'curies': ['../nifstd/scigraph/curie_map.yaml',  # git
+             '{:cwd}/share/pyontutils/curie_map.yaml',  # ebuild testing
              '{:user-config-path}/pyontutils/curie_map.yaml',  # config
              '{:user-data-path}/pyontutils/curie_map.yaml',  # pip install --user
-             '{:cwd}/share/pyontutils/curie_map.yaml',  # ebuild testing
              '{:prefix}/share/pyontutils/curie_map.yaml',  # system
              '/usr/share/pyontutils/curie_map.yaml',  # pypy3
              ],
@@ -20,10 +20,10 @@
   'patch-config': {'default': '../nifstd/patches/patches.yaml',
                    'environment-variables': 'ONTOLOGY_PATCH_CONFIG PATCH_CONFIG'},
   'resources': {'default': ['../nifstd/resources',  # git
+                            '{:cwd}/share/nifstd/resources',  # ebuild testing
                             '{:user-data-path}/nifstd/resources',  # pip install --user
                             '{:prefix}/share/nifstd/resources',  # system
-                            '/usr/share/nifstd/resources',  # pypy3
-                            '{:cwd}/share/nifstd/resources',],  # ebuild testing
+                            '/usr/share/nifstd/resources',], # pypy3
                 'environment-variables': 'NIFSTD_RESOURCES ONTOLOGY_RESOURCES RESOURCES'},
 
   # google api
