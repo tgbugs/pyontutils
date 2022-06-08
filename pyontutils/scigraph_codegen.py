@@ -776,7 +776,16 @@ class State:
 
     def gencode(self):
         """ Run this to generate the code """
-        ledict = requests.get(self.api_url).json()
+        resp = requests.get(self.api_url)
+        if not resp.ok:
+            if resp.status_code == 401 and 'scicrunch.org' in self.api_url:
+                resp = requests.get(
+                    self.api_url,
+                    params={'key': auth.get('scigraph-api-key')})
+            else:
+                resp.raise_for_status()
+
+        ledict = resp.json()
         for durl in self._dynamics:
             dj = requests.get(durl).json()
             for p in dj['paths']:
@@ -786,6 +795,7 @@ class State:
         ledict = self.dotopdict(ledict)
         out = self.dodict(ledict)
         self._code = out
+
 
 class State2(State):
     path_prefix = ''
