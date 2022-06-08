@@ -9,6 +9,7 @@ Usage:
 
 Options:
     -a --api=API            Full url to SciGraph api endpoint
+       --data-api=DAPI      Full url to SciGraph data api endpoint
     -k --key=APIKEY         apikey for SciGraph instance
     -p --port=PORT          port on which to run the server [default: 8000]
     -f --input-file=FILE    don't use SciGraph, load an individual file instead
@@ -1120,7 +1121,12 @@ def main():
             scs.api_key = api_key
             scs.setup(instrumented=OntTerm)
 
-        app = server(verbose=verbose)
+        _data_endpoint = args['--data-api']
+        data_endpoint = (
+            _data_endpoint if _data_endpoint else
+            scigraph.scigraph_client.BASEPATH)
+
+        app = server(verbose=verbose, data_endpoint=data_endpoint)
         # app.debug = False
         # app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
         # app.debug = True
