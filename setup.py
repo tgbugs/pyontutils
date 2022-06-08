@@ -85,7 +85,7 @@ setup(
         'augpathlib>=0.0.23',
         'colorlog',
         'docopt',
-        'funowl',
+        "funowl; python_version >= '3.8'",
         'gitpython',
         'google-api-python-client',
         'google-auth-oauthlib',

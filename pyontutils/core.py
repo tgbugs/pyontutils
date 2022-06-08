@@ -21,7 +21,6 @@ import augpathlib as aug
 import requests
 import htmlfn as hfn
 from rdflib.extras import infixowl
-from funowl.converters.functional_converter import to_python as parse_funowl
 from ttlser import CustomTurtleSerializer, natsort
 from pyontutils import combinators as cmb
 from pyontutils import closed_namespaces as cnses
@@ -53,6 +52,14 @@ from pyontutils.namespaces import (makePrefixes,
                                    oboInOwl,
                                    replacedBy,)
 from pyontutils.identity_bnode import IdentityBNode
+
+try:
+    from funowl.converters.functional_converter import to_python as parse_funowl
+except ImportError as e:
+    def parse_funowl(*args, __error=e, **kwargs):
+        msg = f'funowl needs >= python3.8'
+        raise ModuleNotFoundError(msg) from __error
+
 
 current_file = Path(__file__).absolute()
 oq.utils.log.removeHandler(oq.utils.log.handlers[0])
