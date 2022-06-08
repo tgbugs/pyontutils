@@ -453,15 +453,19 @@ demo_examples = (
     ('Neuron connectivity', '/trees/sparc/demos/isan2019/neuron-connectivity'),
 )
 
-def server(api_key=None, verbose=False):
-    # data endpoint
-    #_dataBP = 'https://sparc.olympiangods.org/scigraph'
-    _dataBP = 'http://sparc-data.scicrunch.io:9000/scigraph'
-    scigraphd = moduleDirect(_dataBP, 'scigraphd')
+def server(api_key=None, verbose=False, data_endpoint=None):
+    if data_endpoint:
+        _dataBP = data_endpoint
+        scigraphd = moduleDirect(_dataBP, 'scigraphd')
+    else:
+        from pyontutils import scigraph as scigraphd
+
     data_sgd = scigraphd.Dynamic(cache=True, verbose=True, do_error=True)
-    data_sgd._basePath = _dataBP
     data_sgc = scigraphd.Cypher(cache=True, verbose=True)
-    data_sgc._basePath = _dataBP
+
+    if data_endpoint:
+        data_sgd._basePath = _dataBP
+        data_sgc._basePath = _dataBP
 
     f = Path(__file__).resolve()
     working_dir = get_working_dir(__file__)
