@@ -49,11 +49,12 @@ def value_nofi(e): return (isinstance(e, ValueError) and
                            e.args and
                            e.args[0].startswith('The file (or absense of file)'))
 
-def value_nova(e): return (isinstance(e, ValueError) and
+def value_nova(e): return (isinstance(e, oa.exceptions.SecretError) and
                            e.args and
-                           e.args[0].startswith('No value found'))
+                           e.args[0].startswith('This secret path'))
 
-def value_val(e): return (isinstance(e, ValueError) and
+def value_val(e): return (isinstance(e, oa.exceptions.SecretError) and
+                          #not breakpoint() and
                           e.args and
                           e.args[0].startswith('Value of secret at'))
 
@@ -89,7 +90,7 @@ errors = {
 def do_test(expect, SCOPES='https://www.googleapis.com/auth/spreadsheets.readonly'):
     try:
         s = sheets._get_oauth_service(SCOPES=SCOPES)
-    except BaseException as e:
+    except Exception as e:
         if not expect(e):
             raise e
 
@@ -120,7 +121,7 @@ class TestGetOauthService(unittest.TestCase):
                 expect = errors[cname, sname]
                 try:
                     do_test(expect)
-                except BaseException as e:
+                except Exception as e:
                     if (cname, sname) == ('user_config_ok', 'secrets_null'):
                         raise e
 
@@ -131,7 +132,7 @@ class TestGetOauthService(unittest.TestCase):
                               if cname in keep_expect or sname in keep_expect else
                               type_scopes)
                     do_test(expect, None)  # FIXME some others come first
-                except BaseException as e:
+                except Exception as e:
                     bads.append((cname, sname, 'SCOPES=None', e))
 
         assert not bads, pprint.pformat(bads)
