@@ -100,7 +100,7 @@ def _get_oauth_service(
             # XXX this branch happens when the keys are in the user config
             # but they are null and no secrets path is set
             msg = ('The file (or absense of file) specified by '
-                f'{_auth_var} in {_p} and {_u} cound not be found')
+                   f'{_auth_var} in {_p} and {_u} cound not be found')
 
             if hasattr(auth, '_runtime_config'):
                 log.debug(auth._runtime_config)
@@ -140,6 +140,17 @@ def _get_oauth_service(
 
         with open(store_file, 'wb') as f:
             pickle.dump(creds, f)
+
+    if SCOPES is not None:
+        # if SCOPES is None then it is up to the user to make sure
+        # they correctly match scopes, we don't warn them here
+        _missing = [scope for scope in SCOPES if scope not in creds.scopes]
+        if _missing:
+            msg = (
+                f'credentials in {store_file} lack '
+                f'authorization for {_missing}')
+
+            raise ValueError(msg)
 
     from googleapiclient.discovery import build
     service = build(api, version, credentials=creds)
