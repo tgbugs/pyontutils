@@ -153,8 +153,29 @@ class TestSheets(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # ensure we always start from a sane state
+        base_sheet = SheetToTest(readonly=False)
+        start = [['id', 'name', 'other'],
+                 ['a', '', ''],
+                 ['b', '', ''],
+                 ['c', '', ''],
+                 ['d', '', ''],]
+        base_sheet.update(start)
+        base_sheet.commit()
+
+        # new object to avoid any potential lingering state
+        # (we would catch this in the tests below)
         cls.base_sheet = SheetToTest(readonly=False)
+        assert cls.base_sheet.values == start
         cls.base_sheet_ro = SheetToTest()
+
+    @classmethod
+    def tearDownClass(cls):
+        # FIXME shrinks should deal with this themselves
+        # but it is not always obvious whether a call to
+        # update should enqueue a resize requests
+        cls.base_sheet._delete_rest()
+        cls.base_sheet.commit()
 
     def setUp(self):
         self.sheet = SheetToTest(readonly=False, fetch=False)
@@ -312,7 +333,8 @@ class TestSheets(unittest.TestCase):
 
         oic = self.sheet.index_columns
         self.sheet.index_columns = tuple()
-        self.sheet.values = test_value
+        self.sheet.update(test_value)  # FIXME vs non-truncating self.sheet.values = test_value
+        assert self.sheet._values_less_removed() == test_value
         assert self.sheet.uncommitted()  # FIXME this needs to be run by default every test
         assert ovalues != test_value  # FIXME this needs to be run by default every test
         assert ovalues[0] != test_value[0]
@@ -329,23 +351,22 @@ class TestSheets(unittest.TestCase):
             self.sheet_ro.fetch()
             tv2 = self.sheet_ro.values
             # FIXME I suspect this will break due to missing ends
-            assert self.sheet.values == tv2 == ovalues
+            assert self.sheet.values == tv2
+            assert tv2 == ovalues
 
-    def test_set_values_update_more_rows(self):
+    def test_set_values_update_more_cols(self):
         ovalues = [list(l) for l in self.sheet.values]  # duh mutation is evil
-        _test_value = [[1, 2, 3, 4],  # FIXME these should probably throw errors too
-                       [1, 2, 3, 4],  # since they break the primary key assuptions?
-                       [1, 2, 3, 4],
-                       [1, 2, 3, 4],
-                       [2, 2, 3, 4],
-                       [3, 2, 3, 4],
-                       [4, 2, 3, 4],]
+        _test_value = [[1, 2, 3, 4, 5],  # FIXME these should probably throw errors too
+                       [1, 2, 3, 4, 5],  # since they break the primary key assuptions?
+                       [1, 2, 3, 4, 5],
+                       [1, 2, 3, 4, 5],]
         # haven't implemented conversion of cell values to strings yet
         test_value = [[str(c) for c in r] for r in _test_value]
 
         oic = self.sheet.index_columns
         self.sheet.index_columns = tuple()
-        self.sheet.values = test_value
+        self.sheet.update(test_value)  # FIXME vs non-truncating self.sheet.values = test_value
+        assert self.sheet._values_less_removed() == test_value
         assert self.sheet.uncommitted()  # FIXME this needs to be run by default every test
         assert ovalues != test_value  # FIXME this needs to be run by default every test
         assert ovalues[0] != test_value[0]
@@ -363,7 +384,44 @@ class TestSheets(unittest.TestCase):
             self.sheet_ro.fetch()
             tv2 = self.sheet_ro.values
             # FIXME I suspect this will break due to missing ends
-            assert self.sheet.values == tv2 == ovalues
+            assert self.sheet.values == tv2
+            assert tv2 == ovalues
+
+    def test_set_values_update_more_rows(self):
+        ovalues = [list(l) for l in self.sheet.values]  # duh mutation is evil
+        _test_value = [[1, 2, 3, 4],  # FIXME these should probably throw errors too
+                       [1, 2, 3, 4],  # since they break the primary key assuptions?
+                       [1, 2, 3, 4],
+                       [1, 2, 3, 4],
+                       [2, 2, 3, 4],
+                       [3, 2, 3, 4],
+                       [4, 2, 3, 4],]
+        # haven't implemented conversion of cell values to strings yet
+        test_value = [[str(c) for c in r] for r in _test_value]
+
+        oic = self.sheet.index_columns
+        self.sheet.index_columns = tuple()
+        self.sheet.update(test_value)  # FIXME vs non-truncating self.sheet.values = test_value
+        assert self.sheet._values_less_removed() == test_value
+        assert self.sheet.uncommitted()  # FIXME this needs to be run by default every test
+        assert ovalues != test_value  # FIXME this needs to be run by default every test
+        assert ovalues[0] != test_value[0]
+
+        try:
+            self.sheet.commit()
+            self.sheet_ro.fetch()
+            tv1 = self.sheet_ro.values
+            assert self.sheet.values == tv1
+        finally:
+            # FIXME need to delete the new rows not just return to the size of the old values
+            self.sheet.update(ovalues)
+            self.sheet.index_columns = oic
+            self.sheet.commit()
+            self.sheet_ro.fetch()
+            tv2 = self.sheet_ro.values
+            # FIXME I suspect this will break due to missing ends
+            assert self.sheet.values == tv2
+            assert tv2 == ovalues
 
     def test_row(self):
         r = self.sheet.row_object(0)

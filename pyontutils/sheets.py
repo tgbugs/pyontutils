@@ -373,24 +373,59 @@ class Cell:
         # TODO as identifier ?
         return idlib.from_oq.OntTerm(iri=self.hyperlink, label=self.value)
 
-    @property
-    def _range(self):
+    def _ciri(self):
         ci = self.column_index
         if ci < 0:
             ci = len(self.sheet.values[0]) + ci
-
-        c = num_to_ab(ci + 1)
 
         ri = self.row_index
         if ri < 0:
             ri = len(self.sheet.values) + ri
 
+        return ci, ri
+
+    @property
+    def _range(self):
+        ci, ri =  self._ciri()
+        c = num_to_ab(ci + 1)
         r = ri + 1
         return f'{c}{r}'
 
     @property
     def range(self):
         return f'{self.sheet.sheet_name}!{self._range}'
+
+    def _obj_coord(self):
+        ci, ri = self._ciri()
+        sid = self.row.sheet.sheetId()  # FIXME perf?
+        return {
+            'sheetId': sid,
+            'rowIndex': ri,
+            'columnIndex': ci,
+        }
+
+    def _obj_range(self):
+        ci, ri = self._ciri()
+        sid = self.row.sheet.sheetId()  # FIXME perf?
+        return {
+            'sheetId': sid,
+            'startRowIndex': ri,
+            'endRowIndex': ri + 1,
+            'startColumnIndex': ci,
+            'endColumnIndex': ci + 1,
+        }
+
+    def _obj_update(self):
+        return {'updateCells': {
+            'rows': [
+                {'values': [
+                    {'userEnteredValue': {'stringValue': self._value_str,}},]},],
+            'fields': 'userEnteredValue',
+            #'start': self._obj_coord(),  # only need one of start or range
+            'range': self._obj_range(),}}
+
+    def _obj_value(self):
+        return {'userEnteredValue': {'stringValue': self._value_str,}}
 
 
 class Row:
@@ -493,6 +528,27 @@ class Row:
 
     def rowBelow(self, positive_offset=1):
         return self.rowFromOffset(positive_offset)
+
+    def _obj_coord(self):
+        return self.cell_object(0)._obj_coord()
+
+    def _obj_range(self):
+        first = self.cell_object(0)._obj_range()
+        last = self.cell_object(-1)._obj_range()
+        out = {k:v for k, v in first.items()}
+        out['endRowIndex'] = last['endRowIndex']
+        out['endColumnIndex'] = last['endColumnIndex']
+        return out
+
+    def _obj_row(self):
+        return {'values': [cell._obj_value() for cell in self.cells]}
+
+    def _obj_update(self):
+        return {'updateCells': {
+            'rows': [{'values': [cell._obj_value() for cell in self.cells]}],
+            'fields': 'userEnteredValue',
+            #'start': self._obj_coord(),  # only need one of start or range
+            'range': self._obj_range(),}}
 
 
 class Column:
@@ -600,6 +656,17 @@ class Column:
     def columnRight(self, positive_offset=1):
         return self.columnFromOffset(positive_offset)
 
+    def _obj_coord(self):
+        return self.cell_object(0)._obj_coord()
+
+    def _obj_range(self):
+        first = self.cell_object(0)._obj_range()
+        last = self.cell_object(-1)._obj_range()
+        out = {k:v for k, v in first.items()}
+        out['endRowIndex'] = last['endRowIndex']
+        out['endColumnIndex'] = last['endColumnIndex']
+        return out
+
 
 class Sheet:
     """ access a single sheet as a basis for a workflow """
@@ -626,6 +693,7 @@ class Sheet:
         self._uncommitted_appends = {}
         self._uncommitted_extends = {}
         self._uncommitted_deletes = {}
+        self._uncommitted_thunks = []
         self._incomplete_removes = {}  # different than deletes for now
 
         self.readonly = readonly
@@ -823,6 +891,14 @@ class Sheet:
 
         self.values = update_values
 
+        #a = [(c.row_index, c.column_index) for c in self._incomplete_removes.keys()]
+        #b = [(i, j) for i, row in enumerate(update_values)
+             #for j, v in enumerate(row) if v == CELL_REMOVED]
+        #if (a or b) and a != b:
+            #breakpoint()
+
+        self._delete_rest()
+
     def _update_old(self, values):
         """ update all values at the same time """
         if self.readonly:
@@ -919,14 +995,22 @@ class Sheet:
 
         self._error_when_in_delete()
 
-        if cell not in self._uncommitted_updates:
-            try:
+        try:
+            if cell.value == value:
+                #if value == CELL_REMOVED and cell not in self._incomplete_removes:
+                    #breakpoint()
+                    #self._incomplete_removes[cell] = value
+
+                # there wasn't actually a change so we don't store it
+                return
+
+            if cell not in self._uncommitted_updates:
                 self._uncommitted_updates[cell] = cell.value  # store the old values
-            except IndexError:
-                # there was no old value so not storing the cell
-                # will have to figure out how to remove values
-                # that forced the extension of the rows I'm sure
-                pass
+        except IndexError:
+            # there was no old value so not comparing and not storing
+            # the cell will have to figure out how to remove values
+            # that forced the extension of the rows I'm sure
+            pass
 
         if value == CELL_REMOVED:
             self._incomplete_removes[cell] = value
@@ -934,7 +1018,7 @@ class Sheet:
         try:
             row_values = self.values[cell.row_index]
         except IndexError:
-            raise  # this is needed to force over to append
+            raise  # IndexError is used to force append
 
         try:
             row_values[cell.column_index] = value
@@ -949,6 +1033,9 @@ class Sheet:
             raise IndexError(msg) from e
         else:
             self._appendColBlank()
+            if cell not in self._uncommitted_updates:
+                # XXX somehow this is never called?
+                self._uncommitted_updates[cell] = cell.value
             row_values[cell.column_index] = value
 
     def _appendColBlank(self):
@@ -978,21 +1065,41 @@ class Sheet:
 
         lrow = len(row)
         # FIXME ensure that lrow actually has max length
-        ncols = len(self.values[0]) if self.values else lrow
+        ncols = len(self.values[0]) if self.values else lrow  # mostly safe
         if lrow < ncols:
             # ensure padding to avoid hard to debug index errors
             # and mutate in place so that anyone dealing with a
             # reference to the original row has the corrected version
             row.extend(['' for _ in range(ncols - lrow)])
+        elif lrow > ncols:
+            # XXX doing this here is safe for reapply uncommitted because
+            # it just adds the rows again, so we get back to the same state
+            n_new_cols = lrow - ncols
+            for i in range(n_new_cols):
+                self._appendColBlank()
 
-        if row not in self.values:
-            self.values.append(row)
-            row_object = Row(self, self.values.index(row))
-            self._uncommitted_appends[row_object] = row
-        else:
-            # FIXME should we allow identical duplicate rows?
-            # or do we require another mechanism for that?
-            raise ValueError('row already in sheet')
+        row_index = len(self.values)  # don't have to add 1 in this case
+        if row in self.values:
+            existing_index = self.values.index(row)
+            msg = (
+                f'A duplicate row (indexes {existing_index} {row_index}) '
+                f'has been added to a sheet! {self}')
+            log.warning(msg)
+
+        self.values.append(row)
+        row_object = Row(self, row_index)
+        self._uncommitted_appends[row_object] = row
+
+        if row and row[-1] == CELL_REMOVED:
+            # we have to append cell removed and then remove it
+            # otherwise the row.extend fill with '' will trigger it
+            # may be possible to avoid that without having to add this
+            # here, but for now we do the stupid and complete thing
+            start = row.index(CELL_REMOVED)
+            for i, value in enumerate(row[start:]):
+                col_index = start + i
+                cell = self.cell_object(row_index, col_index)
+                self._incomplete_removes[cell] = value
 
     def _row_from_index(self, index_column=None, value=None, row=None,
                         fail=False):
@@ -1022,9 +1129,9 @@ class Sheet:
             except AttributeError:
                 self._appendRow(row)
 
-    def _error_when_uncommited(self):
+    def _error_when_uncommitted(self):
         if self._uncommitted_appends or self._uncommitted_updates:
-            raise ValueError('Sheet currently has uncommited appends or updates.')
+            raise ValueError('Sheet currently has uncommitted appends or updates.')
 
     def _error_when_in_delete(self):
         # managing deletes is not simple because the row index has to be
@@ -1032,12 +1139,12 @@ class Sheet:
         # other operations as well ... SIGH, basically don't stack
         # deletes with anything else right now :/
         if self._uncommitted_deletes:
-            raise ValueError('Sheet currently has uncommited deletes.')
+            raise ValueError('Sheet currently has uncommitted deletes.')
 
     def delete(self, *rows):
         """ get me outa here """
         if self.uncommitted():
-            raise ValueError('Sheet has uncommited changes, no deletes '
+            raise ValueError('Sheet has uncommitted changes, no deletes '
                              'may be added to this transaction.')
 
         row_objects = sorted([self._row_from_index(row=row)[0] for row in rows],
@@ -1077,6 +1184,7 @@ class Sheet:
         self._uncommitted_updates = {}
         # restore the previous rows, note that all rows >= row_index += 1
         # have to use list.insert(row_object.row_index, )
+        self._uncommitted_thunks = []
 
         [self.values.insert(row_object.row_index, previously_deleted_row)
          for row_object, previously_deleted_row in
@@ -1092,7 +1200,7 @@ class Sheet:
                 **self._uncommitted_updates,
                 **self._uncommitted_deletes}
 
-    def commit(self):
+    def __commit(self):
         # FIXME need clear documentation about the order in which these things execute
         self._commit_appends()  # has to go first in cases where an added row is later updated
         self._commit_updates()
@@ -1111,6 +1219,263 @@ class Sheet:
         # sure how to test for that, fix involves checking _incomplete_removes
         self._complete_removes()  # FIXME could rewrite these as deletes?
 
+    def _delete_rest(self):
+        """ add a thunk to delete rest, will run after all other
+        operations and then in the order of any other arbitrary thunks
+        that generate requests """
+        # FIXME I'm sure there will be a case where we might want to
+        # run some arbitrary request in some other sequence, but we'll
+        # deal with that if it comes up
+        self._make_thunk(self._delete_rest_impl)
+
+    def _make_thunk(self, f):
+        # FIXME are these call once so we should error if they are
+        # requested more than once per commit?
+        existing = [f for f, thunk in self._uncommitted_thunks]
+        if f in existing:
+            raise ValueError(f'{f} already registered to be called')
+
+        try:
+            raise Exception('original call site')
+        except Exception as e:
+            def call(__exception=e):
+                try:
+                    return f()
+                except Exception as e:
+                    raise e from __exception
+
+            self._uncommitted_thunks.append((f, call))
+
+    def _values_less_removed(self):
+        return [new_row for row in self.values
+                for new_row in ([value for value in row if value != CELL_REMOVED],)
+                if new_row]
+
+    def _delete_rest_impl(self):
+        """ remove rows and columns beyond limits of current values
+        we can't use self._uncommitted_deletes here because we can
+        only delete rows and columns that are actually in values
+        and we intentionally do not pull empty rows and empty columns
+        so this has to go elsewhere
+        """
+
+        sid = self.sheetId()
+
+        # have to do this so that complete removes only happens after
+        # all other requests have succeeded and completed, including
+        # the delete, because if the delete fails at the end we have
+        # cannot call complete removes because it is destructive
+        _values = self.values
+        _lr = len(_values)
+        _lc = len(_values[0])  # mostly safe
+        # i, j will be the negative index of the bottom right non-removed cell
+        for i, row in enumerate(_values[::-1]):
+            if row[0] == CELL_REMOVED:
+                continue
+
+            for j, value in enumerate(row[::-1]):
+                if value != CELL_REMOVED:
+                    break
+
+            if value != CELL_REMOVED:
+                break
+
+        lr = _lr - i
+        lc = _lc - j
+
+        if not hasattr(self, '_meta'):
+            self.metadata()
+
+        this_meta = [s for s in self._meta['sheets'] if s['properties']['sheetId'] == sid][0]
+        gp = this_meta['properties']['gridProperties']
+        nr = gp['rowCount']
+        nc = gp['columnCount']
+        requests = []
+        if nr > lr:
+            requests.append(
+                {'deleteDimension': {
+                    'range': {
+                        'sheetId': sid,
+                        'dimension': 'ROWS',
+                        'startIndex': lr,
+                    }}})
+
+        if nc > lc:
+            requests.append(
+                {'deleteDimension': {
+                    'range': {
+                        'sheetId': sid,
+                        'dimension': 'COLUMNS',
+                        'startIndex': lc,
+                    }}})
+
+        yield from requests
+
+    def _commit_thunks_requests(self):
+        # FIXME deferred calling of thunks means that
+        # debugging the traceback could be a nightmare
+        for f, thunk in self._uncommitted_thunks:
+            yield from thunk()
+
+    def _commit_requests(self):
+        yield from self._commit_appends_requests()
+        yield from self._commit_updates_requests()
+        yield from self._commit_deletes_requests()
+        # XXX arbitrary requests come last and they are populated by
+        # calling all _uncommitted_thunks in order and they are called
+        # and emitted after all others because we need to be sure that
+        # local and remote values are synchronized for aribtrary calls
+        yield from self._commit_thunks_requests()
+
+    def commit(self):
+        requests = list(self._commit_requests())
+        if requests:
+            body = {'requests': requests}
+            resp = (self._spreadsheet_service
+                    .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
+                    .execute())
+
+            self._uncommitted_extends = {}
+            self._uncommitted_appends = {}
+            self._uncommitted_updates = {}
+            self._uncommitted_deletes = {}
+            self._uncommitted_thunks = []
+            self._complete_removes()
+
+    def _obj_coord_range(self, ordered):
+        obj_coord = ordered[0]._obj_coord()
+        first = ordered[0]._obj_range()
+        last = ordered[-1]._obj_range()
+        obj_range = {k:v for k, v in first.items()}
+        obj_range['endRowIndex'] = last['endRowIndex']
+        obj_range['endColumnIndex'] = last['endColumnIndex']
+        return obj_coord, obj_range
+
+    def _obj_update_rows(self, ordered_rows):
+        obj_coord, obj_range = self._obj_coord_range(ordered_rows)
+        return {
+            'updateCells': {
+                'rows': [row._obj_row() for row in ordered_rows],
+                'fields': 'userEnteredValue',
+                #'start': obj_coord,  # only need one of start or range
+                'range': obj_range,}}
+
+    def _obj_update_cols(self, ordered_cols):
+        obj_coord, obj_range = self._obj_coord_range(ordered_cols)
+        rows = [{'values': [cell._obj_value() for cell in row_frag]}
+                for row_frag in zip(*[list(c.cells) for c in ordered_cols])]
+        return {
+            'updateCells': {
+                'rows': rows,
+                'fields': 'userEnteredValue',
+                #'start': obj_coord,  # only need one of start or range
+                'range': obj_range,}}
+
+    # XXX FIXME these are interleaved right now so we can't
+    # aggregate them to reduce our api calls by half
+    # looks like there is an updateCells call that might work for updates?
+    # and an AppendCellsRequest that migth work for append
+    def _commit_appends_requests(self):  # values
+        requests = []
+        extend_objects = []
+        for oclass in (Row, Column):
+            objects = sorted((o for o in self._uncommitted_appends
+                              if isinstance(o, oclass)),
+                             key=lambda o: o.index)
+            if objects:
+                extend_objects.extend(objects)
+                if oclass is Row:
+                    blob = self._obj_update_rows(objects)
+                elif oclass is Column:
+                    blob = self._obj_update_cols(objects)
+                else:
+                    raise Exception('wat')
+                requests.append(blob)
+
+        # sheet updates
+        yield from self._commit_extends_requests(extend_objects)
+        yield from requests
+
+    def __asdf(self):
+        return
+        sid = self.sheetId()
+        # TODO extends has to run first, then we can append, but append is only rows
+        # we have to run the column appends updates I think
+        [
+        {'appendCells': {
+            'sheetId': sheetId,
+            'rows': [
+                {'values': [
+                    {'userEnteredValue':
+                     {'numberValue': 1234,}
+                     if isinstnace(thing, Number) else
+                     {'stringValue': 'asdf',}
+                     }, # ...
+                      ]},  # ...
+            ],
+            'fields': 'userEnteredValue',
+        }, # ...
+        }
+        ]
+        return data
+
+    def _commit_extends_requests(self, objects):  # sheet
+        # FIXME we haven't had any test cases where extends have been
+        # issued independent of data but as implemented this is
+        # completely broken for that case
+        if not self._uncommitted_extends and not objects:
+            return
+
+        # TODO columns ?
+
+        if not objects:
+            objects = sorted(self._uncommitted_extends, key=lambda o: o.index)
+
+        # FIXME there are some seriously nasty concurrency issues lurking here
+
+        sid = self.sheetId()
+        # FIXME extending with a bunch of CELL_REMOVED
+        requests = [
+            {'insertDimension': {
+                'inheritFromBefore': bool(self.raw_values),  # if raw_values is empty there is nothing to inherit
+                'range': {
+                    'sheetId': sid,
+                    'dimension': 'ROWS' if isinstance(object, Row) else 'COLUMNS',
+                    'startIndex': object.index,
+                    'endIndex': object.index + 1,  # have to delete at least one whole row
+                }}}
+            for object in objects]
+
+        yield from requests
+
+    def _commit_updates_requests(self): # values
+        # more overhead, but effectively the same as what we did before
+        requests = [cell._obj_update() for cell in self._uncommitted_updates]
+        yield from requests
+
+    def _commit_deletes_requests(self):  # sheet
+        if not self._uncommitted_deletes:
+            return
+
+        # TODO columns ?
+
+        # delete from the bottom up to avoid changes in the indexing
+        row_objects = sorted(self._uncommitted_deletes, key=lambda r: r.row_index)
+        # can't use rmin and rmax because there might be gaps
+
+        # FIXME there are some seriously nasty concurrency issues lurking here
+
+        requests = [
+            {'deleteDimension': {
+                'range': {
+                    'sheetId': self.sheetId(),
+                    'dimension': 'ROWS' if isinstance(row_object, Row) else 'COLUMNS',
+                    'startIndex': row_object.row_index,
+                    'endIndex': row_object.row_index + 1,  # have to delete at least one whole row
+                }}}
+            for row_object in row_objects[::-1]]  # remove last first just in case
+
+        yield from requests
 
     def _appendRange(self, objects):
         """ WARNING objects must be sorted, non-empty,
@@ -1235,6 +1600,7 @@ class Sheet:
                     'endIndex': row_object.row_index + 1,  # have to delete at least one whole row
                 }}}
             for row_object in row_objects[::-1]]  # remove last first just in case
+
         body = {'requests': data}
         resp = (self._spreadsheet_service
                 .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
@@ -1243,14 +1609,17 @@ class Sheet:
         self._uncommitted_deletes = {}
 
     def _complete_removes(self):
-        for cell in sorted(self._incomplete_removes,
-                           # this runs backwards removing the most distant first
-                           key=lambda c: (-c.row_index, -c.column_index)):
+        for cell in sorted(
+                self._incomplete_removes,
+                # this runs backwards removing the most distant first
+                key=lambda c: (-c.row_index, -c.column_index)):
             columns = self.values[cell.row_index]
             columns.pop(cell.column_index)
             if not columns:
                 self.values.pop(cell.row_index)
 
+        #if self._values_less_removed() != self.values:
+            #breakpoint()
         self._incomplete_removes = {}
 
     def _stash_uncommitted(self):
