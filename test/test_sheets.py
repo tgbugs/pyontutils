@@ -217,13 +217,13 @@ class TestSheets(unittest.TestCase):
 
         row.name().value = 'hello there'
         self.sheet.commit()
-        self.sheet_ro.fetch()
+        self.sheet_ro.fetch(fetch_meta=False)
         tv1 = self.sheet_ro.values
         assert self.sheet.values == tv1
 
         row.name().value = ''
         self.sheet.commit()
-        self.sheet_ro.fetch()
+        self.sheet_ro.fetch(fetch_meta=False)
         tv2 = self.sheet_ro.values
         assert self.sheet.values == tv2
         assert tv1 != tv2
@@ -238,13 +238,13 @@ class TestSheets(unittest.TestCase):
         try:
             self.sheet.upsert(row)
             self.sheet.commit()
-            self.sheet_ro.fetch()
+            self.sheet_ro.fetch(fetch_meta=False)
             tv1 = self.sheet_ro.values
             assert self.sheet.values == tv1
         finally:
             self.sheet.upsert(original_values)
             self.sheet.commit()
-            self.sheet_ro.fetch()
+            self.sheet_ro.fetch(fetch_meta=False)
             tv1 = self.sheet_ro.values
             assert self.sheet.values == tv1
 
@@ -256,7 +256,7 @@ class TestSheets(unittest.TestCase):
         try:
             self.sheet.delete(row)
             self.sheet.commit()
-            self.sheet_ro.fetch()
+            self.sheet_ro.fetch(fetch_meta=False)
             tv1 = self.sheet_ro.values
             assert self.sheet.values == tv1
             assert row not in tv1
@@ -264,7 +264,7 @@ class TestSheets(unittest.TestCase):
             if row not in tv1:
                 self.sheet.insert(row)  # FIXME can only append not insert back to previous location ...
                 self.sheet.commit()
-                self.sheet_ro.fetch()
+                self.sheet_ro.fetch(fetch_meta=False)
                 tv1 = self.sheet_ro.values
                 assert self.sheet.values == tv1
                 assert row in tv1
@@ -274,7 +274,7 @@ class TestSheets(unittest.TestCase):
         assert row not in self.sheet.values
         self.sheet.upsert(row)
         self.sheet.commit()
-        self.sheet_ro.fetch()
+        self.sheet_ro.fetch(fetch_meta=False)
         tv1 = self.sheet_ro.values
         try:
             assert self.sheet.values == tv1
@@ -282,7 +282,7 @@ class TestSheets(unittest.TestCase):
             if row in self.sheet.values:
                 self.sheet.delete(row)
                 self.sheet.commit()
-                self.sheet_ro.fetch()
+                self.sheet_ro.fetch(fetch_meta=False)
                 tv1 = self.sheet_ro.values
                 assert self.sheet.values == tv1
 
@@ -298,7 +298,7 @@ class TestSheets(unittest.TestCase):
             self.sheet._appendRow(row)
 
         self.sheet.commit()
-        self.sheet_ro.fetch()
+        self.sheet_ro.fetch(fetch_meta=False)
         tv1 = self.sheet_ro.values
         try:
             assert self.sheet.values == tv1
@@ -311,7 +311,7 @@ class TestSheets(unittest.TestCase):
             if to_delete:
                 self.sheet.delete(*to_delete)
                 self.sheet.commit()
-                self.sheet_ro.fetch()
+                self.sheet_ro.fetch(fetch_meta=False)
                 tv1 = self.sheet_ro.values
                 assert self.sheet.values == tv1
 
@@ -341,14 +341,14 @@ class TestSheets(unittest.TestCase):
 
         try:
             self.sheet.commit()
-            self.sheet_ro.fetch()
+            self.sheet_ro.fetch(fetch_meta=False)
             tv1 = self.sheet_ro.values
             assert self.sheet.values == tv1
         finally:
             self.sheet.update(ovalues)
             self.sheet.index_columns = oic
             self.sheet.commit()
-            self.sheet_ro.fetch()
+            self.sheet_ro.fetch(fetch_meta=False)
             tv2 = self.sheet_ro.values
             # FIXME I suspect this will break due to missing ends
             assert self.sheet.values == tv2
@@ -373,7 +373,7 @@ class TestSheets(unittest.TestCase):
 
         try:
             self.sheet.commit()
-            self.sheet_ro.fetch()
+            self.sheet_ro.fetch(fetch_meta=False)
             tv1 = self.sheet_ro.values
             assert self.sheet.values == tv1
         finally:
@@ -381,7 +381,7 @@ class TestSheets(unittest.TestCase):
             self.sheet.update(ovalues)
             self.sheet.index_columns = oic
             self.sheet.commit()
-            self.sheet_ro.fetch()
+            self.sheet_ro.fetch(fetch_meta=False)
             tv2 = self.sheet_ro.values
             # FIXME I suspect this will break due to missing ends
             assert self.sheet.values == tv2
@@ -409,7 +409,7 @@ class TestSheets(unittest.TestCase):
 
         try:
             self.sheet.commit()
-            self.sheet_ro.fetch()
+            self.sheet_ro.fetch(fetch_meta=False)
             tv1 = self.sheet_ro.values
             assert self.sheet.values == tv1
         finally:
@@ -417,7 +417,7 @@ class TestSheets(unittest.TestCase):
             self.sheet.update(ovalues)
             self.sheet.index_columns = oic
             self.sheet.commit()
-            self.sheet_ro.fetch()
+            self.sheet_ro.fetch(fetch_meta=False)
             tv2 = self.sheet_ro.values
             # FIXME I suspect this will break due to missing ends
             assert self.sheet.values == tv2

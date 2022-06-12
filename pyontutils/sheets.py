@@ -788,6 +788,7 @@ class Sheet:
     def _fetch_from_other_sheet(self, other):
         """ fix for rate limits when testing """
         self._meta = copy.deepcopy(other._meta)
+        self._meta_file = copy.deepcopy(other._meta_file)
         self.raw_values = copy.deepcopy(other.raw_values)
         self._values = copy.deepcopy(other._values)
         if hasattr(other, 'byCol'):
@@ -796,7 +797,7 @@ class Sheet:
         self.cells_index = copy.deepcopy(other.cells_index)
 
     #fetch_count = 0
-    def fetch(self, fetch_grid=None, filter_cell=None):
+    def fetch(self, fetch_grid=None, filter_cell=None, fetch_meta=True):
         """ update remote values (called automatically at __init__) """
         #self.__class__.fetch_count += 1
         #log.debug(f'fetch count: {self.__class__.fetch_count}')
@@ -804,8 +805,9 @@ class Sheet:
         if fetch_grid is None:
             fetch_grid = self.fetch_grid
 
-        self.metadata()
-        self.metadata_file()
+        if fetch_meta:
+            self.metadata()
+            self.metadata_file()
 
         values, values_formula, grid, cells_index = get_sheet_values(
             self.name,
@@ -842,23 +844,6 @@ class Sheet:
 
         return self._meta, self._meta_file, self.raw_values, self.raw_values_formula, grid
 
-        #self._lol_g, self._lol_c = grid, cells_index  # WHAT! this causes the problem !?
-        #import copy
-        #self._lol_g, self._lol_c = copy.deepcopy(grid), copy.deepcopy(cells_index)  # as does this
-
-        #for sheet in grid['sheets']:
-
-        #self.grid = {}  # grid is BAD
-        #self.cells_index = {}  # cells_index is BAD
-
-        #_asdf = pickle.dumps(grid)
-        #print('grid', len(_asdf) / 1024 ** 2)
-        #_asdf = pickle.dumps(cells_index)
-        #print('cells_index', len(_asdf) / 1024 ** 2)
-
-        #_asdf = pickle.dumps(self)
-        #print(len(_asdf) / 1024 ** 2)
-
     @property
     def values(self):
         return self._values
@@ -890,30 +875,7 @@ class Sheet:
             update_values += [[CELL_REMOVED] * nc] * nblank
 
         self.values = update_values
-
-        #a = [(c.row_index, c.column_index) for c in self._incomplete_removes.keys()]
-        #b = [(i, j) for i, row in enumerate(update_values)
-             #for j, v in enumerate(row) if v == CELL_REMOVED]
-        #if (a or b) and a != b:
-            #breakpoint()
-
         self._delete_rest()
-
-    def _update_old(self, values):
-        """ update all values at the same time """
-        if self.readonly:
-            raise PermissionError('sheet was loaded readonly, '
-                                  'if you want to write '
-                                  'reinit with readonly=False')
-
-        # FIXME this needs to updated the values attached to _THIS_ sheet
-        # as well
-        # FIXME also this bypasses the commit mechanism
-        update_sheet_values(self.name,
-                            self.sheet_name,
-                            values,
-                            spreadsheet_service=self._spreadsheet_service,
-                            SPREADSHEET_ID=self._sheet_id())
 
     def sheetId(self):
         """ the tab aka sheetId not the _sheet_id aka spreadsheetId """
@@ -1200,25 +1162,6 @@ class Sheet:
                 **self._uncommitted_updates,
                 **self._uncommitted_deletes}
 
-    def __commit(self):
-        # FIXME need clear documentation about the order in which these things execute
-        self._commit_appends()  # has to go first in cases where an added row is later updated
-        self._commit_updates()
-
-        # deletes go last so that they don't rearrange the sheet and shift
-        # cell definitions for everything else
-        self._commit_deletes()
-
-        # implementaiton note:
-        # deletes are cases where we explicitly delete rows on our end
-        # removes are used during an update where where are not explicit
-        # deletes, therefore have to clean up the local blook keeping of
-        # the removed cells after the commit finishes
-        # NOTE: this means that checking len of the values lists during
-        # during a call to update may return an incorrect value not entirely
-        # sure how to test for that, fix involves checking _incomplete_removes
-        self._complete_removes()  # FIXME could rewrite these as deletes?
-
     def _delete_rest(self):
         """ add a thunk to delete rest, will run after all other
         operations and then in the order of any other arbitrary thunks
@@ -1327,7 +1270,10 @@ class Sheet:
         # local and remote values are synchronized for aribtrary calls
         yield from self._commit_thunks_requests()
 
+    #commit_count = 0
     def commit(self):
+        #self.__class__.commit_count += 1
+        #log.debug(f'commit count: {self.__class__.commit_count}')
         requests = list(self._commit_requests())
         if requests:
             body = {'requests': requests}
@@ -1371,10 +1317,6 @@ class Sheet:
                 #'start': obj_coord,  # only need one of start or range
                 'range': obj_range,}}
 
-    # XXX FIXME these are interleaved right now so we can't
-    # aggregate them to reduce our api calls by half
-    # looks like there is an updateCells call that might work for updates?
-    # and an AppendCellsRequest that migth work for append
     def _commit_appends_requests(self):  # values
         requests = []
         extend_objects = []
@@ -1395,29 +1337,6 @@ class Sheet:
         # sheet updates
         yield from self._commit_extends_requests(extend_objects)
         yield from requests
-
-    def __asdf(self):
-        return
-        sid = self.sheetId()
-        # TODO extends has to run first, then we can append, but append is only rows
-        # we have to run the column appends updates I think
-        [
-        {'appendCells': {
-            'sheetId': sheetId,
-            'rows': [
-                {'values': [
-                    {'userEnteredValue':
-                     {'numberValue': 1234,}
-                     if isinstnace(thing, Number) else
-                     {'stringValue': 'asdf',}
-                     }, # ...
-                      ]},  # ...
-            ],
-            'fields': 'userEnteredValue',
-        }, # ...
-        }
-        ]
-        return data
 
     def _commit_extends_requests(self, objects):  # sheet
         # FIXME we haven't had any test cases where extends have been
@@ -1499,114 +1418,6 @@ class Sheet:
         cmin = num_to_ab(_cmin + 1)
         cmax = num_to_ab(_cmax + 1)
         return f'{self.sheet_name}!{cmin}{rmin}:{cmax}{rmax}'
-
-    def _commit_appends(self):
-
-        def sigh(vs):  # FIXME
-            return ['' if v == CELL_REMOVED else v for v in vs]
-
-        if not self._uncommitted_appends:
-            return
-
-        data = []
-        extend_objects = []
-        for oclass in (Row, Column):
-            objects = sorted((o for o in self._uncommitted_appends
-                              if isinstance(o, oclass)),
-                             key=lambda o: o.index)
-            if objects:
-                extend_objects.extend(objects)
-                blob = dict(
-                    range = self._appendRange(objects),
-                    values = [sigh(o.values) for o in objects],  # FIXME object -> string issue
-                    majorDimension = oclass.__name__.capitalize() + 'S',
-                )
-                data.append(blob)
-                # FIXME overlapping cells are added twice
-
-        # sheet updates
-        self._commit_extends(extend_objects)
-
-        # value updates
-        body = {'valueInputOption': 'USER_ENTERED',
-                'data': data,}
-
-        resp = (self._spreadsheet_service.values()
-                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
-                .execute())
-
-        self._uncommitted_appends = {}
-
-    def _commit_extends(self, objects=None):
-        if not self._uncommitted_extends and not objects:
-            return
-
-        # TODO columns ?
-
-        if not objects:
-            objects = sorted(self._uncommitted_extends, key=lambda o: o.index)
-
-        # FIXME there are some seriously nasty concurrency issues lurking here
-
-        sid = self.sheetId()
-        data = [
-            {'insertDimension': {
-                'inheritFromBefore': bool(self.raw_values),  # if raw_values is empty there is nothing to inherit
-                'range': {
-                    'sheetId': sid,
-                    'dimension': 'ROWS' if isinstance(object, Row) else 'COLUMNS',
-                    'startIndex': object.index,
-                    'endIndex': object.index + 1,  # have to delete at least one whole row
-                }}}
-            for object in objects]
-
-        body = {'requests': data}
-        resp = (self._spreadsheet_service
-                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
-                .execute())
-
-        if self._uncommitted_extends:
-            self._uncommitted_extends = {}
-
-    def _commit_updates(self):
-        data = [{'range': cell.range, 'values': [[cell._value_str]]}
-                for cell in self._uncommitted_updates]
-        body = {'valueInputOption': 'USER_ENTERED',
-                'data': data,}
-        resp = (self._spreadsheet_service.values()
-                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
-                .execute())
-
-        self._uncommitted_updates = {}
-
-    def _commit_deletes(self):
-        if not self._uncommitted_deletes:
-            return
-
-        # TODO columns ?
-
-        # delete from the bottom up to avoid changes in the indexing
-        row_objects = sorted(self._uncommitted_deletes, key= lambda r: r.row_index)
-        # can't use rmin and rmax because there might be gaps
-
-        # FIXME there are some seriously nasty concurrency issues lurking here
-
-        data = [
-            {'deleteDimension': {
-                'range': {
-                    'sheetId': self.sheetId(),
-                    'dimension': 'ROWS' if isinstance(row_object, Row) else 'COLUMNS',
-                    'startIndex': row_object.row_index,
-                    'endIndex': row_object.row_index + 1,  # have to delete at least one whole row
-                }}}
-            for row_object in row_objects[::-1]]  # remove last first just in case
-
-        body = {'requests': data}
-        resp = (self._spreadsheet_service
-                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
-                .execute())
-
-        self._uncommitted_deletes = {}
 
     def _complete_removes(self):
         for cell in sorted(
