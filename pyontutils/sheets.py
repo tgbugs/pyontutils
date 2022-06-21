@@ -3,6 +3,7 @@ import copy
 import pickle
 import itertools
 from pathlib import Path
+from numbers import Number
 from urllib.parse import urlparse
 import idlib
 import htmlfn as hfn
@@ -418,14 +419,21 @@ class Cell:
     def _obj_update(self):
         return {'updateCells': {
             'rows': [
-                {'values': [
-                    {'userEnteredValue': {'stringValue': self._value_str,}},]},],
+                {'values': [self._obj_value(),]},],
             'fields': 'userEnteredValue',
             #'start': self._obj_coord(),  # only need one of start or range
             'range': self._obj_range(),}}
 
     def _obj_value(self):
-        return {'userEnteredValue': {'stringValue': self._value_str,}}
+        value = self._value_str
+        if isinstance(value, bool):
+            d = {'boolValue': value}
+        elif isinstance(value, Number):
+            d = {'numberValue': value}
+        else:
+            d = {'stringValue': value}
+
+        return {'userEnteredValue': d}
 
 
 class Row:
