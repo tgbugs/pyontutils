@@ -975,7 +975,13 @@ class Sheet:
                 return
 
             if cell not in self._uncommitted_updates:
-                self._uncommitted_updates[cell] = cell.value  # store the old values
+                _cv = cell.value
+                if value == '' and _cv == None or value == None and _cv == '':
+                    # don't push changes related to empty string vs None very bad
+                    # for perf due to some lurking quadraticness
+                    pass
+                else:
+                    self._uncommitted_updates[cell] = cell.value  # store the old values
         except IndexError:
             # there was no old value so not comparing and not storing
             # the cell will have to figure out how to remove values
@@ -1269,6 +1275,8 @@ class Sheet:
             yield from thunk()
 
     def _commit_requests(self):
+        # FIXME there is some lurking quadraticness in here e.g. when
+        # trying to update ALL cells in a big sheet ~100k sheets
         yield from self._commit_appends_requests()
         yield from self._commit_updates_requests()
         yield from self._commit_deletes_requests()
