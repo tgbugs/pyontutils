@@ -96,7 +96,7 @@ setup(
         'lxml',
         'nest_asyncio',
         'ontquery>=0.2.8',
-        'orthauth[sxpr]>=0.0.15',
+        'orthauth[sxpr]>=0.0.16',
         'pyld',
         'pyyaml',
         'requests',
