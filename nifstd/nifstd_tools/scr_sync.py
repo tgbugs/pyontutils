@@ -349,6 +349,9 @@ def main():
     local = Path(git_local, repo)
     if not local.exists():
         local.parent
+    else:
+        Registry.local_base = local
+
     RegistrySource.source = f'{host}:{port}/{database}'
     Registry.config(user=user, host=host, port=port, database=database)
     if not args['--test']:
