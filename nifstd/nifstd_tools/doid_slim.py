@@ -5,8 +5,9 @@ from pyontutils.config import auth
 
 
 def main():
+    olr = auth.get_path('ontology-local-repo')
     ori = OntResIri('http://purl.obolibrary.org/obo/doid.owl')
-    orp = OntResPath('~/git/NIF-Ontology/ttl/external/doid.owl')
+    orp = OntResPath(olr / 'ttl/external/doid.owl')
     ort = ori
     g = ori.graph
     query = """
@@ -19,7 +20,6 @@ def main():
     }"""
     res = list(g.query(query))
     filt = [r for r in res if not isinstance(r[1], rdflib.BNode)]
-    olr = auth.get_path('ontology-local-repo')
     spath = 'ttl/generated/doidslim.ttl'
     go = OntGraph(path=olr / spath)
     # TODO prov record like the one we have for chebi

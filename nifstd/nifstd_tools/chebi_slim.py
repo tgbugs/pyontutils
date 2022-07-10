@@ -99,7 +99,8 @@ class ChebiOntSrc(Source):
             r.append(c)
         data = etree.tostring(r)
         g = OntGraph()
-        g.parse(data=data)  # now _this_ is stupidly slow (like 20 minutes of slow) might make more sense to do the xml directly?
+        g.parse(data=data, format='xml') # now _this_ is stupidly slow
+        # (like 20 minutes of slow) might make more sense to do the xml directly?
         cls.iri = list(g.query('SELECT DISTINCT ?match WHERE { ?temp rdf:type owl:Ontology . ?temp owl:versionIRI ?match . }'))[0][0]
         return more, more_ids, g
 
