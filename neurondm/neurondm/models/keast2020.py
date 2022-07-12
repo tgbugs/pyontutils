@@ -9,7 +9,7 @@ sllp = 'ilxtr:hasSomaLocatedInLayer'
 alp = 'ilxtr:hasAxonLocatedIn'
 dlp = 'ilxtr:hasDendriteLocatedIn'
 synp = 'ilxtr:hasAxonPresynapticElementIn'
-snsp = 'ilxtr:hasSensorySubcellularElementIn'  # XXX new, kind of like axon terminal but for dendrites
+snsp = 'ilxtr:hasDendriteSensorySubcellularElementIn'  # XXX new, kind of like axon terminal but for dendrites
 
 fconp = 'ilxtr:hasForwardConnectionPhenotype'
 
