@@ -188,50 +188,65 @@ class Keast2020(LocalNameManager):
     locals().update(ntks)  # LOL ?! this works !?
 
     # soma layers
-    VII= Phenotype('ilxtr:spinal-VII', sllp)
-    IX = Phenotype('ilxtr:spinal-IX', sllp)
+    VII= Phenotype('UBERON:0016578', sllp)  # 'ilxtr:spinal-VII'
+    IX = Phenotype('UBERON:0016580', sllp)  # 'ilxtr:spinal-IX'
 
     # soma locations
-    L1 = Phenotype('ilxtr:spinal-L1', slp)
-    L2 = Phenotype('ilxtr:spinal-L2', slp)
-    L5 = Phenotype('ilxtr:spinal-L5', slp)
-    L6 = Phenotype('ilxtr:spinal-L6', slp)
-    S1 = Phenotype('ilxtr:spinal-S1', slp)
+
+    #L1 = Phenotype('ilxtr:spinal-L1', slp)
+    #L2 = Phenotype('ilxtr:spinal-L2', slp)
+    #L5 = Phenotype('ilxtr:spinal-L5', slp)
+    #L6 = Phenotype('ilxtr:spinal-L6', slp)
+    #S1 = Phenotype('ilxtr:spinal-S1', slp)
+    L1 = Phenotype('UBERON:0006448', slp)  # XXX fma in sct
+    L2 = Phenotype('UBERON:0006450', slp)  # XXX fma in sct
+    L5 = Phenotype('UBERON:0006447', slp)  # XXX fma in sct
+    L6 = Phenotype('ILX:0793358', slp)
+    S1 = Phenotype('UBERON:0006460', slp)  # XXX fma in sct
+
     IMG = Phenotype('UBERON:0005453', slp)  # ilxtr:IMG
     PG = Phenotype('UBERON:0016508', slp)  # ilxtr:PG
 
-    L1_dr = Phenotype('ilxtr:dr-L1', slp) # soma implies ax + dn
-    L2_dr = Phenotype('ilxtr:dr-L2', slp)
-    L6_dr = Phenotype('ilxtr:dr-L6', slp)
-    S1_dr = Phenotype('ilxtr:dr-S1', slp)
+    #L1_dr = Phenotype('ilxtr:dr-L1', slp)  # soma implies ax + dn
+    #L2_dr = Phenotype('ilxtr:dr-L2', slp)
+    #L6_dr = Phenotype('ilxtr:dr-L6', slp)
+    #S1_dr = Phenotype('ilxtr:dr-S1', slp)
+    L1_dr = Phenotype('UBERON:0002855', slp)  # soma implies ax + dn
+    L2_dr = Phenotype('UBERON:0002856', slp)
+    L6_dr = Phenotype('ILX:0793360', slp)
+    S1_dr = Phenotype('UBERON:0002860', slp)
 
     # sort of nerves
-    L1_vr = Phenotype('ilxtr:vr-L1', alp)  # ventral root
-    L1_wr = Phenotype('ilxtr:wr-L1', alp)  # white ramus
-    L1_gr = Phenotype('ilxtr:gr-L1', alp)  # gray ramus
+    L1_vr = Phenotype('ILX:0785421', alp)  # ventral root 'ilxtr:vr-L1'  # XXX fma in sct
+    L1_wr = Phenotype('ILX:0793220', alp)  # white ramus 'ilxtr:wr-L1'  # XXX FMA in sct
 
-    L2_vr = Phenotype('ilxtr:vr-L2', alp)
-    L2_wr = Phenotype('ilxtr:wr-L2', alp)
-    L2_gr = Phenotype('ilxtr:gr-L2', alp)
+    L1_gr = Phenotype('ILX:0785825', alp)  # gray ramus 'ilxtr:gr-L1'  # XXX fma in sct
 
-    L5_vr = Phenotype('ilxtr:vr-L5', alp)
+    L2_vr = Phenotype('ILX:0788675', alp)  # 'ilxtr:vr-L2'  # XXX fma in sct
+    L2_wr = Phenotype('ILX:0793221', alp)  # 'ilxtr:wr-L2'  # XXX FMA in sct
 
-    L6_gr = Phenotype('ilxtr:gr-L6', alp)
-    L6_vr = Phenotype('ilxtr:vr-L6', alp)
+    L2_gr = Phenotype('ILX:0785733', alp)  # 'ilxtr:gr-L2'  # XXX fma in sct
 
-    S1_gr = Phenotype('ilxtr:gr-S1', alp)
-    S1_vr = Phenotype('ilxtr:vr-S1', alp)
+    L5_vr = Phenotype('ILX:0791148', alp)  # 'ilxtr:vr-L5'  # XXX fma in sct
+
+    L6_gr = Phenotype('ILX:0739299', alp)  # 'ilxtr:gr-L6'
+    L6_vr = Phenotype('ILX:0793615', alp)  # 'ilxtr:vr-L6'
+
+    S1_gr = Phenotype('ILX:0793228', alp)  # 'ilxtr:gr-S1'  # XXX fma in sct
+    S1_vr = Phenotype('ILX:0792853', alp)  # 'ilxtr:vr-S1'  # XXX fma in sct
 
     IMGax = Phenotype('UBERON:0005453', alp)
     PGax = Phenotype('UBERON:0016508', alp)
 
-    S1ax = Phenotype('ilxtr:sc-S1', alp)
+    S1ax = Phenotype('ILX:0793350', alp)  # 'ilxtr:sc-S1'
 
     # ilxtr:spinal-white-matter technically a layer
     # FIXME because axon location does not have cardianlity 1 WMax is
     # ambiguous unless it is composed with a layer of the spinal cord
     # because the operation is not commutative with card > 1
-    WMax = Phenotype('ilxtr:spinal-white-matter', alp)
+    #WMax = Phenotype('ilxtr:spinal-white-matter', alp)
+    WMax = Phenotype('UBERON:0002318', alp)
+
 
     # sensory dendrite sort of nerves
     IMGdn = Phenotype('UBERON:0005453', dlp)
@@ -246,22 +261,24 @@ class Keast2020(LocalNameManager):
     medulla_ax = Phenotype('UBERON:0001896', alp)
 
     # nerves
-    n_bl = Phenotype('ilxtr:nerve-bladder', alp)
+    #n_bl = Phenotype('ilxtr:nerve-bladder', alp)
     #n_hg = Phenotype('ilxtr:nerve-hypogastric', alp)
     #n_ls = Phenotype('ilxtr:nerve-lumbar-splanic', alp)
     #n_ps = Phenotype('ilxtr:nerve-pelvic-splanic', alp) # splanchnic
     #n_pu = Phenotype('ilxtr:nerve-pudendal', alp)
+    n_bl = Phenotype('ILX:0793559', alp)
     n_hg = Phenotype('UBERON:0005303', alp)
     n_ls = Phenotype('UBERON:0018683', alp)
     n_ps = Phenotype('UBERON:0018675', alp)
     n_pu = Phenotype('UBERON:0011390', alp)
 
     # sensory ??ents
-    n_bl_dn = Phenotype('ilxtr:nerve-bladder', dlp)
+    #n_bl_dn = Phenotype('ilxtr:nerve-bladder', dlp)
     #n_hg_dn = Phenotype('ilxtr:nerve-hypogastric', dlp)
     #n_ls_dn = Phenotype('ilxtr:nerve-lumbar-splanic', dlp)
     #n_ps_dn = Phenotype('ilxtr:nerve-pelvic-splanic', dlp)
     #n_pu_dn = Phenotype('ilxtr:nerve-pudendal', dlp)
+    n_bl_dn = Phenotype('ILX:0793559', dlp)
     n_hg_dn = Phenotype('UBERON:0005303', dlp)
     n_ls_dn = Phenotype('UBERON:0018683', dlp)
     n_ps_dn = Phenotype('UBERON:0018675', dlp)
@@ -278,13 +295,13 @@ class Keast2020(LocalNameManager):
     BDVWsyn = Phenotype('ilxtr:bladder-dome-vessel-wall', synp)
 
     BDWsyn = Phenotype('ilxtr:bladder-dome-wall', synp)
-    BNWsyn = Phenotype('ilxtr:bladder-neck-wall', synp)
+    BNWsyn = Phenotype('ILX:0774144', synp)  # 'ilxtr:bladder-neck-wall'
 
     #URTsyn = Phenotype('ilxtr:urethra', synp)
     URTsyn = Phenotype('UBERON:0000057', synp)
 
     BNST = Phenotype('UBERON:0001880', slp)
-    CeA = Phenotype( 'UBERON:0002883', slp)  # central amygdala
+    CeA = Phenotype('UBERON:0002883', slp)  # central amygdala
     MPOA = Phenotype('UBERON:0007769', slp)
     MnPO = Phenotype('UBERON:0002625', slp)
     LPOA = Phenotype('UBERON:0001931', slp)
@@ -298,11 +315,17 @@ class Keast2020(LocalNameManager):
     # with the fact that (intersection (phenotype layer hp) (phenotype region hp))
     # is not commutative with (phenotype (intersection layer region) hp)
     # when the relationship hp allows cardinality > 1
-    Isyn = Phenotype('ilxtr:spinal-I', synp)
-    IIsyn = Phenotype('ilxtr:spinal-II', synp)
-    Vsyn = Phenotype('ilxtr:spinal-V', synp)
-    VIIsyn = Phenotype('ilxtr:spinal-VII', synp)
-    Xsyn = Phenotype('ilxtr:spinal-X', synp)
+
+    #Isyn = Phenotype('ilxtr:spinal-I', synp)
+    #IIsyn = Phenotype('ilxtr:spinal-II', synp)
+    #Vsyn = Phenotype('ilxtr:spinal-V', synp)
+    #VIIsyn = Phenotype('ilxtr:spinal-VII', synp)
+    #Xsyn = Phenotype('ilxtr:spinal-X', synp)
+    Isyn = Phenotype('UBERON:0006118', synp)
+    IIsyn = Phenotype('ILX:0110092', synp)
+    Vsyn = Phenotype('UBERON:0016576', synp)
+    VIIsyn = Phenotype('UBERON:0016578', synp)
+    Xsyn = Phenotype('ILX:0110100', synp)
 
     # sensory substructure locations
 
@@ -358,29 +381,52 @@ class Keast2020(LocalNameManager):
     #EPIsyn = Phenotype('ilxtr:epithelium', synp)
     #RABsyn = Phenotype('ilxtr:epithelium', synp)
 
-
 four_soma_locs = [
     # sympathetic chain
-    'ilxtr:sc-T12',
-    'ilxtr:sc-T13',
-    'ilxtr:sc-L1',
-    'ilxtr:sc-L2',
-    'ilxtr:sc-L3',
-    'ilxtr:sc-L4',
-    'ilxtr:sc-L5',
-    'ilxtr:sc-L6',
-    #'ilxtr:sc-S1',
+    'ILX:0787009',  # 'ilxtr:sc-T12'
+    'ILX:0739295',  # 'ilxtr:sc-T13'
+    'ILX:0789862',  # 'ilxtr:sc-L1'
+    'ILX:0786933',  # 'ilxtr:sc-L2'
+    'ILX:0788315',  # 'ilxtr:sc-L3'
+    'ILX:0786049',  # 'ilxtr:sc-L4'
+    'ILX:0739296',  # 'ilxtr:sc-L5'
+    'ILX:0790472',  # 'ilxtr:sc-L6'
+    #'ILX:0789109',  # 'ilxtr:sc-S1'
 ]
 
-[setattr(Keast2020, f'sc{sl.split("-")[-1]}',
+osl = {
+    'ILX:0787009': 'ilxtr:sc-T12',
+    'ILX:0739295': 'ilxtr:sc-T13',
+    'ILX:0789862': 'ilxtr:sc-L1',
+    'ILX:0786933': 'ilxtr:sc-L2',
+    'ILX:0788315': 'ilxtr:sc-L3',
+    'ILX:0786049': 'ilxtr:sc-L4',
+    'ILX:0739296': 'ilxtr:sc-L5',
+    'ILX:0790472': 'ilxtr:sc-L6',
+    #'ILX:0789109': 'ilxtr:sc-S1',
+}
+
+_osl_chain = {
+    'ILX:0793342': 'ilxtr:sc-T12',
+    'ILX:0793343': 'ilxtr:sc-T13',
+    'ILX:0793344': 'ilxtr:sc-L1',
+    'ILX:0793345': 'ilxtr:sc-L2',
+    'ILX:0793346': 'ilxtr:sc-L3',
+    'ILX:0793347': 'ilxtr:sc-L4',
+    'ILX:0793348': 'ilxtr:sc-L5',
+    'ILX:0793349': 'ilxtr:sc-L6',
+    # 'ILX:0793350': 'ilxtr:sc-S1',
+}
+
+[setattr(Keast2020, f'sc{osl[sl].split("-")[-1]}',
          Phenotype(sl, slp))
  for sl in four_soma_locs]
 
-[setattr(Keast2020, f'sc{sl.split("-")[-1]}ax',
+[setattr(Keast2020, f'sc{osl[sl].split("-")[-1]}ax',
          Phenotype(sl, alp))
  for sl in four_soma_locs]
 
-[setattr(Keast2020, f'sc{sl.split("-")[-1]}syn',
+[setattr(Keast2020, f'sc{osl[sl].split("-")[-1]}syn',
          Phenotype(sl, synp))
  for sl in four_soma_locs]
 
@@ -408,6 +454,15 @@ def main():
         needs_keast_namespace(config)
 
     config.write()
+    labels = (
+        rdfs.label,
+        #ilxtr.genLabel, ilxtr.localLabel, ilxtr.simpleLabel,
+        #ilxtr.simpleLocalLabel, skos.prefLabel
+    )
+    to_remove = [t for t in config._written_graph
+                 if t[1] in labels and '/neuron-type-keast-' in t[0]]
+    [config._written_graph.remove(t) for t in to_remove]
+    config._written_graph.write()
     config.write_python()
     return config,
 
