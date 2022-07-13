@@ -90,8 +90,17 @@ def main():
     for id, label, bag in bags:
         BolserLewisNeuron(*bag, label=label, id_=id, override=True)
 
-    Neuron.write()
-    Neuron.write_python()
+    config.write()
+    labels = (
+        rdfs.label,
+        #ilxtr.genLabel, ilxtr.localLabel, ilxtr.simpleLabel,
+        #ilxtr.simpleLocalLabel, skos.prefLabel
+    )
+    to_remove = [t for t in config._written_graph
+                 if t[1] in labels]
+    [config._written_graph.remove(t) for t in to_remove]
+    config._written_graph.write()
+    config.write_python()
     return config,
 
 
