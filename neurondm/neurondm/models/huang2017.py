@@ -27,6 +27,10 @@ induced_exp = 'ilxtr:hasDriverExpressionInducedPhenotype'
 const_exp = 'ilxtr:hasDriverExpressionConstitutivePhenotype'
 
 
+def gid(i):
+    return OntId(f'npokb:{i}')
+
+
 class Genes(LocalNameManager):
 
     # FIXME ilxtr.hasRNAExpressionPhenotype
@@ -403,41 +407,49 @@ class Huang2017(Genes, Species):
 
 
 with Huang2017:
-    with Neuron_(Mouse, Neocortex, GABA) as context:
+    with Neuron_(Mouse, Neocortex, GABA, id_=gid(58)) as context:
         #context.subClassOf(ilxtr.huang2017)
         # TODO add the names assigned here as abbrevs somehow
 
         #fig1b
         # FIXME is approach to disjointness VS adding negative phenotypes
-        Neuron(Pvalb).disjointWith(Neuron(Sst), Neuron(Htr3a))
+        ns = Neuron(Sst, id_=gid(56))
+        nh = Neuron(Htr3a, id_=gid(53))
+        Neuron(Pvalb, id_=gid(55)).disjointWith(ns, nh)
         #Neuron(Pvalb).equivalentClass(Neuron(NegPhenotype(Sst)), Neuron(NegPhenotype(Htr3a)))
         # FIXME for some reason the NegPhenotype neurons above fail to be added to the graph!??!
         #a = Neuron(NegPhenotype(Sst))
         #b = Neuron(NegPhenotype(Htr3a))
         #Neuron(Pvalb).equivalentClass(a, b)
-        Neuron(Sst).disjointWith(Neuron(Htr3a))
-        Neuron(Vip).subClassOf(Neuron(Htr3a))
-        Neuron(Cck).subClassOf(Neuron(Htr3a))
-        Neuron(Nkx2_1).disjointWith(Neuron(Nos1), Neuron(Htr3a), Neuron(Calb2))
-        Neuron(Nos1).disjointWith(Neuron(Htr3a), Neuron(Calb2))
+        ns.disjointWith(nh)
+        nv = Neuron(Vip, id_=gid(57))
+        nv.subClassOf(nh)
+        nk = Neuron(Cck, id_=gid(52))
+        nk.subClassOf(nh)
 
-        Neuron(Vip, Cck)
-        Neuron(Vip, Calb2, Cck)
-        Neuron(Vip, Calb2)
-        Neuron(Sst, Calb2)
+        nn = Neuron(Nos1, id_=gid(54))
+        nb = Neuron(Calb2, id_=gid(50))
+        Neuron(Nkx2_1, id_=gid(46)).disjointWith(nn, nh, nb)
+        nn.disjointWith(nh, nb)
+
+        Neuron(Vip, Cck, id_=gid(51))
+        Neuron(Vip, Calb2, Cck, id_=gid(47))
+        Neuron(Vip, Calb2, id_=gid(49))
+        Neuron(Sst, Calb2, id_=gid(48))
 
         # NOTE fig1a and fig1b are subtly different and the driver lines are described as
         # marking a superset of neurons that includes these 6 types "and likely other types"
         # distinct from these 6 for this reason the morphology of the neurons is included
         Inter = Interneuron
-        f = lambda *args, label=None, override=None: (args, dict(label=label, override=override))
+        f = lambda *args, label=None, override=None, id_=None: (
+            args, dict(label=label, override=override, id_=id_))
         fig1a = dict(
-        PVBC = f(Basket,     Inter, PV,        label='PVBC cortical neuron', override=True),
-        CHC =  f(Chandelier, Inter, Nkx2_1,    label='CHC cortical neuron', override=True),
-        CCKC = f(Basket,     Inter, VIP, CCK,  label='CCKC cortical neuron', override=True),
-        MNC =  f(Martinotti, Inter, SST, CR,   label='MNC cortical neuron', override=True),
-        ISC =  f(OnToInter,  Inter, VIP, CR,   label='ISC cortical neuron', override=True),
-        LPC =  f(Projection,        SST, NOS1, label='LPC cortical neuron', override=True),
+        PVBC = f(Basket,     Inter, PV,        label='PVBC cortical neuron', override=True, id_=gid(43)),
+        CHC =  f(Chandelier, Inter, Nkx2_1,    label='CHC cortical neuron', override=True, id_=gid(44)),
+        CCKC = f(Basket,     Inter, VIP, CCK,  label='CCKC cortical neuron', override=True, id_=gid(40)),
+        MNC =  f(Martinotti, Inter, SST, CR,   label='MNC cortical neuron', override=True, id_=gid(42)),
+        ISC =  f(OnToInter,  Inter, VIP, CR,   label='ISC cortical neuron', override=True, id_=gid(41)),
+        LPC =  f(Projection,        SST, NOS1, label='LPC cortical neuron', override=True, id_=gid(45)),
         )
 
         f7 = dict(
