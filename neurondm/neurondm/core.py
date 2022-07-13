@@ -191,9 +191,14 @@ class LabelMaker:
                 # TODO negative phenotypes
                 less_entailed = [p for p in phenotypes
                                  if not isinstance(p, EntailedPhenotype)]
-                _sl = function(less_entailed)
+                _sl = list(function(less_entailed))  # must express to get -1
                 if function_name == 'hasCircuitRolePhenotype':
                     sub_labels = _sl
+                elif _sl[-1] == ')':
+                    # don't sort the parens, only the contents
+                    _ssl = sorted(_sl[1:-1])
+                    _ssl[-1] = _ssl[-1] + ')'
+                    sub_labels = _sl[:1] + _ssl
                 else:
                     sub_labels = sorted(_sl)
 
@@ -314,18 +319,17 @@ class LabelMaker:
 
     def _with_thing_located_in(self, prefix_template, phenotypes):
         # TODO consider field separator here as well ... or string quotes ...
-        lp = len(phenotypes)
         if phenotypes:
+            lp = len(phenotypes)
             plural = 's' if '{}' in prefix_template and lp > 1 else ''
             yield '(' + prefix_template.format(plural)
 
-        for i, phenotype in enumerate(phenotypes):
-            l = next(self._default((phenotype,)))
+            for i, phenotype in enumerate(phenotypes):
+                l = next(self._default((phenotype,)))
 
-            if i + 1 == lp:  # FIXME this is firing too early on with-axon-in due to inherited/context phenotypes!
-                l += ')'
+                yield l
 
-            yield l
+            yield ')'
 
     @od
     def hasMorphologicalPhenotype(self, phenotypes):
