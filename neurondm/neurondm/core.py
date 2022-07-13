@@ -194,7 +194,7 @@ class LabelMaker:
                 _sl = list(function(less_entailed))  # must express to get -1
                 if function_name == 'hasCircuitRolePhenotype':
                     sub_labels = _sl
-                elif _sl[-1] == ')':
+                elif _sl and _sl[-1] == ')':
                     # don't sort the parens, only the contents
                     _ssl = sorted(_sl[1:-1])
                     _ssl[-1] = _ssl[-1] + ')'
