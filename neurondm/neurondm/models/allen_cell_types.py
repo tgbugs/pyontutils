@@ -23,6 +23,8 @@ from pyontutils.namespaces import rdf, rdfs, owl, AIBSSPEC
 from pyontutils.combinators import annotation, allDifferent, distinctMembers
 from neurondm.core import auth
 from neurondm.lang import *
+from neurondm.simple import Cell
+from .allen_type_specimen_mapping import ts_mapping
 from docopt import docopt, parse_defaults
 
 
@@ -247,9 +249,22 @@ class AllenCellTypes:
     def build_neurons(self):
         instances = []
         dids = []
+        done = {}
         for cell_specimen in self.neuron_data:
-            neuron = NeuronACT(*self.build_phenotypes(cell_specimen))
-            did = AIBSSPEC[str(cell_specimen['id'])]
+            sid = cell_specimen['id']
+            tid = OntId(f'npokb:{ts_mapping[sid]}') if sid in ts_mapping else None
+
+            phens = self.build_phenotypes(cell_specimen)
+            cell = Cell(*phens)  # use the simple repr to id cells and get the tid
+            if cell not in done:
+                if tid is not None:
+                    done[cell] = tid
+            else:
+                tid = done[cell]
+
+            neuron = NeuronACT(*phens, id_=tid)
+            did = AIBSSPEC[str(sid)]
+            neuron.add_objects(ilxtr.hasNamedIndividual, did)
             dids.append(did)
             instances.append((did, rdf.type, owl.NamedIndividual))
             instances.append((did, rdf.type, neuron.identifier))
@@ -335,6 +350,7 @@ def main(args={o.name:o.value for o in parse_defaults(__doc__)}, run=True):
         with open(args['--input'], 'wt') as f:
             json.dump(input, f, indent=4)
 
+    input = sorted(input, key=lambda d: d['id'])  # ensure type specimens show up first
     act = AllenCellTypes(input, args['--output'])
     act.make_config()
     if __name__ == '__main__' or run:
