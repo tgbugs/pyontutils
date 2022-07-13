@@ -19,8 +19,9 @@ class table1(rowParse):
     _sep = '|'
 
     def __init__(self, *args, **kwargs):
+        self._id_order = []
         with BBP:
-            self._context = Neuron(Rat, S1, Interneuron, GABA)
+            self._context = Neuron(Rat, S1, Interneuron, GABA, id_=OntId('npokb:115'))
             super().__init__(*args, **kwargs)
 
     def Morphological_type(self, value):
@@ -28,6 +29,7 @@ class table1(rowParse):
         syn = syn.strip()
         abrv = abrv.rstrip(')').strip()
         # print((syn, abrv))
+        self._id_order.append((0, 'm', abrv))
         self._mtype = BBP[abrv]
 
         self._m_syn = syn
@@ -97,8 +99,10 @@ class table1(rowParse):
             exists = e_map[score]
             score = s_map[score]
             if exists:
+                self._id_order.append((0, 'ex', abrv))
                 self._moltypes.append(molecule)
             else:
+                self._id_order.append((1, 'ex', abrv))
                 self._moltypes.append(NegPhenotype(molecule))
 
         return self._moltypes
@@ -117,6 +121,7 @@ class table1(rowParse):
         }
 
         values = value.split(self._sep)
+        self._e_id_order = []
         self._etypes = []
         for v in values:
             early_late, score_pct_paren = v.split(' (')
@@ -125,6 +130,7 @@ class table1(rowParse):
             #early, late = e_map[e_name], l_map[l_name]
             early, late = BBP[e_name], BBP[l_name]
             lpe = LogicalPhenotype(AND, early, late)
+            self._e_id_order.append((4, '', ((0, 'el', 'i' + e_name), (0, 'el', 's' + l_name.lower()))))
             self._etypes.append(lpe)
 
         return self._etypes
@@ -138,27 +144,44 @@ class table1(rowParse):
         self._other_etypes = []
         for v in values:
             if v in valid_mappings:
+                self._id_order.append((1, 'el', 'Fast spiking')
+                                      if v.startswith('Non-') else
+                                      (0, 'el', v))
                 self._other_etypes.append(valid_mappings[v])
 
         return self._other_etypes
 
     def _row_post(self):
+        mio = sorted([o for o in self._id_order if o[1] == 'm'] +
+                     [tuple((8 if o[0] == 0 else 8.5,) + o[1:])
+                      for o in self._id_order if o[1] == 'ex'])
         with self._context:
             n = NeuronMarkram2015(self._mtype,
-                                  *[m.asEntailed() for m in self._moltypes],
+                                  *[m.asEntailed()
+                                    for m in self._moltypes],
                                   label=self._m_syn)
+            n._ido = mio
             n.abbrevs = [rdflib.Literal(self._m_abrev)]
 
-            for etype in self._etypes:
-                NeuronMarkram2015(etype, self._mtype, *self._other_etypes, *self._moltypes)
+            for etype, eio in zip(self._etypes, self._e_id_order):
+                io = sorted([*self._id_order, eio])
+                n = NeuronMarkram2015(
+                    etype, self._mtype, *self._other_etypes, *self._moltypes)
+                n._ido = io
+
+        self._id_order = []
 
     def _end(self):
-        graphBase.out_graph.add((NeuronMarkram2015.owlClass,
-                                 ilxtr.modelSource,
-                                 OntId('https://doi.org/10.1016/j.cell.2015.09.029').u))
+        def key(n):
+            return n._ido
 
-        graphBase.write()
-        graphBase.write_python()
+        def sgid(n, i):
+            index = 59 + i
+            oid = n.id_
+            n.id_ = OntId(f'npokb:{index}').u
+
+        need_id = sorted([n for n in Neuron.existing_pes if hasattr(n, '_ido')], key=key)
+        [sgid(n, i) for i, n in enumerate(need_id)]
 
 
 def main():
@@ -167,9 +190,25 @@ def main():
     with open(auth.get_path('resources') / '26451489 table 1.csv', 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
+    table1(rows)
+    ep = Neuron.existing_pes
+
     config = Config('markram-2015',
                     source_file=relative_path(__file__, no_wd_value=__file__))
-    table1(rows)
+
+    for _n in ep:
+        _n._sighed = False
+
+    [n._sigh() for n in ep]
+    #[graphBase.out_graph.add((n.id_, ilxtr.hasTemporaryId, n.temp_id)) for n in ep]
+    del NeuronMarkram2015._runonce
+    NeuronMarkram2015.__new__(NeuronMarkram2015)
+    graphBase.out_graph.add((NeuronMarkram2015.owlClass,
+                             ilxtr.modelSource,
+                             OntId('https://doi.org/10.1016/j.cell.2015.09.029').u))
+
+    config.write()
+    config.write_python()
     return config,
 
 

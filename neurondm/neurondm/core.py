@@ -663,6 +663,7 @@ class GraphOpsMixin:
             yield from graph[self.identifier:predicate]
 
     def add_objects(self, predicate, *objects):
+        self._replay.append((predicate, *objects))
         bads = []
         for object in objects:
             if not isinstance(object, rdflib.URIRef) and not isinstance(object, rdflib.Literal):
@@ -2401,6 +2402,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             raise TypeError('Neurons defined by id may not use equivalent or disjoint')
 
         super().__init__()
+        self._replay = []  # fix for idiocy of using setters to write to the graph
         self._localContext = self.__context
         self.config = self.__class__.config  # persist the config a neuron was created with
         __pes = tuple(set(self._localContext + phenotypeEdges))  # remove dupes
@@ -2519,9 +2521,17 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         # FIXME check on whether setting self.Class = self.existing_pes[self]
         # causes issues
         #if self in self.existing_pes and self.existing_pes[self] is not None:
-        self.Class = self._graphify()
+        graph = self.out_graph
+        self.Class = self.Class.__class__(self.id_, graph=graph)  # in the event we wiped the graph
+        self.Class = self._graphify(graph=graph)
         self.Class.label = rdflib.Literal(self.label)  # FIXME this seems... broken?
         self.existing_pes[self] = self.Class
+        if self._replay:
+            rep = self._replay
+            self._replay = []
+            for p, *os in rep:
+                self.add_objects(p, *os)
+
         self._sighed = True
 
     def removeDuplicateSuperProperties(self, rawpes):
