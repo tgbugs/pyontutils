@@ -209,6 +209,10 @@ class LabelMaker:
                 try:
                     self._do_ent = True
                     elabels = list(function(yes_entailed))
+                    if elabels and elabels[-1] == ')':
+                        _el = sorted(elabels[1:-1])
+                        _el[-1] = _el[-1] + ')'
+                        elabels = elabels[:1] + _el
                 finally:
                     self._do_ent = False
                 entailed += elabels
