@@ -108,7 +108,8 @@ class PhenotypeIndicators(Sheet):
                        OntId('NCBIGene:20604'),
                        OntId('PR:000015665'),
                        OntId('JAX:013044'),
-                       OntId('JAX:028579'),)
+                       OntId('JAX:028579'),
+                       OntId('CHEBI:64628'),)
         for i in sst_members:
             yield i.u, rdfs.subClassOf, sst
 

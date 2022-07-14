@@ -321,6 +321,10 @@ class LabelMaker:
     def hasSensorySubcellularElementIn(self, phenotypes):
         yield from self._with_thing_located_in('with-sensory-subcellular-element-in', phenotypes)
 
+    @od
+    def hasDendriteSensorySubcellularElementIn(self, phenotypes):
+        yield from self._with_thing_located_in('with-dendrite-sensory-subcellular-element-in', phenotypes)
+
     def _with_thing_located_in(self, prefix_template, phenotypes):
         # TODO consider field separator here as well ... or string quotes ...
         if phenotypes:
@@ -447,7 +451,7 @@ class LabelMaker:
             phenotypes.remove(interneuron_phenotype)
             phenotypes = phenotypes + [interneuron_phenotype]
 
-        have_neuron = False  # FIXME not working for cuts
+        have_neuron = False
         for phenotype in phenotypes:
             value = next(self._default((phenotype,))).lower()
             if not have_neuron:
@@ -458,7 +462,7 @@ class LabelMaker:
         if self.local_conventions and have_neuron:
             return
 
-        if phenotypes and not self.local_conventions:
+        if phenotypes:  # and not self.local_conventions:
             suffix = suffix()
             if suffix:
                 yield suffix

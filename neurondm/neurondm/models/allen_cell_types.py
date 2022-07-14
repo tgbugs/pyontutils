@@ -19,7 +19,7 @@ import requests
 from pyontutils.utils import TermColors as tc, relative_path
 from pyontutils.core import simpleOnt, OntGraph
 from pyontutils.namespaces import makePrefixes, ilxtr, definition
-from pyontutils.namespaces import rdf, rdfs, owl, AIBSSPEC
+from pyontutils.namespaces import rdf, rdfs, owl, AIBSSPEC, npokb
 from pyontutils.combinators import annotation, allDifferent, distinctMembers
 from neurondm.core import auth
 from neurondm.lang import *
@@ -42,6 +42,7 @@ class AllenCellTypes:
                    'AllenTL': 'http://api.brain-map.org/api/v2/data/TransgenicLine/'},
                 **makePrefixes('definition', 'ilxtr', 'owl')}
     prefixes['AllenTransgenicLine'] = 'http://api.brain-map.org/api/v2/data/TransgenicLine/'
+    prefixes['AIBSSPEC'] = str(AIBSSPEC)
 
     def __init__(self, input, name):
         self.name = name
@@ -285,6 +286,7 @@ class AllenCellTypes:
         metadata = ((uri, rdf.type, owl.Ontology),)
         instance_graph = OntGraph(path=folder / name)
         instance_graph.bind('AIBSSPEC', AIBSSPEC)
+        instance_graph.bind('npokb', npokb)
         [instance_graph.add(t) for t in metadata]
         [instance_graph.add(t) for t in instances]
         [instance_graph.add(t) for t in allDifferent(None, distinctMembers(*dids))]

@@ -8,7 +8,7 @@ from pyontutils import sheets
 from pyontutils.sheets import update_sheet_values, get_note, Sheet
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import ilxtr, TEMP, definition, npoph
-from pyontutils.namespaces import rdfs, rdf
+from pyontutils.namespaces import rdfs, rdf, owl
 from pyontutils.utils import allMembers
 from neurondm import NeuronCUT, Config, Phenotype, NegPhenotype, LogicalPhenotype
 from neurondm import EntailedPhenotype
@@ -83,6 +83,7 @@ class CutsV1(Cuts):
             e_config.load_existing()
             # FIXME clear use case for the remaining bound to whatever query produced it rather
             # than the other way around ... how to support this use case ...
+            # FIXME this ignores the sheet id mapping, and pulls in old/alternate axioms
             cls.existing = {n.origLabel.toPython():n for n in e_config.existing_pes}
             cls.existing.update({n.id_:n for n in e_config.existing_pes})
             cls.query = oq.OntQuery(oq.plugin.get('rdflib')(e_config.core_graph), instrumented=OntTerm)
@@ -520,10 +521,16 @@ class Row(sheets.Row):
             id_ = OntTerm(curie).u
             match = self.sheet.existing.get(id_)
             if match:
+                match.id_ = id_
                 return match
 
         al = self.alignment_label().value
-        return self.sheet.existing.get(al if al else self.label().value)
+        nrn = self.sheet.existing.get(al if al else self.label().value)
+
+        if nrn and curie:
+            nrn.id_ = id_
+
+        return nrn
 
     def status(self):
         # column header renamed without warning
@@ -609,6 +616,14 @@ class Row(sheets.Row):
         pes = self.asPhenotypes()
         return self.neuron_class(*pes, label=self.label().value)
 
+    def _ec(self, nrn):
+        # handle cases where we accidentally duplicated ids
+        if hasattr(self, 'curie_extra'):
+            ce = self.curie_extra().value
+            if ce:
+                eid = OntId(ce).u
+                nrn.add_objects(owl.equivalentClass, eid)
+
     def neuron_cleaned(self, context=nullcontext()):
         # FIXME WARNING nullcontext behavior seems to have changed at some point !?
         conditional_entailed_predicates = (
@@ -633,17 +648,23 @@ class Row(sheets.Row):
         if ne is None:
             curie = self.curie().value
             id_ = curie if curie else None
-            return self.neuron_class(*sheet_pes, id_=id_, label=self.label().value, override=id_ is None)
+            nrn = self.neuron_class(*sheet_pes, id_=id_, label=self.label().value, override=id_ is None)
+            self._ec(nrn)
+            return nrn
 
         if not emp:
             # can't just return the existing neuron because it isn't bound to the current config
             # FIXME uh what an aweful design
-            return self.neuron_class(*ne, *sheet_pes, id_=ne.id_, label=ne.origLabel, override=True).adopt_meta(ne)
+            nrn = self.neuron_class(*ne, *sheet_pes, id_=ne.id_, label=ne.origLabel,
+                                    override=True).adopt_meta(ne)
+            self._ec(nrn)
+            return nrn
 
         pes = [pe.asEntailed() if should_entail(pe) else pe for pe in ne]
 
         with context:
             nrn = self.neuron_class(*pes, *sheet_pes, id_=ne.id_, label=ne.origLabel, override=True)
+            self._ec(nrn)
             return nrn
 
 
