@@ -190,6 +190,7 @@ def main():
     with open(auth.get_path('resources') / '26451489 table 1.csv', 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
+    config = Config('blank')  # protect from inheriting state if main is imported XXX SIGH
     table1(rows)
     ep = Neuron.existing_pes
 
