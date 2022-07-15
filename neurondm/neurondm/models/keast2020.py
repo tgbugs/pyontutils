@@ -306,7 +306,7 @@ class Keast2020(LocalNameManager):
     MnPO = Phenotype('UBERON:0002625', slp)
     LPOA = Phenotype('UBERON:0001931', slp)
     LHA = Phenotype('UBERON:0002430', slp)
-    VLPAG = Phenotype('UBERON:0003040', slp) # vent lat peri aq gray
+    VLPAG = Phenotype('ILX:0793626', slp) # vent lat peri aq gray
     BRGTN = Phenotype('UBERON:0007632', slp) # barrington's nucleus
 
     BRGTNsyn = Phenotype('UBERON:0007632', synp)
