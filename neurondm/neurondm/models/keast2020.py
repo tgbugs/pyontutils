@@ -14,6 +14,8 @@ snsp = 'ilxtr:hasDendriteSensorySubcellularElementIn'  # XXX new, kind of like a
 fconp = 'ilxtr:hasForwardConnectionPhenotype'
 
 ntkb = rdflib.Namespace(ilxtr[''] + 'neuron-type-keast-')
+ntku = rdflib.Namespace(ilxtr[''] + 'neuron-type-keast-unbranched-')
+ntkh = rdflib.Namespace(ilxtr[''] + 'neuron-type-helper-keast-')
 npkb = rdflib.Namespace(ilxtr[''] + 'neuron-phenotype-keast-')
 
 
@@ -63,6 +65,10 @@ def kld(n):
 def needs_keast_namespace(config):
     """ define neurons for keast spinal """
 
+    plut = {v:k for k, v in Keast2020.items()}
+    def fn(phen):
+        return plut[phen]
+
     # define the inferred parents for neuron populations
     for n in (2, 4, 5, 6, 7, 8, 9, 10, 11, 12):
         NeuronKeast2020(Keast2020[f'ntk_{n}'], id_=ntkb[str(n)], **kld(n))
@@ -73,24 +79,29 @@ def needs_keast_namespace(config):
 
     # neuron populations
     neuron_1 = [kNeuron(PG, n_bl, BDWsyn, BNWsyn, para, post, id_=ntkb['1'], **kld(1))]  # pos
-    neuron_2 = [kNeuron(PG, n_bl, synloc, sym, post, ntk_2_ent) for synloc in (BDWsyn, BNWsyn)]  # sos # FIXME smooth muslce only
+    neuron_2 = [kNeuron(PG, n_bl, synloc, sym, post, ntk_2_ent, id_=ntku[f'2-{fn(synloc)}'])
+                for synloc in (BDWsyn, BNWsyn)]  # sos # FIXME smooth muslce only
     neuron_3 = [kNeuron(IMG, BDWsyn, BNWsyn, sym, post, id_=ntkb['3'], **kld(3))]  # sos # FIXME smooth muscle only
 
     neuron_4 = []  # sos
-    with Neuron(n_ps, PGax, n_bl, sym, post):
+    with Neuron(n_ps, PGax, n_bl, sym, post, id_=ntkh['common-4']):
         for soma_location_id in four_soma_locs:
             somaloc = Phenotype(soma_location_id, slp)
             for exits_via in ((L6_gr,), (S1ax, S1_gr,)):
                 for synapses_on in (BNVWsyn, BDVWsyn):
                     # 4
-                    n4 = kNeuron(somaloc, *exits_via, synapses_on, ntk_4_ent)
+                    n4 = kNeuron(
+                        somaloc, *exits_via, synapses_on, ntk_4_ent,
+                        id_=ntku[f'4-{fn(somaloc)}-{fn(exits_via[0])}-{fn(synapses_on)}'])
                     neuron_4.append(n4)
 
     neuron_5 = []  # pre
-    with Neuron(VII, n_ps, PGax, PGsyn, ntk_1_fcon, para, pre):
+    with Neuron(VII, n_ps, PGax, PGsyn, ntk_1_fcon, para, pre,
+                id_=ntkh['common-5']):
         for somaloc, ventral_root_exit in zip((L6,    S1),
                                               (L6_vr, S1_vr)):
-            n5 = kNeuron(somaloc, ventral_root_exit, ntk_5_ent)
+            n5 = kNeuron(somaloc, ventral_root_exit, ntk_5_ent,
+                         id_=ntku[f'5-{fn(somaloc)}'])
             neuron_5.append(n5)
 
     common = {L1: (L1_vr, L1_wr),
@@ -101,53 +112,62 @@ def needs_keast_namespace(config):
     neuron_6 = []  # sre
     neuron_7 = []  # sre
     neuron_8 = []  # sre
-    with Neuron(VII, WMax, sos_fcon, sym, pre):
+    with Neuron(VII, WMax, sos_fcon, sym, pre,
+                id_=ntkh['common-6-7-8']):
         for i, somaloc in enumerate((L1, L2)):
             soma_index = i + 2  # L1 aligns to the 3rd the sypathetic ganglion
             # which is of course the L1 sypathetic ganglion, but it is
             # the 3rd ganlion in the model with a neuron 4 soma
-            with Neuron(somaloc, *common[somaloc]):
-                with Neuron(n_ls, *common67[somaloc]):
+            with Neuron(somaloc, *common[somaloc], id_=ntkh[f'common-6-7-8-{fn(somaloc)}']):
+                with Neuron(n_ls, *common67[somaloc], id_=ntkh[f'common-6-7-{fn(somaloc)}-extra']):
                     # 6
-                    n6 = kNeuron(IMGax, n_hg, PGsyn, ntk_6_ent, ntk_2_fcon)
+                    n6 = kNeuron(IMGax, n_hg, PGsyn, ntk_6_ent, ntk_2_fcon,
+                                 id_=ntku[f'6-{fn(somaloc)}'])
                     neuron_6.append(n6)
                     # 7
-                    n7 = kNeuron(IMGsyn, ntk_7_ent, ntk_3_fcon)
+                    n7 = kNeuron(IMGsyn, ntk_7_ent, ntk_3_fcon,
+                                 id_=ntku[f'7-{fn(somaloc)}'])
                     neuron_7.append(n7)
 
                 # 8
                 for syn_index, synloc in enumerate(four_soma_locs):
                     axons_in = syn_chain_axons_in(syn_index, soma_index)
                     syn = Phenotype(synloc, synp)
-                    n8 = kNeuron(syn, *axons_in, ntk_8_ent, ntk_4_fcon)
+                    n8 = kNeuron(syn, *axons_in, ntk_8_ent, ntk_4_fcon,
+                                 id_=ntku[f'8-{fn(somaloc)}-{fn(syn)}'])
                     neuron_8.append(n8)
 
     neuron_9 = []  # slm
-    with Neuron(IX, WMax, n_pu, URTsyn, motor):
+    with Neuron(IX, WMax, n_pu, URTsyn, motor, id_=ntkh['common-9']):
         for somaloc, ventral_root_exit in zip((L5,    L6),
                                               (L5_vr, L6_vr)):
-            n9 = kNeuron(somaloc, ventral_root_exit, ntk_9_ent)
+            n9 = kNeuron(somaloc, ventral_root_exit, ntk_9_ent, id_=ntku[f'9-{fn(somaloc)}'])
             neuron_9.append(n9)
 
     neuron_10 = []  # fos
     neuron_11 = []  # fos
     neuron_12 = []  # fos
-    with Neuron(Isyn, IIsyn, Vsyn, VIIsyn, Xsyn, sens):  # 10 11 12 XXX layers are wrong, intersection has to come before phenotype
+    with Neuron(Isyn, IIsyn, Vsyn, VIIsyn, Xsyn, sens,
+                id_=ntkh['common-10-11-12']):  # 10 11 12 XXX layers are wrong, intersection has to come before phenotype
         for somaloc in (L6_dr, S1_dr):
-            n10 = kNeuron(somaloc, n_ps_dn, PGdn, n_bl_dn, ntk_10_ent, )  # TODO a bunch of other sensory terminals
+            n10 = kNeuron(somaloc, n_ps_dn, PGdn, n_bl_dn, ntk_10_ent,
+                          id_=ntku[f'10-{fn(somaloc)}'])  # TODO a bunch of other sensory terminals
             neuron_10.append(n10)
 
-            n12 = kNeuron(somaloc, n_pu_dn, URTdn, ntk_11_ent, )  # TODO URTdn layer is rhabdosphincter
+            n12 = kNeuron(somaloc, n_pu_dn, URTdn, ntk_12_ent,
+                          id_=ntku[f'12-{fn(somaloc)}'])  # TODO URTdn layer is rhabdosphincter
             neuron_12.append(n12)
 
         for somaloc in (L1_dr, L2_dr):
-            n11 = kNeuron(somaloc, n_ls_dn, IMGdn, n_hg_dn, PGdn, n_bl_dn, ntk_12_ent, )  # TODO bladder and layers
+            n11 = kNeuron(somaloc, n_ls_dn, IMGdn, n_hg_dn, PGdn, n_bl_dn, ntk_11_ent,
+                          id_=ntku[f'11-{fn(somaloc)}'])  # TODO bladder and layers
             neuron_11.append(n11)
 
-    with Neuron(pons_ax):
-        with Neuron(midbrain_ax):
-            with Neuron(dienc_ax):
-                with Neuron(cn_ax):
+    # thankfully alphabetical from head to toe
+    with Neuron(pons_ax, id_=ntkh['axon-pons']):
+        with Neuron(midbrain_ax, id_=ntkh['axon-midbrain']):
+            with Neuron(dienc_ax, id_=ntkh['axon-dienceph']):
+                with Neuron(cn_ax, id_=ntkh['axon-cernuc']):
                     neuron_13 = [kNeuron(BNST, BRGTNsyn, id_=ntkb['13'], **kld(13))]  # soma in BNST   ???
                     neuron_14 = [kNeuron(CeA, BRGTNsyn, id_=ntkb['14'], **kld(14))]   # soma in CeA    ???
                 neuron_15 = [kNeuron(MPOA, BRGTNsyn, id_=ntkb['15'], **kld(15))]  # soma in MPOA   ???
@@ -254,7 +274,7 @@ class Keast2020(LocalNameManager):
 
     # XXX FIXME I'm being something of a literalist here, and guessing that
     # the boxes that are drawn for these might not actually be what is intended
-    cn_ax = Phenotype('UBERON:0010011', alp)
+    cn_ax = Phenotype('UBERON:0010011', alp)  # collection of basal ganglia, syn cerebral nuclei ??
     dienc_ax = Phenotype('UBERON:0001894', alp)
     midbrain_ax = Phenotype('UBERON:0001891', alp)
     pons_ax = Phenotype('UBERON:0000988', alp)
