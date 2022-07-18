@@ -23,7 +23,7 @@ sheet_classes = [
             'bromo',
             'sstom',
             # 'keast-jun7',  # bad schema
-            # 'new colon',  # too many empty predicates
+            'new colon',
     )]
 
 
@@ -44,7 +44,8 @@ def main():
     trips = [[cl] + [c.value for c in
                      (r.neuron_id(), r.exact_location(), r.location_id())]
              for cl in cs for r in cl.rows()
-             if r.row_index > 0 and r.neuron_id().value]
+             if r.row_index > 0 and r.neuron_id().value
+             and (not hasattr(r, 'exclude') or not r.exclude().value)]
 
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
