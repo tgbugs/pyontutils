@@ -178,7 +178,7 @@ class scigPrint:
 
     @staticmethod
     def sv(asdf, start, ind, warn=False):
-        if type(asdf) not in (bool, int) and asdf.startswith('http'):
+        if type(asdf) not in (bool, int, float) and asdf.startswith('http'):  # FIXME why are we not using isinstace(i, str) here?
             for iri, short in scigPrint.shorten.items():
                 if iri in asdf:
                     return scigPrint.wrap(asdf.replace(iri, short + ':'), start, ind)
