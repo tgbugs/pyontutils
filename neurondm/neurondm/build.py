@@ -1484,12 +1484,12 @@ def main():
     if old:
         ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph, old=old)
 
-    if dev:
-        make_devel()
-
     if sheets:
         from neurondm import sheets
         sheets.main()
+
+    if dev:
+        make_devel()
 
     if bridge:
         make_bridge()
