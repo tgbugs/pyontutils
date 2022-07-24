@@ -785,6 +785,8 @@ class Sheet:
         return self._meta
 
     def metadata_file(self):
+        """ XXX WARNING drive api metadata updated asynchronously and
+        may be delayed for multiple minutes """
         resp = (self._drive_service
                 .get(fileId=self._sheet_id(),
                      supportsAllDrives=True,
@@ -850,7 +852,10 @@ class Sheet:
 
         self._reapply_uncommitted()
 
-        return self._meta, self._meta_file, self.raw_values, self.raw_values_formula, grid
+        if fetch_meta:
+            return self._meta, self._meta_file, self.raw_values, self.raw_values_formula, grid
+        else:
+            return None, None, self.raw_values, self.raw_values_formula, grid
 
     @property
     def values(self):

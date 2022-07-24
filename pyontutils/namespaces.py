@@ -112,6 +112,8 @@ def _loadPrefixes():
     # holding place for values that are not in the curie map
     full = {
         # interlex predicates  PROVISIONAL
+        'ilx.includesTerm': 'http://uri.interlex.org/base/ilx_0770273',
+        'ilx.includesTermSet': 'http://uri.interlex.org/base/ilx_0770271',
         'ilx.includeForSPARC': 'http://uri.interlex.org/base/ilx_0738400',
         'ilx.federatesElement': 'http://uri.interlex.org/base/ilx_0381445',
         'ilx.relatedTo': 'http://uri.interlex.org/base/ilx_0112796',
@@ -269,7 +271,9 @@ _OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))
 
 (replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
  realizes, partOf, participatesIn, locatedIn, isAbout, editorNote,
+ ilx_includesTerm, ilx_includesTermSet
 ) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
              'hasInput', 'hasOutput', 'realizes', 'partOf', 'participatesIn',
              'locatedIn', 'isAbout', 'editorNote',
+             'ilx.includesTerm', 'ilx.includesTermSet',
             )
