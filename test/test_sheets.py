@@ -190,6 +190,10 @@ class TestSheets(unittest.TestCase):
         ns = NewSheet()
         assert ns.values == self.sheet_ro.values
 
+    def test_fetch_return(self):
+        a, b, c, d, e = self.sheet.fetch()
+        a, b, c, d, e = self.sheet.fetch(fetch_meta=False)
+
     def test_range(self):
         """ test the corners """
         #rcs = ((0, 0), (0, -1), (-1, 0), (-1, -1))  # asymmetry is hard
