@@ -695,7 +695,8 @@ def _rest_make_phenotypes():
                 dg.add_trip(id_, 'oboInOwl:hasDbXref', x)  # xr
                 xr.add_trip(id_, 'oboInOwl:hasDbXref', x)  # x
 
-        elif spre.toPython() != 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#' or ng.namespace_manager.qname(s).replace('default1','NIFQUAL') in desired_nif_terms:  # skip non-xref quals
+        elif (spre.toPython() != 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#' or
+              ng.namespace_manager.qname(s).replace('default1','NIFQUAL') in desired_nif_terms):  # skip non-xref quals
             #print(ng.namespace_manager.qname(s).replace('default1','NIFQUAL'))
             new_terms[s] = {'replaced_by':id_}
             xr.add_trip(s, 'oboInOwl:replacedBy', id_)

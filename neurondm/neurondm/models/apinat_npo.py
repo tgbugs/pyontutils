@@ -1,7 +1,7 @@
 import re
 from collections import defaultdict
 from pyontutils.sheets import Sheet
-from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos
+from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl
 from neurondm.core import Config, NeuronEBM, Phenotype, log, OntId
 
 
@@ -19,11 +19,14 @@ sheet_classes = [
          (AtN,), dict(sheet_name=sname))
     for sname in (
             'aacar',
-            'spleen',
-            'bromo',
+            'splen',
             'sstom',
-            # 'keast-jun7',  # bad schema
-            'new colon',
+            'sdcol',
+
+            'bromo',
+            'kblad',
+            'bolew',
+            'pancr',
     )]
 
 
@@ -34,7 +37,11 @@ def map_predicates(sheet_pred):
         'Axon-Terminal-Location': ilxtr.hasAxonPresynapticElementIn,
         'Axon-Location': ilxtr.hasAxonLocatedIn,
         'Dendrite-Location': ilxtr.hasDendriteLocatedIn,
-        'Dendrite-Terminal-Location': ilxtr.hasDendriteSensorySubcellularElementIn,
+        #'Dendrite-Terminal-Location': ilxtr.hasDendriteSensorySubcellularElementIn,
+        'Forward-Connection': ilxtr.hasForwardConnectionPhenotype,
+        'Axon-Sensory-Location': ilxtr.hasAxonSensorySubcellularElementIn,
+        'Equivalent-To': owl.equivalentClass,
+        'Functional-Circuit-Role': ilxtr.hasFunctionalCircuitRolePhenotype,
     }[sheet_pred]
     return p
 
@@ -47,6 +54,7 @@ def main():
              if r.row_index > 0 and r.neuron_id().value
              and (not hasattr(r, 'exclude') or not r.exclude().value)]
 
+    to_add = []
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
         for x in (_s, _p, _o):
@@ -62,6 +70,11 @@ def main():
             log.error(f'sigh {s}')
             raise e
         o = OntId(_o)
+
+        if p == owl.equivalentClass:
+            to_add.append((s.u, p, o.u))
+            continue
+
         try:
             dd[s].append(Phenotype(o, p))
         except TypeError as e:
@@ -80,6 +93,7 @@ def main():
         ilxtr.simpleLocalLabel, rdfs.label, skos.prefLabel)
     to_remove = [t for t in config._written_graph if t[1] in labels]
     [config._written_graph.remove(t) for t in to_remove]
+    [config._written_graph.add(t) for t in to_add]
     config._written_graph.write()
     config.write_python()
     return config,
