@@ -35,6 +35,8 @@ from pyontutils.namespaces import (makePrefixes,
                                    BFO,
                                    NIFRID,
                                    definition,
+                                   ilx_partOf,
+                                   partOf as BFO_partOf,
                                    rdf,
                                    rdfs,
                                    owl)
@@ -1251,7 +1253,7 @@ def make_devel():
 
         return traverse
 
-    partOf = makeTraverse('partOf:', 'RO:0002433', 'rdfs:subClassOf')  # 2433 CTMO
+    partOf = makeTraverse('partOf:', 'RO:0002433', 'rdfs:subClassOf', 'ilx.partOf:')  # 2433 CTMO
 
     all_sparts = set(o for t in terms  # FIXME this is broken ...
                      for o in partOf(t)
@@ -1274,8 +1276,8 @@ def make_devel():
         paxS1 = OntId('PAXRAT:794').u
         uS1 = OntId('UBERON:0008933').u
         yield paxS1, rdfs.subClassOf, uS1
-        yield from cmb.restriction(ilxtr.delineates, paxS1)(uS1)
-        yield from cmb.restriction(ilxtr.isDelineatedBy, uS1)(paxS1)
+        yield from cmb.restriction(ilxtr.isDelineatedBy, paxS1)(uS1)
+        yield from cmb.restriction(ilxtr.delineates, uS1)(paxS1)
 
         # missing labels
         #yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")  # off by one for dopamine CHEBI:18243
@@ -1363,6 +1365,7 @@ def make_devel():
                 OntTermOntologyOnly('NIFSTD:BAMSC1121'),
                 OntTermOntologyOnly('NIFSTD:BAMSC1126'),
             ]
+            _ipo_done = []
             cortical_layer = OntTermOntologyOnly('UBERON:0002301')
             #yield from cortical_layer.triples_simple
             #yield from cortical_layer('hasPart:')
@@ -1420,7 +1423,21 @@ def make_devel():
                         if not haveLabel:
                             ot = OntTerm(term)  # include InterLex
                             if ot.label:
-                                yield ot.u, rdfs.label, rdflib.Literal(ot.label)
+                                if hasattr(ot, '_graph'):
+                                    ipo = str(ilx_partOf)
+                                    for s, p, o in ot._graph.subjectGraphClosure(ot.u):
+                                        yield s, p, o
+                                        if str(p) == ipo and isinstance(o, rdflib.URIRef):
+                                            if (s, o) not in _ipo_done:
+                                                _ipo_done.append((s, o))
+                                                yield from cmb.restriction(
+                                                    BFO_partOf, o)(s)
+
+                                                no = OntTermOntologyOnly(o)
+                                                if no not in done:
+                                                    next_terms.append(no)
+                                else:
+                                    yield ot.u, rdfs.label, rdflib.Literal(ot.label)
 
                 terms = next_terms
 

@@ -271,9 +271,9 @@ _OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))
 
 (replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
  realizes, partOf, participatesIn, locatedIn, isAbout, editorNote,
- ilx_includesTerm, ilx_includesTermSet
+ ilx_includesTerm, ilx_includesTermSet, ilx_partOf,
 ) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
              'hasInput', 'hasOutput', 'realizes', 'partOf', 'participatesIn',
              'locatedIn', 'isAbout', 'editorNote',
-             'ilx.includesTerm', 'ilx.includesTermSet',
+             'ilx.includesTerm', 'ilx.includesTermSet', 'ilx.partOf',
             )

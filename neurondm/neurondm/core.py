@@ -583,7 +583,7 @@ class OntTerm(bOntTerm, OntId):
                         _l = rdflib.Literal(superclass.label)
                         yield superclass.URIRef, rdfs.label, _l
 
-        predicates = 'partOf:', 'RO:0002433' #'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
+        predicates = 'partOf:', 'RO:0002433', 'ilx.partOf:' #'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
         done = []
         for predicate in predicates:
             if self(predicate, asTerm=True):
