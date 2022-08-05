@@ -879,12 +879,16 @@ class Config:
                 graphBase.part_of_graph = OntResPath(partofpath.as_posix()).graph  # FIXME temp fix for pyontutils 1.6.0
                 [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
 
-        else:
+        else: # XXX this branch always triggers if Config is called with only a path/name
             log.debug('remote')
             core_graph_paths = imports
 
             partofpath = remote.iri + 'ttl/generated/part-of-self.ttl'
+            _opg = graphBase.part_of_graph if hasattr(graphBase, 'part_of_graph') else None
             graphBase.part_of_graph = OntResIri(partofpath).graph
+            if _opg is not None:
+                _opg.namespace_manager.populate(graphBase.part_of_graph.namespace_manager)
+
             if local.exists() and (local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology'):
                 _writepath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
             else:
