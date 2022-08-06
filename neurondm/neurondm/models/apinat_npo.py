@@ -81,10 +81,20 @@ def main():
             log.error(f'bad data for {c} {s} {p} {o}')
             raise e
 
+    problems = ('8a', '8v', 'sstom-6', 'keast-2', 'sdcol-k', 'sdcol-l')
+    def eff(n):
+        return bool([x for x in problems
+                     if x in n.id_ and '20' not in n.id_])
+
     config = Config('apinat-simple-sheet')
+    sigh = []
     nrns = []
     for id, phenos in dd.items():
         n = NeuronApinatSimple(*phenos, id_=id)
+        if eff(n):
+            n._sigh()  # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX FIXME figure out why this is not getting called internally
+            sigh.append(n)
+
         nrns.append(n)
 
     config.write()
