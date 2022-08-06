@@ -1423,6 +1423,7 @@ def make_devel():
                         if not haveLabel:
                             ot = OntTerm(term)  # include InterLex
                             if ot.label:
+                                yield ot.u, rdfs.label, rdflib.Literal(ot.label)
                                 if hasattr(ot, '_graph'):
                                     ipo = str(ilx_partOf)
                                     for s, p, o in ot._graph.subjectGraphClosure(ot.u):
@@ -1436,8 +1437,6 @@ def make_devel():
                                                 no = OntTermOntologyOnly(o)
                                                 if no not in done:
                                                     next_terms.append(no)
-                                else:
-                                    yield ot.u, rdfs.label, rdflib.Literal(ot.label)
 
                 terms = next_terms
 
