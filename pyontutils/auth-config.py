@@ -39,7 +39,7 @@
   'nifstd-checkout-ok': {'environment-variables': 'NIFSTD_CHECKOUT_OK'},
   'scigraph-api': {'default': 'https://scicrunch.org/api/1/sparc-scigraph',
                    'environment-variables': 'SCIGRAPH_API',},
-  'scigraph-api-key': {'environment-variables': 'SCICRUNCH_API_KEY SCIGRAPH_API_KEY'},
+  'scigraph-api-key': {'environment-variables': 'SCIGRAPH_API_KEY SCICRUNCH_API_KEY'},
 
   # scigraph build
   'scigraph-graphload': ['../nifstd/scigraph/graphload-base-template.yaml',  # git
