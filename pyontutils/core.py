@@ -53,14 +53,6 @@ from pyontutils.namespaces import (makePrefixes,
                                    replacedBy,)
 from pyontutils.identity_bnode import IdentityBNode
 
-try:
-    from funowl.converters.functional_converter import to_python as parse_funowl
-except ImportError as e:
-    def parse_funowl(*args, __error=e, **kwargs):
-        msg = f'funowl needs >= python3.8'
-        raise ModuleNotFoundError(msg) from __error
-
-
 current_file = Path(__file__).absolute()
 oq.utils.log.removeHandler(oq.utils.log.handlers[0])
 oq.utils.log.addHandler(log.handlers[0])
@@ -228,6 +220,18 @@ class OntRes(idlib.Stream):
 
         self.Graph = Graph
 
+    def _import_funowl(self):
+        # SIGH python import times for rarely used functionality ...
+        if not hasattr(self, '_parse_funowl'):
+            try:
+                from funowl.converters.functional_converter import to_python as parse_funowl
+            except ImportError as e:
+                def parse_funowl(*args, __error=e, **kwargs):
+                    msg = f'funowl needs >= python3.8'
+                    raise ModuleNotFoundError(msg) from __error
+
+            self._parse_funowl = parse_funowl
+
     def _populate(self, graph, gen):
         raise NotImplementedError('too many differences between header/data and xml/all the rest')
 
@@ -363,9 +367,10 @@ class OntMeta(OntRes):
             graph.parse(data=data, format=self.format)
 
         elif self.format == 'text/owl-functional':
+            self._import_funowl()
             # FIXME funowl could work with iterio I think?
             data = b''.join(gen)
-            fo = parse_funowl(data)
+            fo = self._parse_funowl(data)
             fo.to_rdf(graph)
 
         else:
@@ -865,8 +870,9 @@ class OntResIri(OntIdIri, OntResOnt):
             graph.parse(self.identifier, format=self.format)
 
         elif self.format == 'text/owl-functional':  # FIXME TODO
+            self._import_funowl()
             data = b''.join(gen)
-            fo = parse_funowl(data)
+            fo = self._parse_funowl(data)
             fo.to_rdf(graph)
 
         else:
