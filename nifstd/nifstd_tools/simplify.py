@@ -175,6 +175,13 @@ def apinat_deblob(blob, remove_converge=False, ontology_terms_predicate=onts):
 
     blob['edges'] = [dict(s) for s in set(frozenset({k:v for k, v in d.items()
                                                      if k != 'meta'}.items()) for d in blob['edges'])]
+
+    def sekey(e):
+        p = pred(e)
+        iot = p != ontology_terms_predicate
+        return iot, p, sub(e), obj(e)
+
+    blob['edges'] = sorted(blob['edges'], key=sekey)
     sos = set(sov for e in blob['edges'] for sov in (e['sub'], e['obj']))
     blob['nodes'] = [n for n in blob['nodes'] if n['id'] in sos]
     somas = [e for e in edges if e['pred'] == 'apinatomy:internalIn']
