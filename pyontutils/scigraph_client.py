@@ -158,7 +158,6 @@ class Analyzer(restService):
 
         kwargs = {'sample': sample, 'ontologyClass': ontologyClass, 'path': path, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/analyzer/enrichment').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -175,7 +174,6 @@ class Analyzer(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/analyzer/enrichment').format(**kwargs)
         requests_params = kwargs
         output = self._get('POST', url, requests_params, output)
@@ -210,7 +208,6 @@ class Annotations(restService):
 
         kwargs = {'content': content, 'includeCat': includeCat, 'excludeCat': excludeCat, 'minLength': minLength, 'longestOnly': longestOnly, 'includeAbbrev': includeAbbrev, 'includeAcronym': includeAcronym, 'includeNumbers': includeNumbers}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/annotations').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -239,7 +236,6 @@ class Annotations(restService):
 
         kwargs = {'content': content, 'includeCat': includeCat, 'excludeCat': excludeCat, 'minLength': minLength, 'longestOnly': longestOnly, 'includeAbbrev': includeAbbrev, 'includeAcronym': includeAcronym, 'includeNumbers': includeNumbers, 'ignoreTag': ignoreTag, 'stylesheet': stylesheet, 'scripts': scripts, 'targetId': targetId, 'targetClass': targetClass}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/annotations').format(**kwargs)
         requests_params = kwargs
         output = self._get('POST', url, requests_params, output)
@@ -263,7 +259,6 @@ class Annotations(restService):
 
         kwargs = {'content': content, 'includeCat': includeCat, 'excludeCat': excludeCat, 'minLength': minLength, 'longestOnly': longestOnly, 'includeAbbrev': includeAbbrev, 'includeAcronym': includeAcronym, 'includeNumbers': includeNumbers}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/annotations/complete').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -287,7 +282,6 @@ class Annotations(restService):
 
         kwargs = {'content': content, 'includeCat': includeCat, 'excludeCat': excludeCat, 'minLength': minLength, 'longestOnly': longestOnly, 'includeAbbrev': includeAbbrev, 'includeAcronym': includeAcronym, 'includeNumbers': includeNumbers}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/annotations/complete').format(**kwargs)
         requests_params = kwargs
         output = self._get('POST', url, requests_params, output)
@@ -311,7 +305,6 @@ class Annotations(restService):
 
         kwargs = {'content': content, 'includeCat': includeCat, 'excludeCat': excludeCat, 'minLength': minLength, 'longestOnly': longestOnly, 'includeAbbrev': includeAbbrev, 'includeAcronym': includeAcronym, 'includeNumbers': includeNumbers}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/annotations/entities').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -335,7 +328,6 @@ class Annotations(restService):
 
         kwargs = {'content': content, 'includeCat': includeCat, 'excludeCat': excludeCat, 'minLength': minLength, 'longestOnly': longestOnly, 'includeAbbrev': includeAbbrev, 'includeAcronym': includeAcronym, 'includeNumbers': includeNumbers}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/annotations/entities').format(**kwargs)
         requests_params = kwargs
         output = self._get('POST', url, requests_params, output)
@@ -364,7 +356,6 @@ class Annotations(restService):
 
         kwargs = {'url': url, 'includeCat': includeCat, 'excludeCat': excludeCat, 'minLength': minLength, 'longestOnly': longestOnly, 'includeAbbrev': includeAbbrev, 'includeAcronym': includeAcronym, 'includeNumbers': includeNumbers, 'ignoreTag': ignoreTag, 'stylesheet': stylesheet, 'scripts': scripts, 'targetId': targetId, 'targetClass': targetClass}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/annotations/url').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -394,13 +385,12 @@ class CypherBase(restService):
 
         kwargs = {'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/cypher/curies').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else {}
 
-    def execute(self, cypherQuery, limit, output='text/plain'):
+    def execute(self, cypherQuery, limit, output='text/plain', **kwargs):
         """ Execute an arbitrary Cypher query. from: /cypher/execute
 
             Arguments:
@@ -411,15 +401,14 @@ class CypherBase(restService):
                 application/json
         """
 
-        kwargs = {'cypherQuery': cypherQuery, 'limit': limit}
+        kwargs = {'cypherQuery': cypherQuery, 'limit': limit, **kwargs}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/cypher/execute').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
 
-    def resolve(self, cypherQuery, output='text/plain'):
+    def resolve(self, cypherQuery, output='text/plain', **kwargs):
         """ Cypher query resolver from: /cypher/resolve
 
             Arguments:
@@ -428,9 +417,8 @@ class CypherBase(restService):
                 text/plain
         """
 
-        kwargs = {'cypherQuery': cypherQuery}
+        kwargs = {'cypherQuery': cypherQuery, **kwargs}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/cypher/resolve').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -532,9 +520,9 @@ class Cypher(CypherBase):
         else:
             return iri
 
-    def execute(self, query, limit, output='text/plain'):
+    def execute(self, query, limit, output='text/plain', **kwargs):
         if output == 'text/plain':
-            out = super().execute(query, limit, output)
+            out = super().execute(query, limit, output, **kwargs)
             rows = []
             if out:
                 for raw in out.split('|')[3:-1]:
@@ -546,7 +534,7 @@ class Cypher(CypherBase):
             return rows
 
         else:
-            return super().execute(query, limit, output)
+            return super().execute(query, limit, output, **kwargs)
 
 
 class DynamicBase(restService):
@@ -599,7 +587,6 @@ class DynamicBase(restService):
 
         kwargs = {'start_id': start_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/bundles/{start_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -637,7 +624,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/housing-lyphs').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -700,7 +686,6 @@ class DynamicBase(restService):
 
         kwargs = {'start_id': start_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/housing-lyphs/{start_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -732,7 +717,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/modelList').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -777,7 +761,6 @@ class DynamicBase(restService):
 
         kwargs = {'model_id': model_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('model_id', **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/modelPopulationsReferences/{model_id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'model_id'}
         output = self._get('GET', url, requests_params, output)
@@ -839,7 +822,6 @@ class DynamicBase(restService):
 
         kwargs = {'neupop_id': neupop_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/neru-1/{neupop_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -913,7 +895,6 @@ class DynamicBase(restService):
 
         kwargs = {'neupop_id': neupop_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('neupop_id', **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/neru-2/{neupop_id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'neupop_id'}
         output = self._get('GET', url, requests_params, output)
@@ -996,7 +977,6 @@ class DynamicBase(restService):
 
         kwargs = {'neupop_id': neupop_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('neupop_id', **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/neru-3/{neupop_id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'neupop_id'}
         output = self._get('GET', url, requests_params, output)
@@ -1083,7 +1063,6 @@ class DynamicBase(restService):
 
         kwargs = {'neupop_id': neupop_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('neupop_id', **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/neru-4/{neupop_id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'neupop_id'}
         output = self._get('GET', url, requests_params, output)
@@ -1180,8 +1159,103 @@ class DynamicBase(restService):
 
         kwargs = {'neupop_id': neupop_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('neupop_id', **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/neru-5/{neupop_id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'neupop_id'}
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_neru_6_neupop_id(self, neupop_id, output='application/json'):
+        """ Return the housing regions and publications for neurulated groups. from: /dynamic/demos/apinat/neru-6/{neupop_id}
+
+            Arguments:
+            neupop_id: neuron population identifier
+
+            Query:
+            MATCH (neupop:Class{iri: $neupop_id})
+            -[a:apinatomy:annotates]->(neugrp:NamedIndividual{`https://apinatomy.org/uris/readable/description`: "dynamic"}) // FIXME HACK
+            
+            , (neugrp)
+            -[:apinatomy:links]->(link)
+            -[c:apinatomy:fasciculatesIn|apinatomy:endsIn*0..1]->(lyph_or_layer) // real lyphs convey things, layers do not
+            -[d:apinatomy:layerIn*0..1]->(lyph)
+            -[:apinatomy:conveys*0..1]->() // make sure we are at a real lyph
+            
+            WITH neugrp, link, lyph, a, c, d
+            OPTIONAL MATCH layer_ext = (lyph)
+            <-[d*1]-(layer)-[:apinatomy:cloneOf*0..1]->()-[:apinatomy:inheritedExternal]->()
+            
+            WITH neugrp, link, lyph, a, c, d, layer_ext
+            OPTIONAL MATCH more = (lyph)
+            -[:apinatomy:layerIn|apinatomy:endsIn|apinatomy:fasciculatesIn|apinatomy:internalIn|apinatomy:cloneOf*1..]->()
+            -[:apinatomy:ontologyTerms|apinatomy:inheritedExternal]->()
+            
+            WITH neugrp, link, lyph, a, c, d, layer_ext, more // there is a difference here because the previous match does not require lyphs to have external ids
+            MATCH (lyph)
+            -[e:apinatomy:ontologyTerms]->(region)
+            
+            , p2 = (link)
+            -[:apinatomy:conveyingLyph]->(cl)
+            -[:apinatomy:topology]->()
+            
+            , (cl)
+            -[x:apinatomy:inheritedExternal*0..1]->()
+            
+            // use apinatomy:next to extract ordering information
+            , (link)
+            -[f:apinatomy:next|apinatomy:nextChainStartLevels*0..]->()
+            -[g:apinatomy:target*0..1]->()
+            -[h:apinatomy:rootOf*0..1]->()
+            -[i:apinatomy:levels*0..1]->()
+            <-[:apinatomy:links]-(neugrp)
+            
+            // publications
+            WITH neugrp, a, c, d, e, f, g,h,i, p2, x, layer_ext, more
+            OPTIONAL MATCH path = (neugrp)
+            -[:apinatomy:references]->(pub)
+            -[:type]->(:Class{iri: "https://apinatomy.org/uris/elements/Reference"}) // cannot be curied, dynamic endpoints will not expand it
+            
+            RETURN a, null as b, c, d, e, f, g,h,i, path, p2, x, layer_ext, more
+            
+            UNION
+            
+            // this part usually only returns the soma housing lyph
+            MATCH (neupop:Class{iri: $neupop_id})
+            -[a:apinatomy:annotates]->(neugrp:NamedIndividual{`https://apinatomy.org/uris/readable/description`: "dynamic"}) // FIXME HACK
+            -[b:apinatomy:lyphs]->(lyph)
+            -[c:apinatomy:internalIn]->()
+            -[d:apinatomy:ontologyTerms*0..1]->(region)
+            , p2 = (lyph)
+            -[:apinatomy:conveys]->(soma_link)
+            -[:apinatomy:source|apinatomy:target]->(soma_node)
+            -[:apinatomy:sourceOf]->(chain_link)
+            , (chain_link)
+            -[:apinatomy:levelIn]->(chain)
+            , (soma_node)
+            -[:apinatomy:rootOf]->(chain)
+            
+            WITH lyph, a, b, c, d, p2
+            OPTIONAL MATCH more = (lyph)
+            -[:apinatomy:layerIn|apinatomy:endsIn|apinatomy:fasciculatesIn|apinatomy:internalIn|apinatomy:cloneOf*1..]->()
+            -[:apinatomy:ontologyTerms|apinatomy:inheritedExternal]->()
+            
+            RETURN a, b, c, d, null AS e, null AS f, null AS g, null AS h, null AS i, null AS path, p2, null as x, null as layer_ext, more
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'neupop_id': neupop_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        url = self._basePath + ('/dynamic/demos/apinat/neru-6/{neupop_id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'neupop_id'}
         output = self._get('GET', url, requests_params, output)
         return output if output else None
@@ -1227,7 +1301,6 @@ class DynamicBase(restService):
 
         kwargs = {'start_id': start_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/old-bundles/{start_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1274,7 +1347,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/soma-processes').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1326,7 +1398,6 @@ class DynamicBase(restService):
 
         kwargs = {'start_id': start_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/soma-processes/{start_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1358,7 +1429,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/somas').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1426,7 +1496,6 @@ class DynamicBase(restService):
 
         kwargs = {'process_id': process_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/demos/apinat/weird-soma-processes/{process_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1464,7 +1533,6 @@ class DynamicBase(restService):
 
         kwargs = {'start_id': start_id, 'target_predicate': target_predicate}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/neurons/connectedRegions').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1502,9 +1570,48 @@ class DynamicBase(restService):
 
         kwargs = {'start_id': start_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/neurons/connectivity').format(**kwargs)
         requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_anatomyPhenotypes_id(self, id, output='application/json'):
+        """ Return phenotypes that inhere in some part of an anatomical entity. from: /dynamic/prod/sparc/anatomyPhenotypes/{id}
+
+            Arguments:
+            id: uberon id of the anatomical entity to search from
+
+            Query:
+            MATCH (anatomical_entity:Class{iri: $id})
+            <-[part_of:subClassOf|BFO:0000050|RO:0002433*0..40]-(subclass_part_ctmo)
+            <-[inheres_in:RO:0000052|RO:0002314!]-(intersection_of_quality_and_anatomy) // inheres in (anon intersection of)
+            <-[has_process_part:BFO:0000051]-() // has part (process)
+            <-[:subClassOf*0..]-(phenotype) // phenotype and all subclasses
+            
+            WHERE
+            // filter out partOf/hasPart cases that induce circularity
+            ALL(e IN part_of WHERE NOT EXISTS(e.owlType) OR e.owlType = "subClassOf" OR e.owlType = "operand")
+            RETURN phenotype
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and self._hrx.match(id):
+            id = parse.quote(id, safe='')
+        kwargs = {'id': id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        url = self._basePath + ('/dynamic/prod/sparc/anatomyPhenotypes/{id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
         return output if output else None
 
@@ -1539,7 +1646,6 @@ class DynamicBase(restService):
             artifact_id = parse.quote(artifact_id, safe='')
         kwargs = {'artifact_id': artifact_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/artifactLabels/{artifact_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1574,7 +1680,6 @@ class DynamicBase(restService):
             artifact_id = parse.quote(artifact_id, safe='')
         kwargs = {'artifact_id': artifact_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/artifactRoots/{artifact_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1628,7 +1733,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/organList').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1672,7 +1776,6 @@ class DynamicBase(restService):
             id = parse.quote(id, safe='')
         kwargs = {'id': id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/organParts/{id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
@@ -1706,7 +1809,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationArtifacts').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1742,7 +1844,6 @@ class DynamicBase(restService):
             species_id = parse.quote(species_id, safe='')
         kwargs = {'species_id': species_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationArtifacts/{species_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1787,7 +1888,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationGraph').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1827,7 +1927,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1869,7 +1968,6 @@ class DynamicBase(restService):
             species_id = parse.quote(species_id, safe='')
         kwargs = {'species_id': species_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots/{species_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1926,7 +2024,6 @@ class DynamicBase(restService):
             region_id = parse.quote(region_id, safe='')
         kwargs = {'species_id': species_id, 'region_id': region_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots/{species_id}/{region_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -1999,7 +2096,6 @@ class DynamicBase(restService):
             fma_id = parse.quote(fma_id, safe='')
         kwargs = {'species_id': species_id, 'fma_id': fma_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationRootsFMA/{species_id}/{fma_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2036,7 +2132,6 @@ class DynamicBase(restService):
             root_id = parse.quote(root_id, safe='')
         kwargs = {'root_id': root_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/rootLabels/{root_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2075,7 +2170,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/speciesList').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2113,9 +2207,48 @@ class DynamicBase(restService):
 
         kwargs = {'start_id': start_id, 'end_id': end_id, 'max_depth': max_depth, 'relationship': relationship}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/shortestSimple').format(**kwargs)
         requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def test_sparc_anatomyPhenotypes_id(self, id, output='application/json'):
+        """ Return phenotypes that inhere in some part of an anatomical entity. from: /dynamic/test/sparc/anatomyPhenotypes/{id}
+
+            Arguments:
+            id: uberon id of the anatomical entity to search from
+
+            Query:
+            MATCH (anatomical_entity:Class{iri: $id})
+            <-[part_of:subClassOf|BFO:0000050|RO:0002433*0..40]-(subclass_part_ctmo)
+            <-[inheres_in:RO:0000052|RO:0002314!]-(intersection_of_quality_and_anatomy) // inheres in (anon intersection of)
+            <-[has_process_part:BFO:0000051]-() // has part (process)
+            <-[:subClassOf*0..]-(phenotype) // phenotype and all subclasses
+            
+            WHERE
+            // filter out partOf/hasPart cases that induce circularity
+            ALL(e IN part_of WHERE NOT EXISTS(e.owlType) OR e.owlType = "subClassOf" OR e.owlType = "operand")
+            RETURN phenotype
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and self._hrx.match(id):
+            id = parse.quote(id, safe='')
+        kwargs = {'id': id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        url = self._basePath + ('/dynamic/test/sparc/anatomyPhenotypes/{id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
         return output if output else None
 
@@ -2167,7 +2300,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/test/sparc/organList').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2211,7 +2343,6 @@ class DynamicBase(restService):
             id = parse.quote(id, safe='')
         kwargs = {'id': id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
         url = self._basePath + ('/dynamic/test/sparc/organParts/{id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
@@ -2284,7 +2415,6 @@ class DynamicBase(restService):
             fma_id = parse.quote(fma_id, safe='')
         kwargs = {'species_id': species_id, 'fma_id': fma_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/test/sparc/parcellationRootsFMA/{species_id}/{fma_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2321,7 +2451,6 @@ class DynamicBase(restService):
             root_id = parse.quote(root_id, safe='')
         kwargs = {'root_id': root_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/test/sparc/rootLabels/{root_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2360,7 +2489,6 @@ class DynamicBase(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/test/sparc/speciesList').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2480,7 +2608,6 @@ class GraphBase(restService):
 
         kwargs = {'type': type, 'entail': entail, 'limit': limit, 'skip': skip, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('type', **kwargs)
         url = self._basePath + ('/graph/edges/{type}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'type'}
         output = self._get('GET', url, requests_params, output)
@@ -2518,7 +2645,6 @@ class GraphBase(restService):
             id = parse.quote(id, safe='')
         kwargs = {'id': id, 'depth': depth, 'blankNodes': blankNodes, 'relationshipType': relationshipType, 'direction': direction, 'entail': entail, 'project': project, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/graph/neighbors').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2556,7 +2682,6 @@ class GraphBase(restService):
             id = parse.quote(id, safe='')
         kwargs = {'id': id, 'depth': depth, 'blankNodes': blankNodes, 'relationshipType': relationshipType, 'direction': direction, 'entail': entail, 'project': project, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
         url = self._basePath + ('/graph/neighbors/{id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
@@ -2575,7 +2700,6 @@ class GraphBase(restService):
 
         kwargs = {'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/graph/properties').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2610,7 +2734,6 @@ class GraphBase(restService):
             id = parse.quote(id, safe='')
         kwargs = {'id': id, 'hint': hint, 'relationships': relationships, 'lbls': lbls, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
         url = self._basePath + ('/graph/reachablefrom/{id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
@@ -2629,7 +2752,6 @@ class GraphBase(restService):
 
         kwargs = {'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/graph/relationship_types').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2661,7 +2783,6 @@ class GraphBase(restService):
             id = parse.quote(id, safe='')
         kwargs = {'id': id, 'project': project, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
         url = self._basePath + ('/graph/{id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
@@ -2709,7 +2830,6 @@ class Lexical(restService):
 
         kwargs = {'text': text}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/lexical/chunks').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2726,7 +2846,6 @@ class Lexical(restService):
 
         kwargs = {'text': text}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/lexical/entities').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2743,7 +2862,6 @@ class Lexical(restService):
 
         kwargs = {'text': text}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/lexical/pos').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2760,7 +2878,6 @@ class Lexical(restService):
 
         kwargs = {'text': text}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/lexical/sentences').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2791,7 +2908,6 @@ class Refine(restService):
             id = parse.quote(id, safe='')
         kwargs = {'id': id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
         url = self._basePath + ('/refine/preview/{id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
@@ -2831,7 +2947,6 @@ class Refine(restService):
 
         kwargs = {'query': query, 'queries': queries, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/refine/reconcile').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2868,7 +2983,6 @@ class Refine(restService):
 
         kwargs = {'query': query, 'queries': queries}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/refine/reconcile').format(**kwargs)
         requests_params = kwargs
         output = self._get('POST', url, requests_params, output)
@@ -2888,7 +3002,6 @@ class Refine(restService):
             id = parse.quote(id, safe='')
         kwargs = {'id': id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
         url = self._basePath + ('/refine/view/{id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
@@ -2923,7 +3036,6 @@ class Vocabulary(restService):
 
         kwargs = {'term': term, 'limit': limit, 'searchSynonyms': searchSynonyms, 'searchAbbreviations': searchAbbreviations, 'searchAcronyms': searchAcronyms, 'includeDeprecated': includeDeprecated, 'category': category, 'prefix': prefix}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('term', **kwargs)
         url = self._basePath + ('/vocabulary/autocomplete/{term}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'term'}
         output = self._get('GET', url, requests_params, output)
@@ -2940,7 +3052,6 @@ class Vocabulary(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/vocabulary/categories').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2959,7 +3070,6 @@ class Vocabulary(restService):
             id = parse.quote(id, safe='')
         kwargs = {'id': id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
         url = self._basePath + ('/vocabulary/id/{id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
@@ -2976,7 +3086,6 @@ class Vocabulary(restService):
 
         kwargs = {}
         # type caste not needed
-        param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/vocabulary/prefixes').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
@@ -2999,7 +3108,6 @@ class Vocabulary(restService):
 
         kwargs = {'term': term, 'limit': limit, 'searchSynonyms': searchSynonyms, 'searchAbbreviations': searchAbbreviations, 'searchAcronyms': searchAcronyms, 'category': category, 'prefix': prefix}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('term', **kwargs)
         url = self._basePath + ('/vocabulary/search/{term}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'term'}
         output = self._get('GET', url, requests_params, output)
@@ -3017,7 +3125,6 @@ class Vocabulary(restService):
 
         kwargs = {'term': term, 'limit': limit}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('term', **kwargs)
         url = self._basePath + ('/vocabulary/suggestions/{term}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'term'}
         output = self._get('GET', url, requests_params, output)
@@ -3040,7 +3147,6 @@ class Vocabulary(restService):
 
         kwargs = {'term': term, 'limit': limit, 'searchSynonyms': searchSynonyms, 'searchAbbreviations': searchAbbreviations, 'searchAcronyms': searchAcronyms, 'category': category, 'prefix': prefix}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('term', **kwargs)
         url = self._basePath + ('/vocabulary/term/{term}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'term'}
         output = self._get('GET', url, requests_params, output)
