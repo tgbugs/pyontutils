@@ -235,9 +235,9 @@ class Cypher(SUBCLASS):
         else:
             return iri
 
-    def execute(self, query, limit, output='text/plain'):
+    def execute(self, query, limit, output='text/plain', **kwargs):
         if output == 'text/plain':
-            out = super().execute(query, limit, output)
+            out = super().execute(query, limit, output, **kwargs)
             rows = []
             if out:
                 for raw in out.split('|')[3:-1]:
@@ -249,7 +249,7 @@ class Cypher(SUBCLASS):
             return rows
 
         else:
-            return super().execute(query, limit, output)
+            return super().execute(query, limit, output, **kwargs)
 
 
 class Dynamic(SUBCLASS):
@@ -361,13 +361,12 @@ class CLASSNAME(restService):
 
 
 class FAKECLASS:
-    def NICKNAME(selfPARAMSDEFAULT_OUTPUT):
+    def NICKNAME(selfPARAMSDEFAULT_OUTPUTKWARGS):
         """ DOCSTRING
         """
         {params_conditional}
         kwargs = {param_rest}
         {dict_comp}
-        param_rest = self._make_rest({required}, **kwargs)
         url = self._basePath + ('{path}').format(**kwargs)
         requests_params = {dict_comp2}
         output = self._get('{method}', url, requests_params, {output})
@@ -378,7 +377,7 @@ class FAKECLASS:
         code = inspect.getsource(FAKECLASS.NICKNAME)
         code = code.replace('requests_params, ', 'requests_params')
         code = code.replace('        {params_conditional}','{params_conditional}')
-        for name in ('NICKNAME','PARAMS','DEFAULT_OUTPUT', 'DOCSTRING'):
+        for name in ('NICKNAME','PARAMS','DEFAULT_OUTPUT', 'DOCSTRING', 'KWARGS'):
             code = code.replace(name, '{' + name.lower() + '}')
         return code
 
@@ -525,6 +524,7 @@ class State:
     def make_params(self, list_):
         pargs_list, prests, pdocs = [], [], []
         required = None
+        needs_kwargs = False
         for param in list_:
             if 'schema' in param:  # skip 'body' entries, they cause problems
                 continue
@@ -534,6 +534,8 @@ class State:
             pargs_list.append(parg)
             prests.append(prest)
             pdocs.append(pdoc)
+            if param['name'] == 'cypherQuery':
+                needs_kwargs = True
 
         if pargs_list:
             pargs = ', ' + ', '.join(pargs_list)
@@ -542,13 +544,15 @@ class State:
 
         pkeys = prests
 
+        kwargs = ', **kwargs' if needs_kwargs else ''
+
         if prests:
-            prests = '{' + ', '.join([f'{pr!r}: {pr}' for pr in prests]) + '}'
+            prests = '{' + ', '.join([f'{pr!r}: {pr}' for pr in prests]) + kwargs + '}'
         else:
             prests = '{}'
 
         pdocs = '\n'.join(pdocs)
-        return pargs, prests, pdocs, required, pkeys
+        return pargs, prests, pdocs, required, pkeys, needs_kwargs
 
     def make_return(self, api_dict):
         return_type = None
@@ -588,7 +592,7 @@ class State:
         return None, ''
 
     def operation(self, api_dict):
-        params, param_rest, param_docs, required, pkeys = self.make_params(api_dict['parameters'])
+        params, param_rest, param_docs, required, pkeys, needs_kwargs = self.make_params(api_dict['parameters'])
         dict_comp = (('kwargs = {k:dumps(v) if builtins.type(v) '
                       'is dict else v for k, v in kwargs.items()}')
                       # json needs " not '
@@ -636,17 +640,20 @@ class State:
             default_output = ''
             output = ''
 
+        kwargs = ', **kwargs' if needs_kwargs else ''
+
         method = api_dict['method']
 
         if '{' in path and '-' in path:  # FIXME hack
             before, after = path.split('{', 1)  # use split since there can be multiple paths
             path = before + '{' + after.replace('-', '_')
 
-        formatted = operation_code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,
-                            dict_comp=dict_comp, dict_comp2=dict_comp2, method=method,
-                            docstring=docstring, required=required, default_output=default_output,
-                            params_conditional=params_conditional, output=output, t=self.tab,
-                            empty_return_type=empty_return_type)
+        formatted = operation_code.format(
+            path=path, nickname=nickname, params=params, param_rest=param_rest,
+            dict_comp=dict_comp, dict_comp2=dict_comp2, method=method,
+            docstring=docstring, required=required, default_output=default_output, kwargs=kwargs,
+            params_conditional=params_conditional, output=output, t=self.tab,
+            empty_return_type=empty_return_type)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
 
