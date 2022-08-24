@@ -802,7 +802,11 @@ sed 's,sparc-data,sparc-sckan,g' > \
 #sed 's,http://ontology.neuinfo.org/NIF/,file://<<&path-build-sparc-sckan()>>/NIF-Ontology/,g' > \
 
 pushd <<&path-build-sparc-sckan()>>
-git clone ~/git/NIF-Ontology # FIXME this fails if repo exists
+if [ -d ~/git/NIF-Ontology ]; then
+  git clone ~/git/NIF-Ontology # FIXME this fails if repo exists
+else
+  git clone https://github.com/SciCrunch/NIF-Ontology.git
+fi
 # TODO need to add logic to stash and pull
 pushd NIF-Ontology
 popd; popd
