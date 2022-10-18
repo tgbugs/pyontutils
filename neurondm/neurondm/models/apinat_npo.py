@@ -58,8 +58,8 @@ def main():
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
         for x in (_s, _p, _o):
-            if re.match(x, r'(^[\s]+[^\s].*|.*[^\s][\s]+$)'):
-                msg = 'leading/trailing whitespace in {c} {s} {p} {o}'
+            if re.match(r'(^[\s]+[^\s].*|.*[^\s][\s]+$)', x):
+                msg = f'leading/trailing whitespace in {c} {_s!r} {_p!r} {_o!r}'
                 log.error(msg)
                 raise ValueError(msg)
 
