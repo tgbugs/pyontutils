@@ -1189,11 +1189,12 @@ def make_devel():
           'huang-2017.ttl',
           'markram-2015.ttl',
 
-          'bolser-lewis.ttl',
+          #'bolser-lewis.ttl',
           'keast-2020.ttl',
           'apinatomy-neuron-populations.ttl',
-          'apinatomy-locations.ttl',
-          'nerves.ttl',
+          #'apinatomy-locations.ttl',
+          #'nerves.ttl',
+          'sparc-nlp.ttl',
           'apinat-simple-sheet.ttl',
           )
     g = OntConjunctiveGraph()
