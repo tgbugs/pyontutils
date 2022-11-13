@@ -26,7 +26,7 @@ from pyontutils.core import makeGraph, createOntology, OntId as OntId_, OntConju
 from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger, anyMembers
 from pyontutils.obo_io import OboFile
 from neurondm import _NEURON_CLASS, OntTerm
-from neurondm.core import OntTermOntologyOnly, log as _log, auth
+from neurondm.core import OntTermOntologyOnly, OntTermInterLexOnly, log as _log, auth
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.namespaces import (makePrefixes,
                                    makeNamespaces,
@@ -1211,10 +1211,36 @@ def make_devel():
     ents = set(e for e in chain((o for _, o in g[:owl.someValuesFrom:]),
                                 (o for _, o in g[:rdfs.subClassOf:]),
                                 g.predicates(),
-                                (s for s in g.subjects() if isinstance(s, rdflib.URIRef) and OntId(s).prefix not in bads))
+                                (s for s in g.subjects() if isinstance(s, rdflib.URIRef)
+                                 and OntId(s).prefix not in bads))
                if isinstance(e, rdflib.URIRef) and not isinstance(e, rdflib.BNode)
                and (OntId(e).prefix not in bads or OntId(e).prefix in ('BIRNLEX', 'NIFEXT', 'NLX')))
 
+    # deal with conflicting use cases for ilx terms in the ontology
+    # yes, we really need perspectives working in interlex so that we
+    # can have the FMA query use case and the UBERON use case separated
+    ents_ilx = set(e for e in ents if OntId(e).prefix == 'ILX')
+    terms_ilx = set(OntTermInterLexOnly(e) for e in ents_ilx)
+    missing_sup = [t for t in terms_ilx if 'rdfs:subClassOf' not in t.predicates]
+    ilx_supers = set(
+        o for t in terms_ilx
+        if 'rdfs:subClassOf' in t.predicates
+        for o in t.predicates['rdfs:subClassOf'])
+    fmaish = [t for t in terms_ilx
+              if 'rdfs:subClassOf' in t.predicates and
+              # wow if you leave the if out here it completely breaks
+              # error message locations and syntax messages O_O
+              [s for s in t.predicates['rdfs:subClassOf'] if s.prefix == 'FMA']]
+    # supsub and sup_terms intentionally do not cover ilx_supers
+    ilx_sup_terms = set(s.asTerm() for s in ilx_supers if s.prefix in ('ILX',))
+    isupsub = set(s.u for s in ilx_supers
+                  if s.prefix not in ('ILX', 'FMA',) and
+                  s.prefix not in bads or
+                  s.prefix in ('BIRNLEX', 'NIFEXT', 'NLX'))
+    ilx_terms = terms_ilx | ilx_sup_terms
+    #breakpoint()
+
+    ents = (ents - ents_ilx) | isupsub
     #terms |= set(Async()(deferred(OntTerm)(e) for e in ents))
     terms |= set(OntTermOntologyOnly(e) for e in ents)
 
@@ -1223,10 +1249,17 @@ def make_devel():
                          for o in t.predicates['rdfs:isDefinedBy']
                          if o.prefix not in bads)
 
+    #fma_source = [t for t in terms if t('rdfs:subClassOf', depth=10, asTerm=True)
+                  #and [o for o in t.predicates['rdfs:subClassOf'] if o.prefix == 'FMA']]
+    #breakpoint()
+
     all_supers = set(o for t in terms
                      if t('rdfs:subClassOf', depth=10, asTerm=True)
-                     for o in t.predicates['rdfs:subClassOf']
-                         if o.prefix not in bads)
+                     for predicates in ([o for o in t.predicates['rdfs:subClassOf']
+                                         # avoid pulling in multiparent cross ontology ?
+                                         if o.prefix != 'FMA'],)
+                     for o in (predicates if predicates else t.predicates['rdfs:subClassOf'])
+                     if o.prefix not in bads)
 
     terms |= all_supers
 
@@ -1261,7 +1294,7 @@ def make_devel():
                      if o.prefix not in bads)
 
     terms |= all_sparts
-
+    terms |= ilx_terms
 
     #sctrips = (t for T in sorted(set(asdf for t in terms for
                                      #asdf in (t, *t('rdfs:subClassOf', depth=1, asTerm=True))
@@ -1346,6 +1379,7 @@ def make_devel():
         def _triples(self, terms=terms):
             yield from helper_triples()
             yield OntId('overlaps:').u, rdfs.label, rdflib.Literal('overlaps')
+            yield ilx_partOf, rdfs.subPropertyOf, OntId('BFO:0000050').u
 
             yield OntId('BFO:0000050').u, a, owl.ObjectProperty
             yield OntId('BFO:0000050').u, a, owl.TransitiveProperty
@@ -1384,6 +1418,9 @@ def make_devel():
                     done.append(term)
                     if term.curie and [p for p in skip if term.curie.startswith(p)]:
                         continue
+
+                    if term.label is not None and not isinstance(term.label, str):
+                        log.warning(f'bad label? {term}')  # next line will error
 
                     if (not term.label or (not term.label.lower().endswith('neuron') and
                                            not term.label.lower().endswith('cell') and

@@ -567,6 +567,8 @@ class OntTerm(bOntTerm, OntId):
             for superclass in self.predicates['rdfs:subClassOf']:
                 if superclass.curie in skips:
                     continue
+                elif 'UBERON' in s and superclass.prefix == 'FMA': # XXX FIXME hardcoded hack
+                    continue
                 elif superclass.prefix in bads:
                     if (superclass.prefix == 'BFO' or
                         self.prefix in bads or
@@ -588,8 +590,10 @@ class OntTerm(bOntTerm, OntId):
         for predicate in predicates:
             if self(predicate, asTerm=True):
                 for superpart in self.predicates[predicate]:
-                    if superpart.prefix in bads:
+                    if (superpart.prefix in bads or
+                        superpart.prefix == 'FMA' and 'UBERON' in s):  # XXX FIXME hardcoded hack to work around bad sparc community terms cross hierarchy issues
                         continue
+
                     if (predicate, superpart) not in done:
                         yield from cmb.restriction(OntId(predicate).URIRef,
                                                    superpart.URIRef)(s)
