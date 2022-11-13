@@ -221,7 +221,7 @@ class Keast2020(LocalNameManager):
     L1 = Phenotype('UBERON:0006448', slp)  # XXX fma in sct
     L2 = Phenotype('UBERON:0006450', slp)  # XXX fma in sct
     L5 = Phenotype('UBERON:0006447', slp)  # XXX fma in sct
-    L6 = Phenotype('ILX:0793358', slp)
+    L6 = Phenotype('ILX:0738432', slp)  # 'ILX:0793358' was dupe
     S1 = Phenotype('UBERON:0006460', slp)  # XXX fma in sct
 
     IMG = Phenotype('UBERON:0005453', slp)  # ilxtr:IMG
