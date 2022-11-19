@@ -39,6 +39,18 @@ class Artifacts(Collector):
                    date='2015-02-02',
                    version='2',)
 
+    WHSSD3 = WHSSD(iri=ilx['waxholm/uris/sd/versions/3'],
+                   rdfs_label='Waxholm Space Sprague Dawley Terminology v3',
+                   shortname='WHSSD3',
+                   date='2019-05-15',
+                   version='3',)
+
+    WHSSD4 = WHSSD(iri=ilx['waxholm/uris/sd/versions/4'],
+                   rdfs_label='Waxholm Space Sprague Dawley Terminology v4',
+                   shortname='WHSSD4',
+                   date='2021-10-01',
+                   version='4',)
+
 
 class WHSSDSrc(resSource):
     sourceFile = lambda v: auth.get_path('resources') / f'WHS_SD_rat_atlas_v{v}.label'
@@ -68,6 +80,18 @@ class WHSSDSrc1(WHSSDSrc):
 
 class WHSSDSrc2(WHSSDSrc):
     v = '2'
+    sourceFile = WHSSDSrc.sourceFile(v)
+    artifact = WHSSDSrc.artifact(v)
+
+
+class WHSSDSrc3(WHSSDSrc):
+    v = '3'
+    sourceFile = WHSSDSrc.sourceFile(v)
+    artifact = WHSSDSrc.artifact(v)
+
+
+class WHSSDSrc4(WHSSDSrc):
+    v = '4'
     sourceFile = WHSSDSrc.sourceFile(v)
     artifact = WHSSDSrc.artifact(v)
 
@@ -128,7 +152,7 @@ class WHSSDLabels(LabelsBase):
     shortname = 'whssd'
     imports = parcCore,
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'WHSSD':str(WHSSD)}
-    sources = WHSSDSrc2, WHSSDilfSrc2, WHSSDSrc1, WHSSDilfSrc1
+    sources = WHSSDSrc4, WHSSDSrc3, WHSSDSrc2, WHSSDilfSrc2, WHSSDSrc1, WHSSDilfSrc1
     namespace = WHSSD
     root = LabelRoot(iri=nsExact(namespace),  # ilxtr.whssdroot,
                      label='Waxholm Space Sprague Dawley parcellation label root',
