@@ -794,6 +794,7 @@ cat "$(dirname <<&path-ontologies-sparc-sckan()>>)/sparc-data.ttl" | \
 sed 's,<https://raw.githubusercontent.com/SciCrunch/NIF.\+ttl/,<http://ontology.neuinfo.org/NIF/ttl/,' | \
 sed 's/ilxtr:imports-\(big\|rel\)/owl:imports/g' | \
 sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-sckan()>>/,g' | \
+sed 's,https://cassava.ucsd.edu/sparc/ontologies/,file://<<&path-build-sparc-sckan()>>/,g' | \
 sed 's,https://cassava.ucsd.edu/sparc/preview/exports/,file://<<&path-build-sparc-sckan()>>/,g' | \
 sed 's,protcur.ttl,protcur.owl,g' | \
 sed 's,sparc-data,sparc-sckan,g' > \
