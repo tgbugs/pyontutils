@@ -1,7 +1,7 @@
 from copy import deepcopy
 from pprint import pformat
 import rdflib
-import networkx as nx
+import networkx as nx  # FIXME probably break this out into its own project to avoid scipy dep for deployment
 from rdflib.extras import external_graph_libs as egl
 from pyontutils.core import OntGraph, Edge
 from pyontutils.utils import listIn, makeSimpleLogger
@@ -120,6 +120,8 @@ bag = 'apinatomy:BAG'
 top = 'apinatomy:topology*'
 ie = 'apinatomy:inheritedExternal'
 ies = 'apinatomy:inheritedExternal*'
+iot = 'apinatomy:inheritedOntologyTerms'
+iots = 'apinatomy:inheritedOntologyTerms*'
 ext = 'apinatomy:external'
 fasIn = 'apinatomy:fasciculatesIn'
 endIn = 'apinatomy:endsIn'
@@ -145,8 +147,8 @@ def apinat_deblob(blob, remove_converge=False, ontology_terms_predicate=onts):
                      ['apinatomy:conveyingLyph', 'apinatomy:topology'],
                      ['apinatomy:conveys', 'apinatomy:source', 'apinatomy:sourceOf'],
                      ['apinatomy:conveys', 'apinatomy:target', 'apinatomy:sourceOf'],
-                     ['apinatomy:cloneOf', 'apinatomy:inheritedExternal'],
-                     ['apinatomy:conveyingLyph', 'apinatomy:inheritedExternal'],], blob)
+                     ['apinatomy:cloneOf', 'apinatomy:inheritedOntologyTerms'],
+                     ['apinatomy:conveyingLyph', 'apinatomy:inheritedOntologyTerms'],], blob)
     edges = blob['edges']
     nindex = {n['id']:n for n in blob['nodes']}  # FIXME silent errors ;_;
     for e in edges:
@@ -160,9 +162,9 @@ def apinat_deblob(blob, remove_converge=False, ontology_terms_predicate=onts):
         if e['pred'] == 'apinatomy:conveyingLyph-apinatomy:topology':
             e['pred'] = 'apinatomy:topology*'
         if e['pred'] in (
-                'apinatomy:conveyingLyph-apinatomy:inheritedExternal',
-                'apinatomy:cloneOf-apinatomy:inheritedExternal',):
-            e['pred'] = 'apinatomy:inheritedExternal*'
+                'apinatomy:conveyingLyph-apinatomy:inheritedOntologyTerms',
+                'apinatomy:cloneOf-apinatomy:inheritedOntologyTerms',):
+            e['pred'] = 'apinatomy:inheritedOntologyTerms*'
         if pred(e, top):
             # move topology to be a property not a node to make the layout cleaner
             nindex[sub(e)]['topology'] = obj(e)
