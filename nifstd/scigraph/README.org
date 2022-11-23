@@ -795,6 +795,7 @@ sed 's,<https://raw.githubusercontent.com/SciCrunch/NIF.\+ttl/,<http://ontology.
 sed 's/ilxtr:imports-\(big\|rel\)/owl:imports/g' | \
 sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-sckan()>>/,g' | \
 sed 's,https://cassava.ucsd.edu/sparc/preview/exports/,file://<<&path-build-sparc-sckan()>>/,g' | \
+sed 's,protcur.ttl,protcur.owl,g' | \
 sed 's,sparc-data,sparc-sckan,g' > \
 <<&path-build-sparc-sckan()>>/sparc-sckan.ttl
 
@@ -829,8 +830,10 @@ cp -a data/*.ttl <<&path-build-sparc-sckan()>>/
 popd
 
 pushd <<&path-build-sparc-sckan()>>
-cat curation-export-published.ttl |
-${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export-published.owl
+cat curation-export-published.ttl | \
+${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export-published.owl || exit 1
+cat protcur.ttl | \
+${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/protcur.owl || exit 2
 popd
 
 #curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export-published.ttl | \
