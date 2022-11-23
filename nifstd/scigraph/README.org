@@ -813,7 +813,7 @@ popd; popd
 
 # FIXME this fails if a previous load was run and not cleaned up
 # XXX this should probably be run prior to calling release.org --build --sckan --no-blaze
-python -m pyontutils.ontload graph \
+${PY_X} -m pyontutils.ontload graph \
 --fix-imports-only \
 --org SciCrunch \
 NIF-Ontology \
