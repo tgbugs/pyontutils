@@ -2,7 +2,7 @@ import re
 from collections import defaultdict
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl
-from neurondm.core import Config, NeuronEBM, Phenotype, log, OntId
+from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, log, OntId
 
 
 class NeuronApinatSimple(NeuronEBM):
@@ -42,6 +42,7 @@ def map_predicates(sheet_pred):
         'Axon-Sensory-Location': ilxtr.hasAxonSensorySubcellularElementIn,
         'Equivalent-To': owl.equivalentClass,
         'Functional-Circuit-Role': ilxtr.hasFunctionalCircuitRolePhenotype,
+        'entail:hasInstanceInTaxon': ilxtr.hasInstanceInTaxon,
     }[sheet_pred]
     return p
 
@@ -76,7 +77,10 @@ def main():
             continue
 
         try:
-            dd[s].append(Phenotype(o, p))
+            if _p.startswith('entail:'):  # XXX FIXME hack
+                dd[s].append(EntailedPhenotype(o, p))
+            else:
+                dd[s].append(Phenotype(o, p))
         except TypeError as e:
             log.error(f'bad data for {c} {s} {p} {o}')
             raise e
