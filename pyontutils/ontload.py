@@ -880,7 +880,7 @@ def run(args):
 
     prov = args['prov']
     path_in = Path(args['<path-in>']).resolve() if args['<path-in>'] else None
-    path_out = Path(args['<path-out>']).resolve()
+    path_out = Path(args['<path-out>']).resolve() if args['<path-out>'] else None
     if prov:
         # yes the ordering of path-in and path-out is correct
         # because most of the time path-out is the next path-in

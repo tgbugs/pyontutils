@@ -835,6 +835,7 @@ cat curation-export-published.ttl | \
 ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export-published.owl || exit 1
 cat protcur.ttl | \
 ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/protcur.owl || exit 2
+${PY_X} -m pyontutils.ontload prov scigraph prov-record.ttl prov-record.ttl || exit 3 # overwrite to change type
 popd
 
 #curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export-published.ttl | \
