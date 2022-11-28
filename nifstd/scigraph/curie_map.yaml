@@ -60,6 +60,8 @@ ilxtr: http://uri.interlex.org/tgbugs/uris/readable/
 ilxti: http://uri.interlex.org/tgbugs/uris/indexes/
 ilxtib: http://uri.interlex.org/tgbugs/uris/indexes/blank/
 ilxtio: http://uri.interlex.org/tgbugs/uris/indexes/ontologies/
+build: http://uri.interlex.org/tgbugs/uris/readable/build/
+buildid: http://uri.interlex.org/tgbugs/uris/readable/build/id/
 npokb: http://uri.interlex.org/npo/uris/neurons/
 
 # alternate ids
