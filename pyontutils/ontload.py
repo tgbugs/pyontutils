@@ -13,6 +13,8 @@ Usage:
     ontload chain [options] <repo> <remote_base> <ontologies>...
     ontload extra [options] <repo>
     ontload patch [options] <repo>
+    ontload prov  [blazegraph scigraph] [options] <path-out>
+    ontload prov  [blazegraph scigraph] [options] <path-in> <path-out>
     ontload [options]
 
 Options:
@@ -49,9 +51,13 @@ Options:
     -f --graph-config-out=GCO       output for graphload.yaml   [default: {auth.get_path('scigraph-graphload')}]
                                     only useful for `ontload config` ignored otherwise
     -x --fix-imports-only           prepare graph build but only fix the import chain do not build
+
+    --build-id=BUILD_ID
+    --nowish=NOWISH
 """
 import os
 import json
+import uuid
 import yaml
 import shutil
 import hashlib
@@ -71,7 +77,8 @@ from joblib import Parallel, delayed
 from ttlser import CustomTurtleSerializer
 from pyontutils.core import OntGraph
 from pyontutils.utils import noneMembers, TODAY, setPS1, refile, TermColors as tc, log
-from pyontutils.namespaces import getCuries, OntCuries
+from pyontutils.utils import utcnowtz, isoformat
+from pyontutils.namespaces import getCuries, OntCuries, ilxtr, build, buildid
 from pyontutils.hierarchies import creatTree
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, oboInOwl, dc
 try:
@@ -91,6 +98,67 @@ Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 class NotBuiltError(FileNotFoundError):
     pass
 
+
+def prov_new(path_out, build_id=None, nowish=None, type=build.raw):
+    if build_id is None:
+        build_id = uuid.uuid4().urn[9:]  # aka uuid -v 4
+    if nowish is None:
+        nowish = utcnowtz()
+
+    g = prov_graph(build_id, nowish, type)
+    g.write(path_out, format='nifttl')
+    return g
+
+
+def prov_derive(path_in, path_out, type):
+    g = OntGraph().parse(path_in)
+    for o in list(g[build.prov:build.type]):
+        g.remove((build.prov, build.type, o))
+    g.add((build.prov, build.type, type))
+    # TODO add additional per-type information?
+    g.write(path_out, format='nifttl')
+    return g
+
+
+def prov_graph(build_id, nowish, type):
+    # build id should probably be a uuid set at the start of the process
+    # nowish is the output of utcnowtz (usually), a datetime with a timezone
+    # type is build.SciGraph or build.Blazegraph for now
+    if type not in (build.raw, build.SciGraph, build.Blazegraph):
+        raise TypeError(f'unsupported type {type}')
+    g = OntGraph()
+    g.namespace_manager.bind('build', build)
+    g.namespace_manager.bind('buildid', buildid)
+    s = build.prov
+    posu = {
+        rdf.type: build.Record,
+        build.id : buildid[build_id],
+        build.type : type,
+    }
+    posl = {
+        rdfs.label: 'graph build and load provenance record',
+        build.metaVersion: '0',  # metadata record structure version, helps with version migrations
+        build.epoch : int(nowish.timestamp()),
+        build.datetime : isoformat(nowish),
+        build.date : nowish.date().isoformat(),
+        build.time : nowish.time().isoformat(),
+        # other options
+        # build.system : '???',  # not useful/leaks data
+        # build.resumed : resumed_count,  # not really useful
+        # config hash (scigraph only)
+        # various repo commit hashes
+        # ontology commit hash
+        # apinatomy commit hash (not curretly possible)
+        # open physiology viewer commit hash
+    }
+
+    g.add((s, rdf.type, owl.NamedIndividual))  # ensure find by type in SciGraph
+    for p, o in posu.items():
+        g.add((s, p, o))
+    for p, o in posl.items():
+        g.add((s, p, rdflib.Literal(o)))
+
+    return g
 
 
 def identity_json(blob, *, cls=None,
@@ -809,7 +877,29 @@ def run(args):
     if repo_name is not None:
         local_base = jpth(git_local, repo_name)
 
-    if graph:
+
+    prov = args['prov']
+    path_in = Path(args['<path-in>']).resolve() if args['<path-in>'] else None
+    path_out = Path(args['<path-out>']).resolve()
+    if prov:
+        # yes the ordering of path-in and path-out is correct
+        # because most of the time path-out is the next path-in
+        if scigraph:
+            type = build.SciGraph
+        elif args['blazegraph']:
+            type = build.Blazegraph
+        else:
+            type = None
+
+        if path_in:
+            # TODO could add an integrity check on build-id matching
+            g = prov_derive(path_in, path_out, type)
+        else:
+            build_id = args['--build-id']
+            nowish = args['--nowish']
+            g = prov_new(path_out, build_id, nowish, type)
+
+    elif graph:
         if args['--path-build-scigraph']:  # path-build-scigraph
             path_build_scigraph = Path(args['--path-build-scigraph'])
             (scigraph_commit, services_zip,

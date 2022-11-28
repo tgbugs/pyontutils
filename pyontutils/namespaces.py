@@ -265,6 +265,8 @@ asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 dim = rdflib.Namespace(asp[''] + 'dimension/')
 unit = rdflib.Namespace(asp[''] + 'unit/')
 sparc = rdflib.Namespace(ilxtr[''] + 'sparc/')
+build = rdflib.Namespace(ilxtr[''] + 'build/')
+buildid = rdflib.Namespace(build[''] + 'id/')
 
 # retired namespaces kept as a record in the even that we need them for some reason
 _OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))
