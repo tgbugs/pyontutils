@@ -41,6 +41,7 @@ def main():
             f.writelines(f'~{nif}$ {scr};\n')
 
     ilg = (rdflib.Graph()
+           .parse(f'{prefix}/NIF-Ontology/ttl/generated/DICOM-ILX-mapping.ttl', format='turtle')
            .parse(f'{prefix}/NIF-Ontology/ttl/generated/NPOKB-ILX-mapping.ttl', format='turtle')
            .parse(f'{prefix}/NIF-Ontology/ttl/generated/PHENOTYPE-CORE-ILX-mapping.ttl', format='turtle')
            .parse(f'{prefix}/NIF-Ontology/ttl/generated/methods-ILX-mapping.ttl', format='turtle')
