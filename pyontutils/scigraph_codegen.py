@@ -648,7 +648,15 @@ class State:
             before, after = path.split('{', 1)  # use split since there can be multiple paths
             path = before + '{' + after.replace('-', '_')
 
-        formatted = operation_code.format(
+        if output and nickname == 'execute':
+            path = ('{"/cypher/execute.json" '
+                    'if output == "application/json" else'
+                    ' "/cypher/execute"}')
+            opcode = operation_code.replace("'{path}'", "f'{path}'")
+        else:
+            opcode = operation_code
+
+        formatted = opcode.format(
             path=path, nickname=nickname, params=params, param_rest=param_rest,
             dict_comp=dict_comp, dict_comp2=dict_comp2, method=method,
             docstring=docstring, required=required, default_output=default_output, kwargs=kwargs,
