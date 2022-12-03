@@ -16,7 +16,7 @@ from ast import literal_eval
 from json import dumps
 from urllib import parse
 
-BASEPATH = 'https://scicrunch.org/api/1/scigraph'
+BASEPATH = 'https://scicrunch.org/api/1/sparc-scigraph'
 
 exten_mapping = {'application/graphml+xml': 'graphml+xml', 'application/graphson': 'graphson', 'application/javascript': 'javascript', 'application/json': 'json', 'application/xgmml': 'xgmml', 'application/xml': 'xml', 'image/jpeg': 'jpeg', 'image/png': 'png', 'text/csv': 'csv', 'text/gml': 'gml', 'text/html': 'html', 'text/plain': 'plain', 'text/plain; charset=utf-8': 'plain; charset=utf-8', 'text/tab-separated-values': 'tab-separated-values'}
 
@@ -403,7 +403,7 @@ class CypherBase(restService):
 
         kwargs = {'cypherQuery': cypherQuery, 'limit': limit, **kwargs}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        url = self._basePath + ('/cypher/execute').format(**kwargs)
+        url = self._basePath + (f'{"/cypher/execute.json" if output == "application/json" else "/cypher/execute"}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
@@ -743,7 +743,7 @@ class DynamicBase(restService):
             ,
             (graph)
             -[:apinatomy:references]->(pub)
-            -[e:type]->(:Class{iri: "https://apinatomy.org/uris/elements/Publication"})
+            -[e:type]->(:Class{iri: "https://apinatomy.org/uris/elements/Reference"})
             RETURN e
 
             outputs:
@@ -935,7 +935,7 @@ class DynamicBase(restService):
             
             WITH neugrp, link, a, b, c, d, e, path, p2, cl
             MATCH (cl)
-            -[x:apinatomy:inheritedExternal*0..1]->()
+            -[x:apinatomy:inheritedOntologyTerms*0..1]->()
             
             WITH neugrp, link, a, b, c, d, e, path, p2, x
             MATCH (link)
@@ -1000,7 +1000,7 @@ class DynamicBase(restService):
             
             WITH neugrp, link, lyph, a, c, d
             OPTIONAL MATCH layer_ext = (lyph)
-            <-[d*1]-(layer)-[:apinatomy:cloneOf]->()-[:apinatomy:inheritedExternal]->()
+            <-[d*1]-(layer)-[:apinatomy:cloneOf]->()-[:apinatomy:inheritedOntologyTerms]->()
             
             WITH neugrp, link, lyph, a, c, d, layer_ext // there is a difference here because the previous match does not require lyphs to have external ids
             MATCH (lyph)
@@ -1011,7 +1011,7 @@ class DynamicBase(restService):
             -[:apinatomy:topology]->()
             
             , (cl)
-            -[x:apinatomy:inheritedExternal*0..1]->()
+            -[x:apinatomy:inheritedOntologyTerms*0..1]->()
             
             // use apinatomy:next to extract ordering information
             , (link)
@@ -1256,6 +1256,102 @@ class DynamicBase(restService):
         kwargs = {'neupop_id': neupop_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         url = self._basePath + ('/dynamic/demos/apinat/neru-6/{neupop_id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'neupop_id'}
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_neru_7_neupop_id(self, neupop_id, output='application/json'):
+        """ Return the housing regions and publications for neurulated groups. from: /dynamic/demos/apinat/neru-7/{neupop_id}
+
+            Arguments:
+            neupop_id: neuron population identifier
+
+            Query:
+            MATCH (neupop:Class{iri: $neupop_id})
+            -[a:apinatomy:annotates]->(neugrp:NamedIndividual{`https://apinatomy.org/uris/readable/description`: "dynamic"}) // FIXME HACK
+            
+            , (neugrp)
+            -[:apinatomy:links]->(link)
+            -[c:apinatomy:fasciculatesIn|apinatomy:endsIn*0..1]->(lyph_or_layer) // real lyphs convey things, layers do not
+            -[d:apinatomy:layerIn*0..1]->(lyph)
+            -[:apinatomy:conveys*0..1]->() // make sure we are at a real lyph
+            
+            WITH neugrp, link, lyph, a, c, d
+            OPTIONAL MATCH layer_ext = (lyph)
+            <-[d*1]-(layer)-[:apinatomy:cloneOf*0..1]->()-[:apinatomy:inheritedOntologyTerms]->()
+            
+            WITH neugrp, link, lyph, a, c, d, layer_ext
+            OPTIONAL MATCH more = (lyph)
+            -[:apinatomy:layerIn|apinatomy:endsIn|apinatomy:fasciculatesIn|apinatomy:internalIn|apinatomy:cloneOf*1..]->()
+            -[:apinatomy:ontologyTerms|apinatomy:inheritedOntologyTerms]->()
+            
+            WITH neugrp, link, lyph, a, c, d, layer_ext, more // there is a difference here because the previous match does not require lyphs to have external ids
+            MATCH (lyph)
+            -[e:apinatomy:ontologyTerms]->(region)
+            
+            , p2 = (link)
+            -[:apinatomy:conveyingLyph]->(cl)
+            -[:apinatomy:topology]->()
+            
+            , (cl)
+            -[x:apinatomy:inheritedOntologyTerms*0..1]->()
+            
+            // use apinatomy:next to extract ordering information
+            , (link)
+            -[f:apinatomy:next|apinatomy:nextChainStartLevels*0..]->()
+            -[g:apinatomy:target*0..1]->()
+            -[h:apinatomy:rootOf*0..1]->()
+            -[i:apinatomy:levels*0..1]->()
+            <-[:apinatomy:links]-(neugrp)
+            
+            // publications
+            WITH neugrp, a, c, d, e, f, g,h,i, p2, x, layer_ext, more
+            OPTIONAL MATCH path = (neugrp)
+            -[:apinatomy:references]->(pub)
+            -[:type]->(:Class{iri: "https://apinatomy.org/uris/elements/Reference"}) // cannot be curied, dynamic endpoints will not expand it
+            
+            RETURN a, null as b, c, d, e, f, g,h,i, path, p2, x, layer_ext, more
+            
+            UNION
+            
+            // this part usually only returns the soma housing lyph
+            MATCH (neupop:Class{iri: $neupop_id})
+            -[a:apinatomy:annotates]->(neugrp:NamedIndividual{`https://apinatomy.org/uris/readable/description`: "dynamic"}) // FIXME HACK
+            -[b:apinatomy:lyphs]->(lyph)
+            -[c:apinatomy:internalIn]->()
+            -[d:apinatomy:ontologyTerms*0..1]->(region)
+            , p2 = (lyph)
+            -[:apinatomy:conveys]->(soma_link)
+            -[:apinatomy:source|apinatomy:target]->(soma_node)
+            -[:apinatomy:sourceOf]->(chain_link)
+            , (chain_link)
+            -[:apinatomy:levelIn]->(chain)
+            , (soma_node)
+            -[:apinatomy:rootOf]->(chain)
+            
+            WITH lyph, a, b, c, d, p2
+            OPTIONAL MATCH more = (lyph)
+            -[:apinatomy:layerIn|apinatomy:endsIn|apinatomy:fasciculatesIn|apinatomy:internalIn|apinatomy:cloneOf*1..]->()
+            -[:apinatomy:ontologyTerms|apinatomy:inheritedOntologyTerms]->()
+            
+            RETURN a, b, c, d, null AS e, null AS f, null AS g, null AS h, null AS i, null AS path, p2, null as x, null as layer_ext, more
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'neupop_id': neupop_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        url = self._basePath + ('/dynamic/demos/apinat/neru-7/{neupop_id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'neupop_id'}
         output = self._get('GET', url, requests_params, output)
         return output if output else None
