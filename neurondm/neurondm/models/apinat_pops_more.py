@@ -152,7 +152,7 @@ def dophen(oid, bag):
 
 # XXX TODO need to ensure that the type phenotype axioms so that the model superclass is included
 config = Config('apinat-pops-more')
-neus = [dophen(oid, bag) for bag, _, oid, _ in bagged if bag]
+neus = [dophen(oid, bag) for bag, _, oid, _ in bagged]
 pprint(neus)
 #sys.modules['__main__'].__file__ = __file__
 #import linecache
