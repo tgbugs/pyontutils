@@ -1533,8 +1533,9 @@ class graphBase:
         def getfe(c):  # handle repl case (SIGH)
             # FIXME this will cause errors when we try to read the class back in
             try:
+                inspect.getsource(c)
                 return Path(inspect.getfile(c)).exists()
-            except TypeError:
+            except (OSError, TypeError) as e:
                 return False
 
         _subs = [inspect.getsource(c) for c in subclasses(Neuron)
