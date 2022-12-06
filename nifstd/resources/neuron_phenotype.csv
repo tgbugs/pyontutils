@@ -82,6 +82,9 @@ ilxtr:CorticoStriatal,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
 ilxtr:ThalamoCortical,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
 ilxtr:StriatoCortical,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
 ilxtr:CorticoSpinal,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
+ilxtr:SpinalCordAscendingProjectionPhenotype,ilxtr:ProjectionPhenotype,,,,,projects in the anterior direction of the spinal cord,hasProjectionPhenotype
+ilxtr:SpinalCordDescendingProjectionPhenotype,ilxtr:ProjectionPhenotype,,,,,projects in the posterior direction of the spinal cord,hasProjectionPhenotype
+ilxtr:IntestinoFugalProjectionPhenotype,ilxtr:ProjectionPhenotype,,,,,projects out of the intestines,hasProjectionPhenotype
 ,,,,,,,
 ilxtr:PerforantPathwayAssociated,,,,,,Needs work,
 ilxtr:DirectPathway,,,,,,Needs work,
@@ -119,6 +122,4 @@ ilxtr:neuron-phenotype-para-pre,"ilxtr:ParasympatheticPhenotype,ilxtr:PreGanglio
 ilxtr:neuron-phenotype-para-post,"ilxtr:ParasympatheticPhenotype,ilxtr:PostGanglionicPhenotype",Parasympathetic Post-Ganglionic phenotype,,,,,
 ilxtr:neuron-phenotype-sym-pre,"ilxtr:SympatheticPhenotype,ilxtr:PreGanglionicPhenotype",Sympathetic Pre-Ganglionic phenotype,,,,,
 ilxtr:neuron-phenotype-sym-post,"ilxtr:SympatheticPhenotype,ilxtr:PostGanglionicPhenotype",Sympathetic Post-Ganglionic phenotype,,,,,
-ilxtr:SpinalCordAscendingProjectionPhenotype,ilxtr:ProjectionPhenotype,,,,,,
-ilxtr:SpinalCordDescendingProjectionPhenotype,ilxtr:ProjectionPhenotype,,,,,,
 ilxtr:EntericPhenotype,ilxtr:CellPhenotype,,,,,,
