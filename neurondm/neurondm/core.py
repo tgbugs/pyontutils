@@ -513,7 +513,8 @@ class OntTerm(bOntTerm, OntId):
             ind = sco[0]
             # FIXME it being first is by accident of implementation only
             log.debug(f'{sco} {self}')
-            assert ilxtr.PhenotypeIndicator == ind.predicates['rdfs:subClassOf'].u
+            assert ind.predicates['rdfs:subClassOf']
+            assert ilxtr.PhenotypeIndicator == rdflib.URIRef(ind.predicates['rdfs:subClassOf'][0].iri)
             self._cache_ind[self] = ind
             return ind
         else:
