@@ -185,3 +185,7 @@ smint: https://apinatomy.org/uris/models/small-intestine/ids/
 # identifiers
 PMID: http://www.ncbi.nlm.nih.gov/pubmed/
 doi: https://doi.org/
+
+# resource prefixes
+JAX: http://jaxmice.jax.org/strain/
+MMRRC: http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=
