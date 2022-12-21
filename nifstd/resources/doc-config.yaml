@@ -3,6 +3,7 @@ repos:
   NIF-Ontology: https://github.com/SciCrunch/NIF-Ontology.git
   pyontutils: https://github.com/tgbugs/pyontutils.git
   augpathlib: https://github.com/tgbugs/augpathlib.git
+  dockerfiles: https://github.com/tgbugs/dockerfiles.git
   interlex: https://github.com/tgbugs/interlex.git
   ontquery: https://github.com/tgbugs/ontquery.git
   orthauth: https://github.com/tgbugs/orthauth.git
@@ -12,9 +13,13 @@ skip-folders:
   - complete
   - ilxutils
   - librdflib
+  - simple-sckan
+  - kg-release-user
 skip:
   augpathlib:
     - augpathlib/pyads.py            # unused
+  dockerfiles:
+    - README.org                     # insubstantial
   interlex:
     - README.md                      # insubstantial
     - docs/explaining.org            # not ready
@@ -25,13 +30,16 @@ skip:
     - pyontutils/iterio.py           # insubstantial
   sparc-curation:
     - README.md                      # insubstantial
-    #- docs/apinatomy.org             # rendered under sparc
-    - docs/developer-guide.org       # rendered under sparc
+    #- docs/apinatomy.org             # rendered under SCKAN
+    #- docs/developer-guide.org       # rendered under SCKAN
     - docs/notes.org                 # not relevant
     - docs/sckan/queries.org         # symlink dupe from parent folder
     - test/apinatomy/README.org      # insubstantial
     - resources/scigraph/README.org  # replaced by the nifstd scigraph readme
     - resources/DatasetTemplate/README.md
+    - sparcur_internal/sparcur/README.org
+hlv:
+    - docs/sckan/tutorial.org        # needed for (literal "asdf") cell calls, can't ignore because it is a tutorial file
 index:
   - Components
   - Ontology
@@ -41,6 +49,7 @@ index:
   - Python
   - InterLex
   - Specifications
+  - SCKAN
   - Other
 titles:
   Components: Components
@@ -97,7 +106,9 @@ titles:
   sparc-curation/docs/apinatomy.html: ApiNATOMY build process
   sparc-curation/docs/queries.html: SPARC competency queries
   sparc-curation/docs/release.html: SPARC SCKAN release process
+  sparc-curation/docs/developer-guide.html: sparcur dev guide (SCKAN release workflow)
   sparc-curation/docs/sckan/README.html: SCKAN readme
+  sparc-curation/docs/sckan/CHANGELOG.html: SCKAN changelog
   sparc-curation/docs/sckan/overview.html: SCKAN overview
   sparc-curation/docs/sckan/welcome.html: SCKAN docker image welcome
   sparc-curation/docs/sckan/tutorial.html: SCKAN tutorial
@@ -110,4 +121,5 @@ titles:
   pyontutils/ttlser/README.html: ttlser readme
   ontquery/docs/tutorial.html: ontquery tutorial notebook
   orthauth/docs/guide.html: orthauth user guide
+  dockerfiles/source.html: dockerfiles source
   sparc-curation/docs/background.html: null  # prevent broken links

@@ -5,10 +5,14 @@ from augpathlib import RepoPath as Path
 temp_path = Path(tempfile.tempdir)
 _ddconf = auth.get_path('resources') / 'doc-config.yaml'
 _ddpath = temp_path / 'build-ont-docs' / 'docs'
+glb = Path(auth.get_path('git-local-base'))
+_theme_repo = glb / 'org-html-themes'
+_theme_path = 'org/theme-readtheorg-local.setup'
 __doc__ = f"""Compile all documentation from git repos.
 
 Usage:
     ont-docs [options] [--repo=<REPO>...]
+    ont-docs render [options] <path>...
 
 Options:
     -h --help             show this
@@ -19,6 +23,8 @@ Options:
     -d --docstring-only   build docstrings only
     -j --jobs=NJOBS       number of jobs [default: 9]
     -r --repo=<REPO>      additional repos to crawl for docs
+    --theme=<THEMEPATH>   path to theme inside theme-repo [default: {_theme_path}]
+    --theme-repo=<REPO>   path to theme [default: {_theme_repo}]
     --debug               redirect stderr to debug pipeline errors
 
 """
@@ -44,6 +50,8 @@ from pyontutils.utils import TermColors as tc, get_working_dir
 from pyontutils.utils import asStr, findAssignToName
 from pyontutils.ontutils import tokstrip, _bads
 
+# TODO collect images and serve them locally
+
 log = makeSimpleLogger('ont-docs')
 working_dir = Path(__file__).resolve().working_dir
 
@@ -59,7 +67,7 @@ def patch_theme_setup(theme):
     with open(theme, 'rt+') as f:
         dat = f.read()
         f.seek(0)
-        f.write(dat.replace('="styles/', '="/docs/styles/'))
+        f.write(dat.replace('="src/', '="/docs/src/'))
 
 
 _crumbs = ('<span style="float:left;">'
@@ -69,14 +77,14 @@ def makeEditLink(crumbs, title, edit_link):
     ghs = ''  # TODO apparently need font awsome for this or something?
     crumbs = crumbs.format(title=title)
     _org_edit_link_html = (
-        f'#+HTML: <div>{crumbs}'
+        f'<div style="position:float;top:0;">{crumbs}'
         f'<span style="float:right;"><a href={edit_link}>'
-        f'{ghs}Edit on GitHub</a></span><br><br></div>\n')
+        f'{ghs}Edit on GitHub</a></span><br><br></div>')
 
     return _org_edit_link_html
 
 
-def augmentExisting(header, title, authors, date, theme):
+def augmentExisting(header, title, authors, date, theme, path):
     def tf(line): return line if line else f'#+TITLE: {title}'
     def af(line):
         if line:
@@ -89,11 +97,40 @@ def augmentExisting(header, title, authors, date, theme):
         astr = ', '.join(all_authors)
         return f'#+AUTHOR: {astr}'
     def df(line): return f'#+DATE: {date}'
-    def sf(line): return line if line else f'#+SETUPFILE: {theme}'
+    def of(line):
+        # ensure that we always have a table of contents even if the file
+        # wants it disabled other export cases
+        default = '#+OPTIONS: toc:t'  # not strictly necessary, but a good starter
+        always = ' num:nil'
+
+        return ((line.replace('toc:nil', 'toc:t')
+                 if 'toc:nil' in line else line)
+                if line else default) + always
+    def sf(line):
+        # we need to ensure that the theme is present we set it first
+        # so that the file specified #+setupfile: can override
+        stheme = f'#+SETUPFILE: {theme}'
+        def fixpath(l):
+            path
+            _prefix, _spath = l.split(':', 1)
+            spath = _spath.strip()
+            p = Path(spath)
+            if not p.is_absolute():
+                # FIXME really need to forward the error stream,
+                # missing #+setupfile: entries show up in messages
+                npath = (path.parent / p).resolve()
+                nspath = npath.as_posix()
+            else:
+                nspath = spath
+
+            return _prefix + ': ' + nspath
+
+        return stheme + '\n' + fixpath(line) if line else stheme
 
     sections = (('#+title:', tf),
                 ('#+author:', af),
                 ('#+date:', df),
+                ('#+options:', of),
                 ('#+setupfile:', sf),)
 
     lines = header.split('\n')
@@ -111,11 +148,31 @@ def augmentExisting(header, title, authors, date, theme):
     return '\n'.join(lines) + '\n', title
 
 
+ob_lang_titles = (
+    ('jupyter-python', 'Python'),
+    ('sparql', 'SPARQL'),
+    ('cypher', 'Cypher'),
+    ('elisp', 'Emacs Lisp'),
+    ('powershell', 'Powershell'),
+    ('dockerfile', 'Dockerfile'),
+    ('json', 'JSON'),
+)
+
+ob_lang_css = ' '.join([
+    f"pre.src-{lang}:before  {{ content: '{display}'; }}"
+    for lang, display in ob_lang_titles])
+
+todo_colors_css = (
+    '.todo.RC {color:black; background-color:khaki;}'
+)
+
+
 def makeOrgHeader(title, authors, date, theme, crumbs='', edit_link=None,
-                  existing=None):
+                  existing=None, path=None):
     if existing is not None:
         existing = existing.decode()
-        header, title = augmentExisting(existing, title, authors, date, theme)
+        header, title = augmentExisting(
+            existing, title, authors, date, theme, path)
 
     else:
         header = (f'#+TITLE: {title}\n'
@@ -127,20 +184,107 @@ def makeOrgHeader(title, authors, date, theme, crumbs='', edit_link=None,
                   #'#+LATEX_HEADER: \\renewcommand\contentsname{Table of Contents}\n'
                 )
 
+    # at some point org-html-themes removed the default html-style
+    # so we add it back
+    header += '#+OPTIONS: html-style:t\n'
+    # fill in missing langs
+    header += f'#+HTML_HEAD: <style>{ob_lang_css}{todo_colors_css}</style>\n'
+
+    # FIXME we need to work our way back from the top within the header
+    # so can correctly add this before anything else, which was not an
+    # issue when we were splitting from the start instead of the end of
+    # the zeroth section
     if edit_link is not None:
-        header += makeEditLink(crumbs, title, edit_link)
+        # XXX in this approach have to override org-html-template
+        # because by default they are not in the content, which is
+        # where the toc is so the link up is hidden behind the toc
+        header += f'#+HTML_LINK_UP: {title}\n#+HTML_LINK_HOME: {edit_link}\n'
+
+    elif False: # old
+        # FIXME still not quite right I think, because we sometimes put
+        # title at the end of a zeroth section with text
+        _el = makeEditLink(crumbs, title, edit_link)
+        _keys = [f'\n#+{w}:' for w in ('TITLE', 'title')]
+        _ins = [(i, k) for i, k in sorted([(header.find(k), k) for k in _keys])
+                if i >= 0]
+        if _ins:
+            (pos, _match), *_ = _ins
+            _replace = '\n#+HTML: ' + _el + '\n' + _match[1:]  # old, does not do what we want
+            # _replace = _match + ' @@html:' + _el + '@@'  # XXX this also fails, div is in h1
+            # also breaks the title metadata in a bad way, likely a bug
+            header = header.replace(_match, _replace, 1)
+        else:
+            header += _el
 
     return header
 
 
+def file_git_metadata(file, *, nogiterr=None):
+    current_file = Path(file).resolve()
+    working_dir = current_file.working_dir
+    if working_dir is None:
+        # cannot proceed without git
+        log.warning(f'Not in repo, not fixing links for {current_file}')
+        if nogiterr:
+            raise nogiterr()
+        else:
+            return [None] * 8
+
+    repo = working_dir.repo
+    repo_name = working_dir.name
+    remote_url = next(repo.remote().urls)
+    if remote_url.startswith('git@'):
+        remote_url = 'ssh://' + remote_url
+
+    duh = urlparse(remote_url)
+    netloc = duh.netloc
+
+    if 'github' in netloc:
+        netloc_raw = 'raw.githubusercontent.com'
+    else:
+        raise NotImplementedError(f"don't know raw for: {remote_url}")
+
+    if netloc.startswith('git@github.com'):
+        _, group = netloc.split(':')
+        netloc = 'github.com'
+
+    elif netloc == 'github.com':
+        _, group, *rest = duh.path.split('/')
+    else:
+        raise NotImplementedError(remote_url)
+
+    return current_file, working_dir, repo, repo_name, remote_url, netloc, netloc_raw, group
+
+
 class FixLinks:
-    link_pattern = re.compile(rb'\[\[(.*?)\]\[(.*?)\]\]', flags=re.S)  # non greedy . matches all
-    single_pattern = re.compile(rb'\[\[(file:.*?)\]\]')
+    #link_pattern = re.compile(rb'\[\[([^[]*?)\]\[([^[]*?)\]\]', flags=re.S)  # non greedy . matches all
+    # link pattern follows laundry's implementation
+    hlc = rb'((?:[^\[\]]|\\\[|\\\])+)'
+    link_pattern = re.compile(rb'\[\[' + hlc + rb'(?:\]\[' + hlc + rb')?\]\]', re.S)
+    #single_pattern = re.compile(rb'\[\[file:' + hlc + rb'\]\]') # no longer needed
 
     class MakeMeAnInlineSrcBlock(Exception):
         """ EVIL """
 
+    class NoGitError(Exception):
+        """ also evil """
+
     def __init__(self, current_file):
+        try:
+            (
+                self.current_file,
+                self.working_dir,
+                self.repo,
+                self.repo_name,
+                self.remote_url,
+                self.netloc,
+                self.netloc_raw,
+                self.group,
+            ) = file_git_metadata(current_file, nogiterr=self.NoGitError)
+        except self.NoGitError:
+            self.__call__ = lambda org: org
+
+    def ___init__(self, current_file):
         self.current_file = Path(current_file).resolve()
         self.working_dir = self.current_file.working_dir
         if self.working_dir is None:
@@ -178,28 +322,38 @@ class FixLinks:
             raise NotImplementedError(self.remote_url)
 
     def __call__(self, org):
-        org = re.sub(rb'\[\[\.\/', b'[[file:', org)  # run this once at the start
-        org = re.sub(rb'\[\[\.\.\/', b'[[file:../', org)  # run this once at the start
+        # run these once at the start
+        org = re.sub(rb'\[\[\.\/', b'[[file:', org)  # start from same folder
+        org = re.sub(rb'\[\[\.\.\/', b'[[file:../', org)  # relative
+        org = re.sub(rb'\[\[~/', b'[[file:~/', org)  # home dir refs
+        org = re.sub(rb'\[\[file:::', b'[[file:#', org)  # internal/external (new buffer) fuzzy refs (don't use)
 
         #print(org.decode())
         out = re.sub(self.link_pattern, self.process_matches, org)
-        out = re.sub(self.single_pattern, self.process_matches, out)
+        #out = re.sub(self.single_pattern, self.process_matches, out)  # no longer needed
         #print(out.decode())
         return out
 
     def process_matches(self, match):
         href, *text = match.groups()
+        # (log.info(f'probably bad href match {href!r} {text!r}') if b':' not in href and b' ' in href else log.debug(f'{href!r} {text!r}'))
         if text:
             text, = text
-        else:
-            log.debug(match)
-            text = href.replace(b'file:', b'')
+
+        #if text is None:  # mistake, changes the semantics
+            #text = href.replace(b'file:', b'')
 
         try:
-            if b'][' in href:  # was already matched by link pattern
+            if False and b'][' in href:  # was already matched by link pattern
                 outlink = b'[[' + href + b']]'
+
+            if text is None:
+                #log.debug(f'single link case {href!r}')
+                outlink = b'[[' + self.fix_href(href) + b']]'
             else:
-                outlink = b'[[' + self.fix_href(href) + b'][' + self.fix_text(text, href) + b']]'
+                badmatch = b'\n\n' in text  # empty lines end paragraphs, so no links
+                ft = (lambda t, h: t if t else h) if badmatch else self.fix_text
+                outlink = b'[[' + self.fix_href(href) + b'][' + ft(text, href) + b']]'
         except self.MakeMeAnInlineSrcBlock as e:
             if text and text.startswith(b'~'):
                 tolink = text
@@ -208,11 +362,6 @@ class FixLinks:
 
             outlink = f'={tolink.decode().replace("file:", "")}='.encode()
 
-
-        #if b'md#' in outlink:
-        #if match.group() != outlink:
-            #print('MATCH', match.group().decode())
-            #print('OUTLN', outlink.decode())
         return outlink
 
     def fix_text(self, btext, bhref):
@@ -233,10 +382,8 @@ class FixLinks:
         if branch != 'master':
             return href
 
-        rest, *fragment = rest.rsplit('#', 1)
-        fragment = '#' + fragment if fragment else ''
-        rest, *query = rest.rsplit('?', 1)
-        query = '?' + query if query else ''
+        fragment = '#' + up.fragment if up.fragment else ''
+        query = '?' + query if up.query else ''
         dir_stem, old_suffix = rest.rsplit('.', 1)
         local_path = dir_stem + '.html'
         path = f'/docs/{project}/' + local_path + query + fragment
@@ -258,7 +405,6 @@ class FixLinks:
             else:
                 return bhref
 
-
         class SubRel:
             current_file = self.current_file
             working_dir = self.working_dir
@@ -268,28 +414,69 @@ class FixLinks:
 
             def __call__(self, match):
                 name, suffix, rest = match.groups()
+
                 if rest is None:
                     rest = ''
+                elif rest.startswith('::'):
+                    # normalize org :: links to work for html
+                    rest = (rest[2:] if rest.startswith('::#') else '#' + rest[2:])
 
-                if not any(name.startswith(p) for p in ('$', '#')):
+                if rest:
+                    log.log(9, rest)
+
+                # FIXME somehow truncating fragments?
+                if not any(name.startswith(p) for p in ('$', '#', '~/')):
+                    base = self.base
                     if self.working_dir is None:
                         log.warning('no working directory found, you will have broken links')
                         rel = Path(name + suffix)
                     else:
+                        link_target = (self.current_file.parent / (name + suffix)).resolve()
+                        if link_target.is_dir():
+                            base = base.replace('/blob/', '/tree/')  # XXX HACK for github
+                        elif not link_target.exists():
+                            log.warning(f'link to nonexistent file {link_target}')
+                            raise self.MakeMeAnInlineSrcBlock(link_target)
+                        elif not list(link_target.commits(max_count=1)):
+                            log.warning(f'link to file not tracked by git, likely a transient tangle {link_target}')
+                            raise self.MakeMeAnInlineSrcBlock(link_target)
+
+                        # TODO detect tangled files and flag them
                         try:
-                            rel = ((self.current_file.parent / (name + suffix)).resolve()
-                                   .relative_to(self.working_dir))
+                            rel = link_target.relative_to(self.working_dir)
                         except ValueError as e:
-                            log.error('path went outside current repo')
-                            return name + suffix + rest
+                            try:
+                                # alternate repo case
+                                if link_target.working_dir:
+                                    # a bit of rework, but handles all our logic for us
+                                    # FIXME this is a hack that we shouldn't have to use
+                                    # for some reason the relative paths stack if you use
+                                    # link_target by itself
+                                    ncf = link_target.working_dir / link_target.repo_relative_path.parts[0]
+                                    orc = FixLinks(ncf).fix_href(
+                                        (b'file:' +
+                                         link_target
+                                         .repo_relative_path
+                                         .as_posix()
+                                         .encode()))
+
+                                    return orc.decode() + rest
+                                else:
+                                    # FIXME raise error here?
+                                    return name + suffix + rest
+                            except Exception as e2:
+                                log.exception(e2)
+                                log.error(f'path went outside current repo {link_target}')
+                                return name + suffix + rest
 
                     if suffix in ('.md', '.org', '.ipynb'):
                         rel = rel.with_suffix('.html')
 
                     rel_path = rel.as_posix() + rest
                     #print('aaaaaaaaaaa', suffix, rel, rel_path)
-                    return self.base + rel_path
-                elif name.startswith('$'):
+                    return base + rel_path
+                elif name.startswith('$') or name.startswith('~/'):
+                    log.log(9, f'inline verbatim for {name}{suffix}{rest}')
                     raise self.MakeMeAnInlineSrcBlock(match.group())
                 else:
                     #print('bbbbbbbbbbb', match.group())
@@ -298,21 +485,24 @@ class FixLinks:
 
         # tirgger the $ error in the stupidest posible way
         sub_nothing = SubRel(f"we're off to see the inline src block maker")
-        out_m1 = re.sub(r'^file:(\$)(.*)(#.+)*$', sub_nothing, out)
+        out_m1 = re.sub(r'^file:(\$|~/)([^#]*)(#.+)?$', sub_nothing, out)
 
         if self.working_dir is None:
-            log.warning('no working directory found, you will have broken links')
+            msg = 'no working directory found, you will have broken links'
+            log.warning(msg)
 
         #print('----------------------------------------')
         # TODO consider htmlifying these ourselves and serving them directly
+        # FIXME /master/ vs /dev/ for NIF-Ontology
         sub_github = SubRel(f'https://{self.netloc}/{self.group}/{self.repo_name}/blob/master/')
         # source file and/or code extensions regex
-        # TODO folders that simply end
-        code_regex = (r'(\.(?:el|py|sh|ttl|graphml|yml|yaml|spec|example|xlsx|svg)'
-                      r'|LICENSE|catalog-extras|authorized_keys|\.vimrc)')
+        # XXX note, for folders to direct to the forge make sure the link ends with /
+        # the link checker will usually catch them for you if you miss
+        code_regex = (r'(\.(?:el|py|sh|ttl|graphml|yml|yaml|spec|example|xlsx|csv|rkt|lisp)'
+                      r'|LICENSE|catalog-extras|authorized_keys|\.vimrc|/)')
         out0 = re.sub(r'^file:(.*)'
                       + code_regex +
-                      r'(#.+)*$',
+                      r'(#.+)?$',
                       sub_github, out_m1)
 
         #print('----------------------------------------')
@@ -325,16 +515,41 @@ class FixLinks:
 
         #print('----------------------------------------')
         # FIXME won't work if the outer folder does not match the github project name
+        # FIXME possibly related to apinatomy.org failing to resolve scigraph/README.org::#stuff
         sub_docs = SubRel(f'hrefl:/docs/{self.repo_name}/')
         out1 = re.sub(r'^file:(.*)'
                       r'(\.(?:md|org|ipynb))'
-                      r'(#.+)*$', sub_docs, out0)
+                      r'((?:::#?|#).+)?$',
+                      #r'(?:::)?(#.+)?$',
+                      sub_docs, out0)
         out = out1
         #print('----------------------------------------')
 
-        if not any(out.startswith(s) for s in ('https:', 'http:', 'hrefl:',
-                                               'file:', 'img:', 'mailto:', '/', '#')):
-            log.warning(f'Potentially relative path {out!r} does not have a known good start in {self.current_file}')
+        if not any(out.startswith(s) for s in (
+                'https:', 'http:', 'hrefl:', 'file:', 'img:', 'mailto:',
+                'tramp:', 'info:', 'man:', '/', '#')):
+            if (' ' in out or
+                '${' in out):
+                # watch out for bash if [[ ]] cases, not guranteed, but safer
+                log.debug(
+                    f'skip likely bash if test  {out!r} in {self.current_file}')
+            elif (out.startswith('(') and out.endswith(')') or  # coderef, let elisp sort it out
+                  out.startswith('{') and out.endswith('}') or  # skip python code that generates org links (lol)
+                  out.startswith(':') and out.endswith(':')  # regex :space: etc.
+                  ):
+                pass
+            elif (not out.startswith('*') and  # not a fuzzy heading match
+                  not ':' in out and  # curies
+                  not Path(out).exists()  # no unprefixed reference to a file
+                  ):
+                # guess fuzzy link, hope we hit a code block or something
+                out = 'file:::#' + out
+                log.info(
+                    f'fuzzy link transformed to {out!r} in {self.current_file}')
+            else:
+                log.warning(
+                    f'Potentially relative path {out!r} does not '
+                    f'have a known good start in {self.current_file}')
 
         return out.encode()
 
@@ -505,21 +720,26 @@ def spell(filenames, debug=False):
 
 
 # NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
-orgstrap_init = (auth.get_path('git-local-base') / 'orgstrap/init.el').resolve().as_posix()
+orgstrap_init = (glb / 'orgstrap/init.el').resolve().as_posix()
 docs_init = (auth.get_path('resources') / 'docs-init.el').resolve().as_posix()
 
-compile_org_file = ['emacs',
-                    '--batch',
-                    '--quick',
-                    '--load', orgstrap_init,
-                    '--load', docs_init,
-                    '--funcall', 'compile-org-file']
 
-first_sep = re.compile(b'^[^#\n]', re.MULTILINE)
+def argv_compile_org_file(*, emacs='emacs', hlv=False):
+    fun = 'compile-org-file-hlv' if hlv else 'compile-org-file'
+    return [emacs,
+            '--batch',
+            '--quick',
+            '--load', orgstrap_init,
+            '--load', docs_init,
+            '--funcall', fun]
+
+
+first_sep = re.compile(b'^[^#\n]|\n\n|\n#+(begin_src|BEGIN_SRC)', re.MULTILINE)
+first_heading = re.compile(b'^\*+[\ \t]', re.MULTILINE)
 
 
 @suffix('org')
-def renderOrg(path, debug=False, **kwargs):
+def renderOrg(path, debug=False, hlv=False, **kwargs):
     orgfile = path.as_posix()
     try:
         ref = path.latest_commit().hexsha
@@ -527,11 +747,11 @@ def renderOrg(path, debug=False, **kwargs):
     except (aexc.NoCommitsForFile, aexc.NotInRepoError):
         github_link = None
 
-    #print(' '.join(compile_org_file))
-    p = subprocess.Popen(compile_org_file,
+    #print(' '.join(argv_compile_org_file(hlv=hlv)))
+    p = subprocess.Popen(argv_compile_org_file(hlv=hlv),
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
-                         stderr=subprocess.DEVNULL)
+                         stderr=subprocess.PIPE if debug else subprocess.DEVNULL)
 
     with open(orgfile, 'rb') as f:
         # for now we do this and don't bother with the stream implementaiton of read1 write1
@@ -552,22 +772,26 @@ def renderOrg(path, debug=False, **kwargs):
     try:
         if org_in.startswith(b'* '):
             title_author_etc = makeOrgHeader(title, authors, date, theme,
-                                             crumbs, github_link)
+                                             crumbs, github_link,
+                                             path=path)
             org = title_author_etc.encode() + org_in
         else:
-            match = first_sep.search(org_in)
+            match = first_heading.search(org_in)  # zeroth section
+            #match = first_sep.search(org_in)
             if match is None:
                 breakpoint()
             start = match.start()
             existing, rest = org_in[:start], org_in[start:]
             title_author_etc = makeOrgHeader(title, authors, date, theme,
-                                             crumbs, github_link, existing)
+                                             crumbs, github_link, existing,
+                                             path=path)
             org = (title_author_etc.encode() +
                    rest)
     except ValueError as e:
         log.exception(e)
         title_author_etc = makeOrgHeader(title, authors, date, theme,
-                                         crumbs, github_link)
+                                         crumbs, github_link,
+                                         path=path)
         org = title_author_etc.encode() + org_in
         #raise ValueError(f'{orgfile!r}') from e
 
@@ -576,12 +800,18 @@ def renderOrg(path, debug=False, **kwargs):
     org = fix_links(org)
 
     out, err = p.communicate(input=org)
-    if not out and not err:
+    if not out and not err or p.returncode != 0:
         log.critical(f'No output and no error for {path}\n'
-                        'Set --debug to dump to file.')
-        if debug:
-            with open(temp_path / f'debug-{path.name}', 'wb') as f:
-                f.write(org)
+                     'Set --debug to dump to file.')
+
+    if debug:
+        with open(temp_path / f'debug-{path.name}', 'wb') as f:
+            f.write(org)
+
+    if p.returncode != 0:
+        msg = (f'building {orgfile} failed with {p.returncode}\nout:\n'
+               f'{out.decode()}\nerr:\n{err}')
+        raise ValueError(msg)
 
     return out.decode()
 
@@ -619,10 +849,11 @@ def renderMarkdown(path, title=None, authors=None, date=None, theme=None,
                          stdin=ohno.stdout,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
-    e = subprocess.Popen(compile_org_file,
+    e = subprocess.Popen(argv_compile_org_file(),
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
-                         stderr=(subprocess.STDOUT
+                         stderr=(subprocess.PIPE
+                                 # do not set STDOUT on debug, produces garbage
                                  if debug else
                                  subprocess.PIPE))
 
@@ -670,9 +901,13 @@ def renderMarkdown(path, title=None, authors=None, date=None, theme=None,
     body, err = e.communicate(input=org)
 
     # debug
-    #print(' '.join(pandoc), '|', ' '.join(sed), '|', ' '.join(compile_org_file))
+    #print(' '.join(pandoc), '|', ' '.join(sed), '|', ' '.join(argv_compile_org_file()))
     #if b'[[img:' in out or not out or 'external-sources' in path.as_posix():
         #breakpoint()
+
+    if debug:
+        with open(temp_path / f'debug-{path.with_suffix(".org").name}', 'wb') as f:
+            f.write(org)
 
     if e.returncode:
         # if this happens direct stderr to stdout to get the message
@@ -717,7 +952,7 @@ def renderDoc(path, debug=False, **kwargs):
         raise TypeError(f'Don\'t know how to render {path.suffix}') from e
 
 
-def makeKwargs(repo_path, filepath):
+def makeKwargs(repo_path, filepath, doc_config):
     path = repo_path / filepath
     kwargs = {}
     kwargs['title'] = filepath
@@ -734,6 +969,7 @@ def makeKwargs(repo_path, filepath):
     kwargs['repo'] = repo_url.stem
     kwargs['branch'] = 'master'  # TODO figure out how to get the default branch on the remote
     kwargs['crumbs'] = _crumbs
+    kwargs['hlv'] = filepath in doc_config['hlv']
 
     return kwargs
 
@@ -758,6 +994,7 @@ def render_docs(wd_docs_kwargs, out_path, titles=None, n_jobs=9, debug=False):
     if titles is None:
         titles = {}
 
+    # FIXME collect errors so we can see everything that fails in a single pass
     if 'CI' in os.environ or n_jobs == 1:
         outname_rendered = [
             (outFile(doc, wd, out_path),
@@ -785,8 +1022,8 @@ def prepare_paths(BUILD, out_path, theme_repo, theme):
     if not out_path.exists():
         out_path.mkdir()
 
-    theme_styles_dir = theme_repo / 'styles'
-    doc_styles_dir = out_path / 'styles'
+    theme_styles_dir = theme_repo / 'src'
+    doc_styles_dir = out_path / 'src'
     if doc_styles_dir.exists():
         shutil.rmtree(doc_styles_dir)
 
@@ -827,6 +1064,19 @@ class Options(clif.Options):
     def BUILD(self):
         return (self.out_path / self.html_root).resolve()
 
+    @property
+    def paths(self):
+        return [Path(string_path).resolve()
+                for string_path in self._args['<path>']]
+
+    @property
+    def theme_repo(self):
+        return Path(self._args['--theme-repo']).expanduser()
+
+    @property
+    def theme(self):
+        return self.theme_repo / self._args['--theme']
+
 
 class Main(clif.Dispatcher):
 
@@ -835,14 +1085,36 @@ class Main(clif.Dispatcher):
         with open(self.options.config, 'rt') as f:
             return yaml.safe_load(f)
 
+    def render(self):
+        prepare_paths(
+            self.options.BUILD,
+            self.options.out_path,
+            self.options.theme_repo,
+            self.options.theme)
+        doc_config = self._doc_config
+        wd_docs_kwargs = [
+            (path.working_dir,
+             path,
+             makeKwargs(path.working_dir, path.repo_relative_path.as_posix(), doc_config))
+            for path in self.options.paths]
+        [kwargs.update({'theme': self.options.theme}) for _, _, kwargs in wd_docs_kwargs]
+        outname_rendered = render_docs(wd_docs_kwargs,
+                                       self.options.out_path,
+                                       titles=None,
+                                       n_jobs=self.options.jobs,
+                                       debug=self.options.debug)
+        for outname, rendered in outname_rendered:
+            outpath = self.options.out_path / outname
+            outpath.parent.mkdir(parents=True, exist_ok=True)
+            with open(outpath, 'wt') as f:
+                f.write(rendered)
+            log.info(f'org file rendered to {outpath}')
+
     def default(self):
         out_path = self.options.out_path
         BUILD = self.options.BUILD
 
-        glb = Path(auth.get_path('git-local-base'))
-        theme_repo = glb / 'org-html-themes'
-        theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
-        prepare_paths(BUILD, out_path, theme_repo, theme)
+        prepare_paths(BUILD, out_path, self.options.theme_repo, self.options.theme)
 
         doc_config = self._doc_config
         names = tuple(doc_config['repos']) + tuple(self.options.repo)  # TODO fetch if missing ?
@@ -869,7 +1141,7 @@ class Main(clif.Dispatcher):
 
         et = tuple()
         wd_docs_kwargs += [
-            (rp, rp / f, makeKwargs(rp, f))
+            (rp, rp / f, makeKwargs(rp, f, doc_config))
             for rp in repo_paths
             for f in rp.repo.git.ls_files().split('\n')
             if Path(f).suffix in suffixFuncs
@@ -877,7 +1149,7 @@ class Main(clif.Dispatcher):
             and noneMembers(f, *skip_folders)
             and f not in rskip.get(rp.name, et)]
 
-        [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
+        [kwargs.update({'theme': self.options.theme}) for _, _, kwargs in wd_docs_kwargs]
 
         if self.options.spell:
             spell((f.as_posix() for _, f, _ in wd_docs_kwargs))
@@ -910,15 +1182,23 @@ class Main(clif.Dispatcher):
                 f.write(rendered)
 
         lt  = list(titles)
-        def title_key(a):
+        missing_titles = []
+        def title_key(a, _mt=missing_titles):
             title = a.split('"')[1]
             if title not in lt:
                 msg = (f'{title} missing from {self.options.config}')
-                raise ValueError(msg)
+                _mt.append(msg)
+                return -1
+
             return lt.index(title)
 
         index_body = '<br>\n'.join(['<h1>Documentation Index</h1>'] +
                                     sorted(index, key=title_key))
+
+        if missing_titles:
+            msg = '\n'.join(missing_titles)
+            raise ValueError(msg)
+
         with open((out_path / 'index.html').as_posix(), 'wt') as f:
             f.write(hfn.htmldoc(index_body,
                                 title=doc_config['title']))

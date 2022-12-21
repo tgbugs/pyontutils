@@ -984,6 +984,7 @@ Code is compiled once for all deployments.
 *** Compile
 **** RPM
 :properties:
+:CUSTOM_ID: rpm-compile
 :visibility: folded
 :end:
 The easiest way to deploy SciGraph to RHEL-like systems is to build an RPM using
@@ -1152,6 +1153,7 @@ are also available.
 =SERVER= is the name in the .ssh/config
 **** RPM
 :properties:
+:CUSTOM_ID: rpm-deploy
 :visibility: folded
 :end:
 #+name: rpm-install
@@ -1318,7 +1320,7 @@ function load-graph-ontload () {
 #+end_src
 
 If loading fails, then you probably need to patch something in which case you will
-need the following commands. See an example setup in [[../nifstd/patches/][nifstd/patches]].
+need the following commands. See an example setup in [[../patches/][nifstd/patches]].
 If =--patch= is enabled and the patch config cannot be found you will get an error.
 
 # TODO
