@@ -70,20 +70,6 @@ def patch_theme_setup(theme):
         f.write(dat.replace('="src/', '="/docs/src/'))
 
 
-_crumbs = ('<span style="float:left;">'
-           '<a href="/docs">Index</a> > {title}</span>')
-def makeEditLink(crumbs, title, edit_link):
-    GITHUB_SYMBOL = b'\xef\x82\x9b'.decode()  # 
-    ghs = ''  # TODO apparently need font awsome for this or something?
-    crumbs = crumbs.format(title=title)
-    _org_edit_link_html = (
-        f'<div style="position:float;top:0;">{crumbs}'
-        f'<span style="float:right;"><a href={edit_link}>'
-        f'{ghs}Edit on GitHub</a></span><br><br></div>')
-
-    return _org_edit_link_html
-
-
 def augmentExisting(header, title, authors, date, theme, path):
     def tf(line): return line if line else f'#+TITLE: {title}'
     def af(line):
@@ -167,7 +153,7 @@ todo_colors_css = (
 )
 
 
-def makeOrgHeader(title, authors, date, theme, crumbs='', edit_link=None,
+def makeOrgHeader(title, authors, date, theme, edit_link=None,
                   existing=None, path=None):
     if existing is not None:
         existing = existing.decode()
@@ -200,22 +186,6 @@ def makeOrgHeader(title, authors, date, theme, crumbs='', edit_link=None,
         # where the toc is so the link up is hidden behind the toc
         header += f'#+HTML_LINK_UP: {title}\n#+HTML_LINK_HOME: {edit_link}\n'
 
-    elif False: # old
-        # FIXME still not quite right I think, because we sometimes put
-        # title at the end of a zeroth section with text
-        _el = makeEditLink(crumbs, title, edit_link)
-        _keys = [f'\n#+{w}:' for w in ('TITLE', 'title')]
-        _ins = [(i, k) for i, k in sorted([(header.find(k), k) for k in _keys])
-                if i >= 0]
-        if _ins:
-            (pos, _match), *_ = _ins
-            _replace = '\n#+HTML: ' + _el + '\n' + _match[1:]  # old, does not do what we want
-            # _replace = _match + ' @@html:' + _el + '@@'  # XXX this also fails, div is in h1
-            # also breaks the title metadata in a bad way, likely a bug
-            header = header.replace(_match, _replace, 1)
-        else:
-            header += _el
-
     return header
 
 
@@ -233,6 +203,10 @@ def file_git_metadata(file, *, nogiterr=None):
     repo = working_dir.repo
     repo_name = working_dir.name
     remote_url = next(repo.remote().urls)
+    if remote_url.startswith('/'):
+        # cloned locally case
+        remote_url = next(Path(remote_url).repo.remote().urls)
+
     if remote_url.startswith('git@'):
         remote_url = 'ssh://' + remote_url
 
@@ -257,11 +231,9 @@ def file_git_metadata(file, *, nogiterr=None):
 
 
 class FixLinks:
-    #link_pattern = re.compile(rb'\[\[([^[]*?)\]\[([^[]*?)\]\]', flags=re.S)  # non greedy . matches all
     # link pattern follows laundry's implementation
     hlc = rb'((?:[^\[\]]|\\\[|\\\])+)'
     link_pattern = re.compile(rb'\[\[' + hlc + rb'(?:\]\[' + hlc + rb')?\]\]', re.S)
-    #single_pattern = re.compile(rb'\[\[file:' + hlc + rb'\]\]') # no longer needed
 
     class MakeMeAnInlineSrcBlock(Exception):
         """ EVIL """
@@ -284,43 +256,6 @@ class FixLinks:
         except self.NoGitError:
             self.__call__ = lambda org: org
 
-    def ___init__(self, current_file):
-        self.current_file = Path(current_file).resolve()
-        self.working_dir = self.current_file.working_dir
-        if self.working_dir is None:
-            log.warning(f'Not in repo, not fixing links for {self.current_file}')
-            self.__call__ = lambda org: org
-            return
-            # cannot proceed without git
-            #raise FileNotFoundError(f'No working directory found for {self.current_file}')
-            #self.repo_name = 'NOREPO'
-            #self.netloc = 'NOWHERE'
-            #self.netloc_raw = 'NOWHERE'
-            #self.group = 'NOGROUP'
-
-        self.repo = self.working_dir.repo
-        self.repo_name = self.working_dir.name
-        self.remote_url = next(self.repo.remote().urls)
-        if self.remote_url.startswith('git@'):
-            self.remote_url = 'ssh://' + self.remote_url
-
-        duh = urlparse(self.remote_url)
-        self.netloc = duh.netloc
-
-        if 'github' in self.netloc:
-            self.netloc_raw = 'raw.githubusercontent.com'
-        else:
-            raise NotImplementedError("don't know raw for: {self.remote_url}")
-
-        if self.netloc.startswith('git@github.com'):
-            _, self.group = self.netloc.split(':')
-            self.netloc = 'github.com'
-
-        elif self.netloc == 'github.com':
-            _, self.group, *rest = duh.path.split('/')
-        else:
-            raise NotImplementedError(self.remote_url)
-
     def __call__(self, org):
         # run these once at the start
         org = re.sub(rb'\[\[\.\/', b'[[file:', org)  # start from same folder
@@ -328,10 +263,7 @@ class FixLinks:
         org = re.sub(rb'\[\[~/', b'[[file:~/', org)  # home dir refs
         org = re.sub(rb'\[\[file:::', b'[[file:#', org)  # internal/external (new buffer) fuzzy refs (don't use)
 
-        #print(org.decode())
         out = re.sub(self.link_pattern, self.process_matches, org)
-        #out = re.sub(self.single_pattern, self.process_matches, out)  # no longer needed
-        #print(out.decode())
         return out
 
     def process_matches(self, match):
@@ -340,13 +272,7 @@ class FixLinks:
         if text:
             text, = text
 
-        #if text is None:  # mistake, changes the semantics
-            #text = href.replace(b'file:', b'')
-
         try:
-            if False and b'][' in href:  # was already matched by link pattern
-                outlink = b'[[' + href + b']]'
-
             if text is None:
                 #log.debug(f'single link case {href!r}')
                 outlink = b'[[' + self.fix_href(href) + b']]'
@@ -388,7 +314,6 @@ class FixLinks:
         local_path = dir_stem + '.html'
         path = f'/docs/{project}/' + local_path + query + fragment
         out = 'hrefl:' + path
-        #log.debug(out)
         return out
 
     def fix_href(self, bhref):
@@ -473,14 +398,12 @@ class FixLinks:
                         rel = rel.with_suffix('.html')
 
                     rel_path = rel.as_posix() + rest
-                    #print('aaaaaaaaaaa', suffix, rel, rel_path)
                     return base + rel_path
                 elif name.startswith('$') or name.startswith('~/'):
                     log.log(9, f'inline verbatim for {name}{suffix}{rest}')
                     raise self.MakeMeAnInlineSrcBlock(match.group())
                 else:
-                    #print('bbbbbbbbbbb', match.group())
-                    return match.group()  # rel_path = name + ext + rest
+                    return match.group()
 
 
         # tirgger the $ error in the stupidest posible way
@@ -629,7 +552,6 @@ def makeDocstrings(BUILD, repo_paths, skip_folders, skip):
                       'org': '',
                       'repo': '',
                       'branch': 'master',
-                      'crumbs': _crumbs,
                      })
     docstrings = get__doc__s(repo_paths, skip_folders, skip)
 
@@ -720,8 +642,8 @@ def spell(filenames, debug=False):
 
 
 # NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
-orgstrap_init = (glb / 'orgstrap/init.el').resolve().as_posix()
-docs_init = (auth.get_path('resources') / 'docs-init.el').resolve().as_posix()
+orgstrap_init = (glb / 'orgstrap/init.el').resolve()
+docs_init = (auth.get_path('resources') / 'docs-init.el').resolve()
 
 
 def argv_compile_org_file(*, emacs='emacs', hlv=False):
@@ -729,8 +651,8 @@ def argv_compile_org_file(*, emacs='emacs', hlv=False):
     return [emacs,
             '--batch',
             '--quick',
-            '--load', orgstrap_init,
-            '--load', docs_init,
+            '--load', orgstrap_init.as_posix(),
+            '--load', docs_init.as_posix(),
             '--funcall', fun]
 
 
@@ -760,7 +682,6 @@ def renderOrg(path, debug=False, hlv=False, **kwargs):
     title = kwargs['title']
     authors = kwargs['authors']
     date = kwargs['date']
-    crumbs = kwargs['crumbs'] 
     theme = kwargs['theme']
 
     repo = kwargs['repo']
@@ -772,8 +693,7 @@ def renderOrg(path, debug=False, hlv=False, **kwargs):
     try:
         if org_in.startswith(b'* '):
             title_author_etc = makeOrgHeader(title, authors, date, theme,
-                                             crumbs, github_link,
-                                             path=path)
+                                             github_link, path=path)
             org = title_author_etc.encode() + org_in
         else:
             match = first_heading.search(org_in)  # zeroth section
@@ -783,15 +703,14 @@ def renderOrg(path, debug=False, hlv=False, **kwargs):
             start = match.start()
             existing, rest = org_in[:start], org_in[start:]
             title_author_etc = makeOrgHeader(title, authors, date, theme,
-                                             crumbs, github_link, existing,
+                                             github_link, existing,
                                              path=path)
             org = (title_author_etc.encode() +
                    rest)
     except ValueError as e:
         log.exception(e)
         title_author_etc = makeOrgHeader(title, authors, date, theme,
-                                         crumbs, github_link,
-                                         path=path)
+                                         github_link, path=path)
         org = title_author_etc.encode() + org_in
         #raise ValueError(f'{orgfile!r}') from e
 
@@ -818,7 +737,7 @@ def renderOrg(path, debug=False, hlv=False, **kwargs):
 
 @suffix('md')
 def renderMarkdown(path, title=None, authors=None, date=None, theme=None,
-                   crumbs='', debug=False, **kwargs):
+                   debug=False, **kwargs):
     mdfile = path.as_posix()
     try:
         ref = path.latest_commit().hexsha
@@ -863,7 +782,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, theme=None,
             if 'titles' in kwargs and _title in kwargs['titles'] else
             title)
 
-    header = makeOrgHeader(title, authors, date, theme, crumbs, github_link)
+    header = makeOrgHeader(title, authors, date, theme, github_link)
     out, err = s.communicate()
     #print(out.decode())
 
@@ -968,7 +887,6 @@ def makeKwargs(repo_path, filepath, doc_config):
     kwargs['org'] = repo_url.parent.name
     kwargs['repo'] = repo_url.stem
     kwargs['branch'] = 'master'  # TODO figure out how to get the default branch on the remote
-    kwargs['crumbs'] = _crumbs
     kwargs['hlv'] = filepath in doc_config['hlv']
 
     return kwargs
@@ -1085,7 +1003,14 @@ class Main(clif.Dispatcher):
         with open(self.options.config, 'rt') as f:
             return yaml.safe_load(f)
 
+    def _sanity_check(self):
+        if not orgstrap_init.exists():
+            msg = ('Required file orstrap/init.el not found. '
+                   f'Did you clone orgstrap? {orgstrap_init}')
+            raise FileNotFoundError(msg)
+
     def render(self):
+        self._sanity_check()
         prepare_paths(
             self.options.BUILD,
             self.options.out_path,
@@ -1111,6 +1036,7 @@ class Main(clif.Dispatcher):
             log.info(f'org file rendered to {outpath}')
 
     def default(self):
+        self._sanity_check()
         out_path = self.options.out_path
         BUILD = self.options.BUILD
 
