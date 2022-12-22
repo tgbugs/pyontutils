@@ -19,7 +19,6 @@ class TestRegex(unittest.TestCase):
     def test_regex(self):
         tomatch = b'[[file:${HOME}/.ssh/config][your ssh config file]]'
         ml = re.match(FixLinks.link_pattern, tomatch)
-        ms = re.match(FixLinks.single_pattern, tomatch)
         assert len(ml.groups()) == 2, ml
 
 

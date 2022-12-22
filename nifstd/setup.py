@@ -102,5 +102,7 @@ setup(
                  ['resources/sparc_term_versions/sparc_terms2-mod.txt']),
                 ('share/nifstd/resources/',
                  [p.as_posix() for p in Path('resources').iterdir()
-                  if p.is_file() and p.suffix[1:] not in
+                  if p.is_file() and
+                  not p.name.startswith('.') and
+                  p.suffix[1:] not in
                   ('confd', 'rc', 'service', 'socket', 'tmp', 'spec')],)])
