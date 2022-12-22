@@ -29,7 +29,7 @@ skip:
     - nifstd/resources/sawg.org      # published via another workflow
     - pyontutils/iterio.py           # insubstantial
   sparc-curation:
-    - README.md                      # insubstantial
+    #- README.md                      # insubstantial
     #- docs/apinatomy.org             # rendered under SCKAN
     #- docs/developer-guide.org       # rendered under SCKAN
     - docs/notes.org                 # not relevant
@@ -103,10 +103,11 @@ titles:
   pyontutils/ttlser/docs/ttlser.html: Deterministic turtle specification
 
   SCKAN: SCKAN
-  sparc-curation/docs/apinatomy.html: ApiNATOMY build process
-  sparc-curation/docs/queries.html: SPARC competency queries
+  sparc-curation/docs/workflows.html: SPARC workflows
+  sparc-curation/docs/queries.html: SPARC queries
   sparc-curation/docs/release.html: SPARC SCKAN release process
-  sparc-curation/docs/developer-guide.html: sparcur dev guide (SCKAN release workflow)
+  sparc-curation/docs/developer-guide.html: SPARC developer guide
+  sparc-curation/docs/apinatomy.html: ApiNATOMY build process
   sparc-curation/docs/sckan/README.html: SCKAN readme
   sparc-curation/docs/sckan/CHANGELOG.html: SCKAN changelog
   sparc-curation/docs/sckan/overview.html: SCKAN overview
@@ -116,6 +117,7 @@ titles:
   sparc-curation/docs/sckan/scratch.html: SCKAN scratch
 
   Other: Other
+  sparc-curation/README.html: sparcur readme
   augpathlib/README.html: augpathlib readme
   pyontutils/htmlfn/README.html: htmlfn readme
   pyontutils/ttlser/README.html: ttlser readme
