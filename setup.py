@@ -95,7 +95,7 @@ setup(
         'joblib>=1.1.0',
         'lxml',
         'nest_asyncio',
-        'ontquery>=0.2.8',
+        'ontquery>=0.2.11',
         'orthauth[sxpr]>=0.0.16',
         'pyld',
         'pyyaml',

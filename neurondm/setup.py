@@ -107,7 +107,7 @@ try:
         tests_require=tests_require,
         install_requires=[
             'hyputils>=0.0.8',
-            'pyontutils>=0.1.29',
+            'pyontutils>=0.1.31',
         ],
         extras_require={'dev': ['pytest-cov', 'wheel'],
                         'test': tests_require,
