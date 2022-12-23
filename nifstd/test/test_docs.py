@@ -24,36 +24,37 @@ class TestRegex(unittest.TestCase):
 
 @pytest.mark.skipif(working_dir is None, reason='Not in git repo so not testing.')  # FIXME create a temp repo?
 class TestFixLinks(unittest.TestCase):
+    target = Path(__file__)
     path_nasty_good = (
-        (Path(__file__), '[[file:${HOME}/.ssh/config][your ssh config file]]', '=${HOME}/.ssh/config='),
-        (Path(__file__), '[[file:${HOME}/.ssh/config][~/.ssh/config]]', '=~/.ssh/config='),
-        (Path(__file__), '[[file:${HOME}/.ssh_tmp]]', '=${HOME}/.ssh_tmp='),
-        (Path(__file__), '[[http://example.org/test-1][text\ntext]]', '[[http://example.org/test-1][text text]]'),
-        (Path(__file__), '[[][text-2]]', '[[][text-2]]'),
+        (target, '[[file:${HOME}/.ssh/config][your ssh config file]]', '=${HOME}/.ssh/config='),
+        (target, '[[file:${HOME}/.ssh/config][~/.ssh/config]]', '=~/.ssh/config='),
+        (target, '[[file:${HOME}/.ssh_tmp]]', '=${HOME}/.ssh_tmp='),
+        (target, '[[http://example.org/test-1][text\ntext]]', '[[http://example.org/test-1][text text]]'),
+        (target, '[[][text-2]]', '[[][text-2]]'),
 
-        (Path(__file__), '[[file:a-code-file.py][text-3]]', '[[' + gitbase + 'a-code-file.py][text-3]]'),
-        (Path(__file__), '[[./a-code-file.py][text-4]]', '[[' + gitbase + 'a-code-file.py][text-4]]'),
-        (Path(__file__), '[[file:a-ttl-file.ttl][text-5]]', '[[' + gitbase + 'a-ttl-file.ttl][text-5]]'),
-        (Path(__file__), '[[../a-sh-file.sh][text-5.1]]', '[[' + gitbase.rsplit('/', 2)[0] + '/a-sh-file.sh][text-5.1]]'),
-        (Path(__file__), '[[../a-ex.ini.example][text-5.2]]', '[[' + gitbase.rsplit('/', 2)[0] + '/a-ex.ini.example][text-5.2]]'),
-        (Path(__file__), '[[../a-ex-5.3.ini.example]]', '[[' + gitbase.rsplit('/', 2)[0] + '/a-ex-5.3.ini.example][../a-ex-5.3.ini.example]]'),
+        (target, '[[file:a-code-file.py][text-3]]', '[[' + gitbase + 'a-code-file.py][text-3]]'),
+        (target, '[[./a-code-file.py][text-4]]', '[[' + gitbase + 'a-code-file.py][text-4]]'),
+        (target, '[[file:a-ttl-file.ttl][text-5]]', '[[' + gitbase + 'a-ttl-file.ttl][text-5]]'),
+        (target, '[[../a-sh-file.sh][text-5.1]]', '[[' + gitbase.rsplit('/', 2)[0] + '/a-sh-file.sh][text-5.1]]'),
+        (target, '[[../a-ex.ini.example][text-5.2]]', '[[' + gitbase.rsplit('/', 2)[0] + '/a-ex.ini.example][text-5.2]]'),
+        (target, '[[../a-ex-5.3.ini.example]]', '[[' + gitbase.rsplit('/', 2)[0] + '/a-ex-5.3.ini.example]]'),  # [../a-ex-5.3.ini.example]  # FIXME reasonable, lost, TODO restore
 
-        (Path(__file__), '[[file:a-docs-file.md][text-6]]', '[[hrefl:/docs' + base + 'a-docs-file.html][text-6]]'),
-        (Path(__file__), '[[./a-docs-file.md][text-7]]', '[[hrefl:/docs' + base + 'a-docs-file.html][text-7]]'),
+        (target, '[[file:a-docs-file.md][text-6]]', '[[hrefl:/docs' + base + 'a-docs-file.html][text-6]]'),
+        (target, '[[./a-docs-file.md][text-7]]', '[[hrefl:/docs' + base + 'a-docs-file.html][text-7]]'),
 
-        (Path(__file__), '[[./../a-docs-file.md][text-8]]', '[[hrefl:/docs/pyontutils/nifstd/a-docs-file.html][text-8]]'),
-        (Path(__file__), '[[file:../a-docs-file.md][text-9]]', '[[hrefl:/docs/pyontutils/nifstd/a-docs-file.html][text-9]]'),
+        (target, '[[./../a-docs-file.md][text-8]]', '[[hrefl:/docs/pyontutils/nifstd/a-docs-file.html][text-8]]'),
+        (target, '[[file:../a-docs-file.md][text-9]]', '[[hrefl:/docs/pyontutils/nifstd/a-docs-file.html][text-9]]'),
 
-        (Path(__file__), '[[file:a-docs-file.md#section][text-10]]', '[[hrefl:/docs' + base + 'a-docs-file.html#section][text-10]]'),
-        (Path(__file__), '[[file:a-docs%20file.md#section][text-11]]', '[[hrefl:/docs' + base + 'a-docs%20file.html#section][text-11]]'),
+        (target, '[[file:a-docs-file.md#section][text-10]]', '[[hrefl:/docs' + base + 'a-docs-file.html#section][text-10]]'),
+        (target, '[[file:a-docs%20file.md#section][text-11]]', '[[hrefl:/docs' + base + 'a-docs%20file.html#section][text-11]]'),
 
-        #(Path(__file__), '[[../a-docs-file.md#section][text]]', '[[../a-docs-file.md#section][text]]'),  # FIXME warn error or what?
+        #(target, '[[../a-docs-file.md#section][text]]', '[[../a-docs-file.md#section][text]]'),  # FIXME warn error or what?
     )
 
     def test_fix_links(self):
         bads = ['\n' + '\n'.join((good, actual.decode()))
                 for path, nasty, good in self.path_nasty_good
-                for actual in (FixLinks(path)(nasty.encode()),)
+                for actual in (FixLinks(path, False)(nasty.encode()),)
                 if actual.decode() != good]
         lb = '\n\n'
         assert not bads, f'{f"{lb}".join(bads)}'

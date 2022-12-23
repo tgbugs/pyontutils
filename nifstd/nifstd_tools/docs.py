@@ -241,7 +241,8 @@ class FixLinks:
     class NoGitError(Exception):
         """ also evil """
 
-    def __init__(self, current_file):
+    def __init__(self, current_file, verbatim_untracked_missing=True):
+        self.verbatim_untracked_missing = verbatim_untracked_missing
         try:
             (
                 self.current_file,
@@ -333,6 +334,7 @@ class FixLinks:
         class SubRel:
             current_file = self.current_file
             working_dir = self.working_dir
+            verbatim_untracked_missing = self.verbatim_untracked_missing
             def __init__(self, base, mmaisb=self.MakeMeAnInlineSrcBlock):
                 self.base = base
                 self.MakeMeAnInlineSrcBlock = mmaisb  # lol
@@ -356,14 +358,20 @@ class FixLinks:
                         log.warning('no working directory found, you will have broken links')
                         rel = Path(name + suffix)
                     else:
-                        link_target = (self.current_file.parent / (name + suffix)).resolve()
+                        link_target = (self.current_file.parent /
+                                       (name + suffix)).resolve()
                         if link_target.is_dir():
                             base = base.replace('/blob/', '/tree/')  # XXX HACK for github
+                        elif not self.verbatim_untracked_missing:
+                            pass  # early exit so the next two don't trigger
                         elif not link_target.exists():
-                            log.warning(f'link to nonexistent file {link_target}')
+                            msg = f'link to nonexistent file {link_target}'
+                            log.warning(msg)
                             raise self.MakeMeAnInlineSrcBlock(link_target)
                         elif not list(link_target.commits(max_count=1)):
-                            log.warning(f'link to file not tracked by git, likely a transient tangle {link_target}')
+                            msg = ('link to file not tracked by git, '
+                                   f'likely a transient tangle {link_target}')
+                            log.warning(msg)
                             raise self.MakeMeAnInlineSrcBlock(link_target)
 
                         # TODO detect tangled files and flag them
