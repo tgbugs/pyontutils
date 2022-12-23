@@ -783,7 +783,7 @@ def main():
     epoch = args['--epoch']
 
     curies_location = args['--curies']
-    curies = getCuries(curies_location)
+    curies = getCuries(Path(curies_location))
     curie_prefixes = set(curies.values())
 
     filenames = args['<file>']
