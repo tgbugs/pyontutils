@@ -766,7 +766,7 @@ triples = (
        (hasPart, tech.injection),
        unionOf(restN(hasPart, tech.cellPatching),  # vs oneOf? which fails to load?
                restN(hasPart, tech.sharpElectrodeTechnique)),
-       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular')),
+       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular anatomical structure')),
        #(ilxtr.hasPrimaryParticipant, OntTerm()),
        #(ilxtr.hasPrimaryParticipant, OntTerm('SAO:1289190043', label='Cellular Space')),  # TODO add intracellular as synonym
        synonyms=('intracellular injection',)),
@@ -2786,7 +2786,7 @@ triples = (
     (i.p, ilxtr.hasTempId, OntTerm("HBP_MEM:0000112")),
 
     _t(DEV(222), 'intracellular electrophysiology technique',
-       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular')),
+       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular anatomical structure')),
        # FIXME in a physiological (not dead) system
        (ilxtr.hasPrimaryAspect, asp.electrical),
        #(ilxtr.hasPrimaryParticipant, OntTerm('SAO:1289190043', label='Cellular Space')),  # TODO add intracellular as synonym
@@ -2838,7 +2838,7 @@ triples = (
 
     _t(tech.sharpElectrodeEphys, 'sharp intracellular electrode technique',
        (ilxtr.hasPrimaryAspect, asp.electrical),
-       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular')),
+       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular anatomical structure')),
        (hasInput, ilxtr.sharpElectrode),
        synonyms=('sharp electrode technique',)),
        (tech.sharpElectrodeEphys, ilxtr.hasTempId, OntTerm('HBP_MEM:0000023')),
@@ -2871,7 +2871,7 @@ triples = (
     _t(DEV(226), 'cell attached patch technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.cellMembrane),
        (hasInput, ilxtr.patchPipette),
-       (hasParticipant, OntTerm('GO:0005622', label='intracellular')),
+       (hasParticipant, OntTerm('GO:0005622', label='intracellular anatomical structure')),
        # cell attached configuration?
        (ilxtr.hasSomething, blank(96)),
     ),
@@ -2907,7 +2907,7 @@ triples = (
 
     _t(tech.wholeCellPatch, 'whole cell patch technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.cellMembrane),
-       (hasParticipant, OntTerm('GO:0005622', label='intracellular')),
+       (hasParticipant, OntTerm('GO:0005622', label='intracellular anatomical structure')),
        (hasInput, ilxtr.patchPipette),
        (ilxtr.hasSomething, blank(101)),
     ),
@@ -2952,7 +2952,7 @@ triples = (
     _t(DEV(234), 'cell filling technique',
        (hasPart, tech.cellPatching),
        #(hasPart, tech.contrastEnhancement),  #not the right way to do this?
-       #(hasParticipant, OntTerm('GO:0005622', label='intracellular')),
+       #(hasParticipant, OntTerm('GO:0005622', label='intracellular anatomical structure')),
        (hasInput, ilxtr.contrastAgent),  # FIXME ...
       ),
 
