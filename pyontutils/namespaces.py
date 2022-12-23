@@ -60,6 +60,29 @@ def getCuries(curies_location):
                             '.config/pyontutils/curie_map.yaml '
                             'what have you done!?')
 
+        if not curies_location.exists():
+            # windows pip user install madness probably
+            log.warning(f'no curies_map.yaml found, searching')
+            _node = Path(__file__).parent
+            _searching = True
+            while _searching:
+                if _node.parent == _node:
+                    break
+                _maybe_share = _node / 'share'
+                if _maybe_share.exists():
+                    for p in _maybe_share.rglob('**/curie_map.yaml'):
+                        curies_location = p
+                        log.info(
+                            f'curies_map.yaml found at: {p}\n'
+                            'if this was slow, or to silenced this message\n'
+                            f'copy {p} to ' + str(auth._pathit(
+                            '{:user-config-path}/pyontutils/curie_map.yaml'))
+                            + '\n')
+                        _searching = False
+                        break
+
+                _node = _node.parent
+
         # TODO staleness check
         with open(curies_location, 'rt') as f:
             curie_map = yaml.safe_load(f)
