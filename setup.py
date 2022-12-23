@@ -90,7 +90,7 @@ setup(
         'google-api-python-client',
         'google-auth-oauthlib',
         'htmlfn',
-        'idlib>=0.0.1.dev17',
+        'idlib>=0.0.1.dev14',
         "ipython; python_version < '3.7'",
         'joblib>=1.1.0',
         'lxml',
