@@ -134,7 +134,7 @@ def augmentExisting(header, title, authors, date, theme, path):
     return '\n'.join(lines) + '\n', title
 
 
-ob_lang_titles = (
+ob_lang_titles = (  # FIXME config (SIGH)
     ('jupyter-python', 'Python'),
     ('sparql', 'SPARQL'),
     ('cypher', 'Cypher'),
@@ -148,8 +148,9 @@ ob_lang_css = ' '.join([
     f"pre.src-{lang}:before  {{ content: '{display}'; }}"
     for lang, display in ob_lang_titles])
 
-todo_colors_css = (
+todo_colors_css = (  # FIXME config (SIGH)
     '.todo.RC {color:black; background-color:khaki;}'
+    '.done.PLAN {color:black; background-color:gray;}'
 )
 
 
