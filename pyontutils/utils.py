@@ -461,10 +461,12 @@ def Async(rate=None, debug=False, collector=None):  # ah conclib
             time_est = len(funclist) / rate
             chunks = chunk_list(funclist, size)
             lc = len(chunks)
-            print(f'Time estimate: {time_est}    rate: {rate}Hz    '
-                  f'func: {funclist[0]}    args: {len(funclist)}    '
-                  f'chunks: {lc}    size: {size}')
-            generator = (lambda:list(limited_gen(chunk, smooth_offset=(i % lc)/lc, time_est=time_est, debug=debug, thread=i))  # this was the slowdown culpret
+            log.info(f'Time estimate: {time_est}    rate: {rate}Hz    '
+                     f'func: {funclist[0]}    args: {len(funclist)}    '
+                     f'chunks: {lc}    size: {size}')
+            generator = (lambda _c=chunk, _i=i: list(limited_gen(
+                _c, smooth_offset=(_i % lc)/lc, time_est=time_est,
+                debug=debug, thread=_i))
                          for i, chunk in enumerate(sorted(chunks, key=len, reverse=True)))
 
         async def future_loop(future_):
