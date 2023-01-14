@@ -12,7 +12,11 @@ class NeuronSparcNlp(NeuronEBM):
 
 
 class NLP1(Sheet):
-    name = 'off-nlp'
+    name = 'off-nlp-1'
+
+
+class NLP2(Sheet):
+    name = 'off-nlp-2'
 
 
 def nlp_ns(name):
@@ -20,15 +24,16 @@ def nlp_ns(name):
 
 
 snames = {
-    'MM Set 1': nlp_ns('mmset1'),
-    'MM Set 2 Cranial Nerves': nlp_ns('mmset2cn'),
+    'MM Set 1': (NLP1, nlp_ns('mmset1')),
+    'MM Set 2 Cranial Nerves': (NLP1, nlp_ns('mmset2cn')),
+    'MM Set 4': (NLP2, nlp_ns('mmset4')),
 }
 
 
 sheet_classes = [
-    type(f'NLP1{sname.replace(" ", "_")}',
-         (NLP1,), dict(sheet_name=sname))
-    for sname in snames]
+    type(f'{base.__name__}{sname.replace(" ", "_")}',
+         (base,), dict(sheet_name=sname))
+    for sname, (base, ns) in snames.items()]
 
 
 def map_predicates(sheet_pred):
@@ -69,7 +74,7 @@ def main():
             to_add.append((s.u, p, v))
 
     for cl in cs:
-        nlpns = snames[cl.sheet_name]
+        _, nlpns = snames[cl.sheet_name]
         for r in cl.rows():
             if (r.row_index > 0 and
                 r.id().value and
@@ -87,7 +92,7 @@ def main():
 
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
-        nlpns = snames[c.sheet_name]
+        _, nlpns = snames[c.sheet_name]
         for x in (_s, _p, _o):
             if re.match(r'(^[\s]+[^\s].*|.*[^\s][\s]+$)', x):
                 msg = f'leading/trailing whitespace in {c} {_s!r} {_p!r} {_o!r}'
