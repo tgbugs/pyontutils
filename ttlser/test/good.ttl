@@ -450,16 +450,16 @@ sco:8 a owl:Class .
     owl:annotatedSource BLX:20 ;
     owl:annotatedProperty owl:propertyChainAxiom ;
     owl:annotatedTarget (
-            BLX:18
-            BLX:21 ) ;
+            BLX:21
+            BLX:18 ) ;
     rdfs:label "lol you have got to be kidding me" .
 
 [] a owl:Axiom ;
     owl:annotatedSource BLX:21 ;
     owl:annotatedProperty owl:propertyChainAxiom ;
     owl:annotatedTarget (
-            BLX:18
-            BLX:21 ) ;
+            BLX:21
+            BLX:18 ) ;
     rdfs:label "lol you have got to be kidding me" .
 
 [] a owl:Axiom ;

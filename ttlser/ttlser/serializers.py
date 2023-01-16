@@ -127,7 +127,11 @@ class ListRanker:
     @staticmethod
     def test_reorder(node, serializer):
         try:
-            _, linking_predicate = next(serializer.store[::node])
+            s, linking_predicate = next(serializer.store[::node])
+            if linking_predicate in serializer.no_reorder_rdf_star:
+                p = serializer.no_reorder_rdf_star[linking_predicate]
+                linking_predicate = next(serializer.store[s:p:])
+
             reorder = linking_predicate not in serializer.no_reorder_list
             return reorder
         except StopIteration:
@@ -173,13 +177,16 @@ class CustomTurtleSerializer(TurtleSerializer):
     roundtrip_prefixes = '',
     short_name = 'nifttl'
     _name = 'ttlser deterministic'
-    __version = 'v1.2.0'
+    __version = 'v1.2.1'
     _newline = True
     _nl = '\n'
     _space = ' '
     sortkey = staticmethod(natsort)
     make_litsortkey = staticmethod(make_litsort)
-    no_reorder_list = OWL.propertyChainAxiom,
+    no_reorder_list = (OWL.propertyChainAxiom,)
+    no_reorder_rdf_star = {
+         OWL.annotatedTarget: OWL.annotatedProperty,
+    }
 
     topClasses = [OWL.Ontology,
                   RDF.Property,

@@ -228,6 +228,14 @@ class TestSCO(Simple, TestTtlser):  # TODO TestDet, but not ready yet
     actualpath2 = 'test/scoactual2.ttl'
 
 
+class TestNoReorderRdfStar(Simple, TestTtlser):
+    format = 'nifttl'
+    serializer = CustomTurtleSerializer
+    goodpath = 'test/no-reorder.ttl'
+    actualpath = 'test/no-reorder-actual.ttl'
+    actualpath2 = 'test/no-reorder-actual-2.ttl'
+
+
 class TestMultiBNode(unittest.TestCase):
 
     format = 'nifttl'

@@ -1,0 +1,25 @@
+@prefix : <file:///ERROR/EMPTY/PREFIX/BANNED/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix partOf: <http://purl.obolibrary.org/obo/BFO_0000050> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix RO: <http://purl.obolibrary.org/obo/RO_> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+### Object Properties
+
+RO:0002216 a owl:ObjectProperty ;
+    owl:propertyChainAxiom (
+            RO:0002215
+            partOf: ) .
+
+### Axioms
+
+[] a owl:Axiom ;
+    owl:annotatedSource RO:0002216 ;
+    owl:annotatedProperty owl:propertyChainAxiom ;
+    owl:annotatedTarget (
+            RO:0002215
+            partOf: ) ;
+    RO:0002582 true .
+
+### Serialized using the ttlser deterministic serializer v1.2.0
