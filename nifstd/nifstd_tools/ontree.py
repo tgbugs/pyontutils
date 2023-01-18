@@ -752,7 +752,11 @@ def server(api_key=None, verbose=False, data_endpoint=None):
         if j is None or 'edges' not in j or not j['edges']:
             log.error(pformat(j))
             log.debug(sgd._last_url)
-            return abort(400)
+            edges = [{'sub': 'ROOT', 'pred': 'hasMember', 'obj': n['id']}
+                     for n in j['nodes']]
+            j['edges'] = edges
+            j['nodes'].append({'id': 'ROOT', 'lbl': 'ROOT'})  # in case of direction
+            #return abort(400)
 
         prov = [hfn.titletag(f'Dynamic query result for {path}'),
                 f'<meta name="date" content="{UTCNOWISO()}">',
