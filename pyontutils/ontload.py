@@ -761,18 +761,22 @@ def normalize_prefixes(graph, curies):
     [new_graph.add(t) for t in graph]
     return new_graph
 
-def import_tree(graph, ontologies, **kwargs):
-    for ontology in ontologies:
-        thisfile = Path(ontology).name
-        print(thisfile)
-        OntCuries.populate(graph)
-        j = graph.asOboGraph('owl:imports', restriction=False)
-        try:
-            t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=dict(graph.namespace_manager), **kwargs)
-            #print(t)
-            yield t, te
-        except KeyError:
-            print(tc.red('WARNING:'), 'could not find', ontology, 'in import chain')  # TODO zap onts w/o imports
+def import_tree(graph, root, **kwargs):
+    OntCuries.populate(graph)  # FIXME OntCuries trie not working for longest match !?
+    #log.debug(root)
+    j = graph.asOboGraph('owl:imports', restriction=False)
+    try:
+        t, te = creatTree(
+            *Query(root, 'owl:imports', 'OUTGOING', 30),
+            json=j, prefixes=dict(graph.namespace_manager), **kwargs)
+        return t, te
+    except KeyError:
+        print(tc.red('WARNING:'),
+              'could not find',
+              root,
+              'in import chain')  # TODO zap onts w/o imports
+        return None, None
+
 
 def for_burak(graph):
     nm = graph.namespace_manager

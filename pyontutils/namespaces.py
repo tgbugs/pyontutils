@@ -231,6 +231,7 @@ def _loadPrefixes():
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
+        'NIFBASE':'http://ontology.neuinfo.org/NIF/',  # XXX order should not matter but does?
         'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
         'NLXWIKI':'http://neurolex.org/wiki/',
         # FIXME a thought: was # intentionally used to increase user privacy? or is this just happenstance?

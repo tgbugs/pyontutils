@@ -53,41 +53,66 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
         self.results = self.sgc.execute('MATCH (n:Ontology) RETURN n', 1000)
         return self.results
 
-    def get_itrips(self):
+    def get_itrips(self, root=None, extras=tuple()):
         results = self.get_scigraph_onts()
         iris = sorted(set(r['iri'] for r in results))
         gin = lambda i: (i, self.sgg.getNeighbors(i, relationshipType='isDefinedBy',
                                                   direction='OUTGOING'))
-        nodes = Async()(deferred(gin)(i) for i in iris)
+        iblobs = Async()(deferred(gin)(i) for i in iris)
         imports = [(i, *[(e['obj'], 'owl:imports', e['sub'])
-                         for e in n['edges']
+                         for e in blob['edges']
                          if not e['sub'].startswith('_:')])
-                   for i, n in nodes if n]
+                   for i, blob in iblobs if blob]
+        if root:
+            if not extras:
+                _subs = set(e['sub']
+                            for i, blob in iblobs if blob
+                            for e in blob['edges']
+                            if not e['sub'].startswith('_:'))
+                _objs = set(e['obj']
+                            for i, blob in iblobs if blob
+                            for e in blob['edges']
+                            if not e['sub'].startswith('_:'))
+                extras = sorted(_objs - _subs)
+
+            imports.append(
+                (root,
+                 *[(root, 'owl:imports', extra)
+                   for extra in extras]))
+
         self.itrips = sorted(set(tuple(rdflib.URIRef(OntId(e).iri) for e in t)
                                  for i, *ts in imports if ts for t in ts))
-        return self.itrips
 
-    def make_import_chain(self, ontology='nif.ttl'):
-        itrips = self.get_itrips()
-        if not any(ontology in t[0] for t in itrips):
+        return self.itrips, extras
+
+    def make_import_chain(self, root='TEMP:NIF-SCIGRAPH-ROOT',
+                          ontologies=tuple()):
+        itrips, extras = self.get_itrips(root, ontologies)
+        if not ontologies:
+            ontologies = extras
+
+        if len(extras) == 1:
+            root, = extras
+
+        if not [ontology for ontology in
+                [o.split(':')[-1] for o in ontologies]
+                if any(ontology in t[0] for t in itrips)]:
             return None, None
 
-        ontologies = ontology,  # hack around bad code in ontload
         import_graph = OntGraph()
         [import_graph.add(t) for t in itrips]
 
-        self.tree, self.extra = next(import_tree(import_graph, ontologies))
+        self.tree, self.extra = import_tree(import_graph, root)
         return self.tree, self.extra
 
     def make_html(self):
         line = getSourceLine(self.__class__)
         wgb = self.wasGeneratedBy.format(line=line)
-        prov = makeProv('owl:imports', 'NIFTTL:nif.ttl', wgb)
         tree, extra  = self.make_import_chain()
+        prov = makeProv('owl:imports', 'SCIGRAPH-IMPORT-ROOT', wgb)
         if tree is None:
             html_all = ''
         else:
-
             html = extra.html.replace('NIFTTL:', '')
             html_all = hfn.htmldoc(html,
                                    other=prov,
