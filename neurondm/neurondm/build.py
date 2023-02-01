@@ -1381,6 +1381,8 @@ def make_devel():
             yield OntId('overlaps:').u, rdfs.label, rdflib.Literal('overlaps')
             yield ilx_partOf, rdfs.subPropertyOf, OntId('BFO:0000050').u
 
+            yield OntId('SAO:1224657022'), rdfs.subClassOf, OntId('BFO:0000040').u  # needed for cfde
+
             yield OntId('BFO:0000050').u, a, owl.ObjectProperty
             yield OntId('BFO:0000050').u, a, owl.TransitiveProperty
             yield OntId('BFO:0000050').u, owl.inverseOf, OntId('BFO:0000051').u
