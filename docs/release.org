@@ -341,8 +341,20 @@ build-release () {
     fi
 }
 #+end_src
-
+** TODO ebuild testing
+9999 ebuild testing can happen before this, but in principle we
+can/should also test the release at this point probably in the latest
+docker package builder image after a sync? or even just have a
+dedicated python release testing image where all the deps are already
+present ...
+** TODO Tag release
+I think that this is the correct place to tag a release.
+Tag locally, then push the tag to GitHub.
+That will simplify the steps for doing a GitHub release.
 ** Push release
+TODO check to make sure that twine is installed
+TODO make sure that we pop out of software releases if twine fails/does not exist
+TODO check to make sure that the target folder exists e.g. ~/files/software-releases
 #+NAME: &push-release
 #+begin_src bash :eval never :exports code :noweb yes
 function push-release () {
