@@ -1,4 +1,4 @@
-# -*- org-adapt-indentation: nil; org-edit-src-content-indentation: 0; orgstrap-cypher: sha256; orgstrap-norm-func-name: orgstrap-norm-func--dprp-1-0; orgstrap-block-checksum: 42369ed94d4cef88ee56916a26f300ba41770482c07df693eda8191baf302fbf; -*-
+# -*- org-adapt-indentation: nil; org-edit-src-content-indentation: 0; orgstrap-cypher: sha256; orgstrap-norm-func-name: orgstrap-norm-func--dprp-1-0; orgstrap-block-checksum: a90974dbcb4511ef3a4b98a54d26347d5fc12a002f5b5a4ce5c25fb1f85f9838; -*-
 # [[orgstrap][jump to the orgstrap block for this file]]
 #+TITLE: Using SciGraph
 #+OPTIONS: num:nil
@@ -451,8 +451,7 @@ Run this block
 pushd ~/git/NIF-Ontology/ttl
 git checkout sparc || exit $?  # can fail if your working copy has stuff saved
 git pull || exit $?
-curl https://alt.olympiangods.org/sparc/ontologies/community-terms.ttl -o sparc-community-terms.ttl || exit $?  # FIXME TEMP url
-# FIXME update to production url: http://uri.interlex.org/sparc/ontologies/community-terms.ttl
+curl https://uri.interlex.org/sparc/ontologies/community-terms.ttl -o sparc-community-terms.ttl || exit $?
 { python || exit $?; } <<EOF
 <<&materialize-ifsu>>
 EOF
@@ -808,11 +807,12 @@ else
   git clone https://github.com/SciCrunch/NIF-Ontology.git
 fi
 # TODO need to add logic to stash and pull
+# flow replicated from prrequaestor
 pushd NIF-Ontology
 popd; popd
 
 # FIXME this fails if a previous load was run and not cleaned up
-# XXX this should probably be run prior to calling release.org --build --sckan --no-blaze
+# XXX this should probably be run prior to calling release.org build --sckan --no-blaze
 ${PY_X} -m pyontutils.ontload graph \
 --fix-imports-only \
 --org SciCrunch \
@@ -1925,15 +1925,16 @@ source "$(eval echo <<path-scigraph-functions()>>)"
 #+begin_src elisp :results none :exports none :lexical yes
 (when noninteractive
   (setq args nil)
-  (let (enable-local-eval)
-    ;; this pattern is required when tangling to avoid infinite loops
-    (revert-buffer nil t nil)
-    (setq-local find-file-literally nil))
-  (org-babel-tangle))
+  (when (member "tangle" argv)
+    (let (enable-local-eval)
+      ;; this pattern is required when tangling to avoid infinite loops
+      (revert-buffer nil t nil)
+      (setq-local find-file-literally nil))
+    (org-babel-tangle)))
 #+end_src
 
 ** Local Variables :ARCHIVE:
 # close powershell comment #>
 # Local Variables:
-# eval: (progn (setq-local orgstrap-min-org-version "8.2.10") (let ((a (org-version)) (n orgstrap-min-org-version)) (or (fboundp #'orgstrap--confirm-eval) (not n) (string< n a) (string= n a) (error "Your Org is too old! %s < %s" a n))) (defun orgstrap-norm-func--dprp-1-0 (body) (let ((p (read (concat "(progn\n" body "\n)"))) (m '(defun defun-local defmacro defvar defvar-local defconst defcustom)) print-quoted print-length print-level) (cl-labels ((f (b) (cl-loop for e in b when (listp e) do (or (and (memq (car e) m) (let ((n (nthcdr 4 e))) (and (stringp (nth 3 e)) (or (cl-subseq m 3) n) (f n) (or (setcdr (cddr e) n) t)))) (f e))) p)) (prin1-to-string (f p))))) (unless (boundp 'orgstrap-norm-func) (defvar-local orgstrap-norm-func orgstrap-norm-func-name)) (defun orgstrap-norm-embd (body) (funcall orgstrap-norm-func body)) (unless (fboundp #'orgstrap-norm) (defalias 'orgstrap-norm #'orgstrap-norm-embd)) (defun orgstrap-org-src-coderef-regexp (_fmt &optional label) (let ((fmt org-coderef-label-format)) (format "\\([:blank:]*\\(%s\\)[:blank:]*\\)$" (replace-regexp-in-string "%s" (if label (regexp-quote label) "\\([-a-zA-Z0-9_][-a-zA-Z0-9_ ]*\\)") (regexp-quote fmt) nil t)))) (unless (fboundp #'org-src-coderef-regexp) (defalias 'org-src-coderef-regexp #'orgstrap-org-src-coderef-regexp)) (defun orgstrap--expand-body (info) (let ((coderef (nth 6 info)) (expand (if (org-babel-noweb-p (nth 2 info) :eval) (org-babel-expand-noweb-references info) (nth 1 info)))) (if (not coderef) expand (replace-regexp-in-string (org-src-coderef-regexp coderef) "" expand nil nil 1)))) (defun orgstrap--confirm-eval-portable (lang _body) (not (and (member lang '("elisp" "emacs-lisp")) (let* ((body (orgstrap--expand-body (org-babel-get-src-block-info))) (body-normalized (orgstrap-norm body)) (content-checksum (intern (secure-hash orgstrap-cypher body-normalized)))) (eq orgstrap-block-checksum content-checksum))))) (unless (fboundp #'orgstrap--confirm-eval) (defalias 'orgstrap--confirm-eval #'orgstrap--confirm-eval-portable)) (let (enable-local-eval) (vc-find-file-hook)) (let ((ocbe org-confirm-babel-evaluate) (obs (org-babel-find-named-block "orgstrap"))) (if obs (unwind-protect (save-excursion (setq-local orgstrap-norm-func orgstrap-norm-func-name) (setq-local org-confirm-babel-evaluate #'orgstrap--confirm-eval) (goto-char obs) (org-babel-execute-src-block)) (when (eq org-confirm-babel-evaluate #'orgstrap--confirm-eval) (setq-local org-confirm-babel-evaluate ocbe)) (org-set-visibility-according-to-property)) (warn "No orgstrap block."))))
+# eval: (progn (setq-local orgstrap-min-org-version "8.2.10") (let ((a (org-version)) (n orgstrap-min-org-version)) (or (fboundp #'orgstrap--confirm-eval) (not n) (string< n a) (string= n a) (error "Your Org is too old! %s < %s" a n))) (defun orgstrap-norm-func--dprp-1-0 (body) (let ((p (read (concat "(progn\n" body "\n)"))) (m '(defun defun-local defmacro defvar defvar-local defconst defcustom)) print-quoted print-length print-level) (cl-labels ((f (b) (cl-loop for e in b when (listp e) do (or (and (memq (car e) m) (let ((n (nthcdr 4 e))) (and (stringp (nth 3 e)) (or (cl-subseq m 3) n) (f n) (or (setcdr (cddr e) n) t)))) (f e))) p)) (prin1-to-string (f p))))) (unless (boundp 'orgstrap-norm-func) (defvar-local orgstrap-norm-func orgstrap-norm-func-name)) (defun orgstrap-norm-embd (body) (funcall orgstrap-norm-func body)) (unless (fboundp #'orgstrap-norm) (defalias 'orgstrap-norm #'orgstrap-norm-embd)) (defun orgstrap-org-src-coderef-regexp (_fmt &optional label) (let ((fmt org-coderef-label-format)) (format "\\([:blank:]*\\(%s\\)[:blank:]*\\)$" (replace-regexp-in-string "%s" (if label (regexp-quote label) "\\([-a-zA-Z0-9_][-a-zA-Z0-9_ ]*\\)") (regexp-quote fmt) nil t)))) (unless (fboundp #'org-src-coderef-regexp) (defalias 'org-src-coderef-regexp #'orgstrap-org-src-coderef-regexp)) (defun orgstrap--expand-body (info) (let ((coderef (nth 6 info)) (expand (if (org-babel-noweb-p (nth 2 info) :eval) (org-babel-expand-noweb-references info) (nth 1 info)))) (if (not coderef) expand (replace-regexp-in-string (org-src-coderef-regexp coderef) "" expand nil nil 1)))) (defun orgstrap--confirm-eval-portable (lang _body) (not (and (member lang '("elisp" "emacs-lisp")) (let* ((body (orgstrap--expand-body (org-babel-get-src-block-info))) (body-normalized (orgstrap-norm body)) (content-checksum (intern (secure-hash orgstrap-cypher body-normalized)))) (eq orgstrap-block-checksum content-checksum))))) (unless (fboundp #'orgstrap--confirm-eval) (defalias 'orgstrap--confirm-eval #'orgstrap--confirm-eval-portable)) (let (enable-local-eval) (vc-find-file-hook)) (let ((ocbe org-confirm-babel-evaluate) (obs (org-babel-find-named-block "orgstrap"))) (if obs (unwind-protect (save-excursion (setq-local orgstrap-norm-func orgstrap-norm-func-name) (setq-local org-confirm-babel-evaluate #'orgstrap--confirm-eval) (goto-char obs) (org-babel-execute-src-block)) (when (eq org-confirm-babel-evaluate #'orgstrap--confirm-eval) (setq-local org-confirm-babel-evaluate ocbe)) (ignore-errors (org-set-visibility-according-to-property))) (warn "No orgstrap block."))))
 # End:
