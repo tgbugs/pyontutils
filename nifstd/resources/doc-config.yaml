@@ -107,6 +107,7 @@ titles:
   sparc-curation/docs/queries.html: SPARC queries
   sparc-curation/docs/release.html: SPARC SCKAN release process
   sparc-curation/docs/developer-guide.html: SPARC developer guide
+  sparc-curation/docs/user-guide.html: SPARC user guide
   sparc-curation/docs/apinatomy.html: ApiNATOMY build process
   sparc-curation/docs/sckan/README.html: SCKAN readme
   sparc-curation/docs/sckan/CHANGELOG.html: SCKAN changelog
