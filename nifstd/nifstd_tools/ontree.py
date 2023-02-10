@@ -274,6 +274,9 @@ def render(pred, root, direction=None, depth=10, local_filepath=None,
             #print(versionIRI)
             prov.append('<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" '
                         f'href="{versionIRI}">')  # FIXME wrong and wont resolve
+        prov.append(
+            ('<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" '
+             f'href="{sgg._last_url}">'))
         prov.append('<meta name="representation" content="SciGraph">')  # FIXME :/
     kwargs['html_head'] = prov
     try:
