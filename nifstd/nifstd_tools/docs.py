@@ -3,28 +3,36 @@ import tempfile
 from pyontutils.config import auth
 from augpathlib import RepoPath as Path
 temp_path = Path(tempfile.tempdir)
-_ddconf = auth.get_path('resources') / 'doc-config.yaml'
+_resources = auth.get_path('resources')
+_ddconf = _resources / 'doc-config.yaml'
+_ddinit = _resources / 'docs-init.el'
 _ddpath = temp_path / 'build-ont-docs' / 'docs'
-glb = Path(auth.get_path('git-local-base'))
-_theme_repo = glb / 'org-html-themes'
+_glb = Path(auth.get_path('git-local-base'))
+_orgstrap_init = (_glb / 'orgstrap/init.el').resolve()
+_theme_repo = _glb / 'org-html-themes'
 _theme_path = 'org/theme-readtheorg-local.setup'
 __doc__ = f"""Compile all documentation from git repos.
 
 Usage:
     ont-docs [options] [--repo=<REPO>...]
     ont-docs render [options] <path>...
+    ont-docs clone [options]
 
 Options:
     -h --help             show this
     -c --config=<PATH>    path to doc-index.yaml [default: {_ddconf}]
+    -i --init=<PATH>      path to docs-init.el [default: {_ddinit}]
     -o --out-path=<PATH>  path inside which docs are built [default: {_ddpath}]
     -b --html-root=<REL>  relative path to the html root [default: ..]
     -s --spell            run hunspell on all docs
     -d --docstring-only   build docstrings only
     -j --jobs=NJOBS       number of jobs [default: 9]
     -r --repo=<REPO>      additional repos to crawl for docs
+    --orgstrap            clone the orgstrap repo
+    --orgstrap-init=OI    path to the orgstrap/init.el file [default: {_orgstrap_init}]
     --theme=<THEMEPATH>   path to theme inside theme-repo [default: {_theme_path}]
     --theme-repo=<REPO>   path to theme [default: {_theme_repo}]
+    --git-local-base=GLB  path to git-local-base [default: {_glb}]
     --debug               redirect stderr to debug pipeline errors
 
 """
@@ -61,6 +69,13 @@ except ImportError:
     hunspell = None
 
 suffixFuncs = {}
+
+
+class Sigh:
+    # sigh missing dynamic variables ...
+    git_local_base = _glb
+    docs_init = _ddinit
+    orgstrap_init = _orgstrap_init
 
 
 def patch_theme_setup(theme):
@@ -591,11 +606,11 @@ def pandocVersion():
     p = subprocess.Popen(['pandoc', '--version'], stdout=subprocess.PIPE)
     out, _ = p.communicate()
     version = out.split(b'\n', 1)[0].split(b' ', 1)[-1].decode()
-    return version
+    return tuple(int(i) for i in version.split('.'))
 
 
 def getMdReadFormat(version):
-    if version < '2.2.1':
+    if version < (2, 2, 1):
         return 'markdown_github'
     else:
         return 'gfm'
@@ -603,7 +618,7 @@ def getMdReadFormat(version):
 
 pdv = pandocVersion()
 md_read_format = getMdReadFormat(pdv)
-pandoc_columns = pdv < '2.2.3' # pandoc version >= 2.2.3 vastly improved org export
+pandoc_columns = pdv < (2, 2, 3) # pandoc version >= 2.2.3 vastly improved org export
 #pandoc_columns = True  # I think this was due to the fact that I had a weird version lingering
 
 
@@ -650,12 +665,9 @@ def spell(filenames, debug=False):
         breakpoint()
 
 
-# NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
-orgstrap_init = (glb / 'orgstrap/init.el').resolve()
-docs_init = (auth.get_path('resources') / 'docs-init.el').resolve()
-
-
 def argv_compile_org_file(*, emacs='emacs', hlv=False):
+    orgstrap_init = Sigh.orgstrap_init
+    docs_init = Sigh.docs_init.resolve()
     fun = 'compile-org-file-hlv' if hlv else 'compile-org-file'
     return [emacs,
             '--batch',
@@ -980,6 +992,14 @@ class Options(clif.Options):
         return Path(self._args['--config'])
 
     @property
+    def init(self):
+        return Path(self._args['--init']).expanduser()
+
+    @property
+    def orgstrap_init(self):
+        return Path(self._args['--orgstrap-init']).expanduser()
+
+    @property
     def jobs(self):
         return int(self._args['--jobs'])
 
@@ -995,6 +1015,10 @@ class Options(clif.Options):
     def paths(self):
         return [Path(string_path).resolve()
                 for string_path in self._args['<path>']]
+
+    @property
+    def git_local_base(self):
+        return Path(self._args['--git-local-base']).expanduser()
 
     @property
     def theme_repo(self):
@@ -1013,10 +1037,34 @@ class Main(clif.Dispatcher):
             return yaml.safe_load(f)
 
     def _sanity_check(self):
+        orgstrap_init = self.options.orgstrap_init
         if not orgstrap_init.exists():
             msg = ('Required file orstrap/init.el not found. '
                    f'Did you clone orgstrap? {orgstrap_init}')
             raise FileNotFoundError(msg)
+
+    def clone(self):
+        import requests
+        doc_config = self._doc_config
+        p = self.options.git_local_base
+        if self.options.orgstrap:
+            orgstrap_repo = p / 'orgstrap'
+            orgstrap_repo_exists = orgstrap_repo.exists()
+            orgstrap_repo.init('https://github.com/tgbugs/orgstrap.git')
+        for name, remote_url in doc_config['repos'].items():
+            resp = requests.head(remote_url, allow_redirects=True)
+            if not resp.ok:
+                # TODO basic auth or something?
+                log.warning(f'could not access: {remote_url}')
+                continue
+            rp = p / name
+            if not rp.exists():
+                log.debug((rp, remote_url))
+                rp.init(remote_url)
+
+        if self.options.orgstrap and not orgstrap_repo_exists:
+            cmd = f'emacs -batch -load {orgstrap_repo / "init.el"} -load {self.options.init}'
+            log.warning(f'Newly cloned! You need to run the following command:\n{cmd}')
 
     def render(self):
         self._sanity_check()
@@ -1053,7 +1101,7 @@ class Main(clif.Dispatcher):
 
         doc_config = self._doc_config
         names = tuple(doc_config['repos']) + tuple(self.options.repo)  # TODO fetch if missing ?
-        repo_paths = [(glb / name).resolve() for name in names]
+        repo_paths = [(self.options.git_local_base / name).resolve() for name in names]
         repos = [p.repo for p in repo_paths]
         skip_folders = doc_config.get('skip-folders', tuple())
         rskip = doc_config.get('skip', {})
@@ -1146,6 +1194,9 @@ def main():
                 for o in parse_defaults(__doc__)}
     debug = args['--debug']
     options = Options(args, defaults)
+    Sigh.git_local_base = options.git_local_base
+    Sigh.orgstrap_init = options.orgstrap_init
+    Sigh.docs_init = options.init
     main = Main(options)
     main()
 
