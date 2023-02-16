@@ -1418,15 +1418,21 @@ local PATH_RUNTIME=${PATH_RUNTIME:-<<path-runtime()>>}
 local FOLDER_NAME_RUNTIME=${FOLDER_NAME_RUNTIME:-<<folder-name-runtime()>>}
 
 local LATEST="${PATH_BUILD}/LATEST"
-if [ ! -f "${LATEST}" ]; then
-    echo $LATEST path does not exist.
+local FILE_NAME_ZIP
+local PATH_ZIP
+if [ -f "${PATH_ZIP}" ]; then
+    echo ${PATH_ZIP} exists and will be used.
+    FILE_NAME_ZIP="$(basename ${PATH_ZIP})"
+elif [ ! -f "${LATEST}" ]; then
+    echo ${LATEST} path does not exist.
     echo Did you actually build the graph?
     echo Not deploying.
     return 1
+else
+    FILE_NAME_ZIP=$(readlink "${LATEST}")
+    PATH_ZIP=${PATH_ZIP:-"${PATH_BUILD}/${FILE_NAME_ZIP}"}
 fi
-local FILE_NAME_ZIP=$(readlink "${LATEST}")
 local STAMPED="${FILE_NAME_ZIP//.zip/}"
-local PATH_ZIP=${PATH_ZIP:-"${PATH_BUILD}/${FILE_NAME_ZIP}"}
 if [ ! -f "${PATH_ZIP}" ]; then
     echo $PATH_ZIP path does not exist.
     echo Not deploying.
