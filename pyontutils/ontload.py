@@ -73,7 +73,6 @@ import requests
 from lxml import etree
 from git.repo import Repo
 from docopt import parse_defaults
-from joblib import Parallel, delayed
 from ttlser import CustomTurtleSerializer
 from pyontutils.core import OntGraph
 from pyontutils.utils import noneMembers, TODAY, setPS1, refile, TermColors as tc, log

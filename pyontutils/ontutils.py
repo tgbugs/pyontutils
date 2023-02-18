@@ -41,7 +41,6 @@ from pathlib import Path, PurePath
 import rdflib
 import requests
 import augpathlib as aug
-from joblib import Parallel, delayed
 from git.repo import Repo
 from pyontutils.core import makeGraph, createOntology
 from pyontutils.utils import noneMembers, anyMembers, Async, deferred, TermColors as tc
@@ -152,6 +151,7 @@ def catalog_extras(fetch=False):
 
 
 def spell(filenames, debug=False):
+    from joblib import Parallel, delayed
     if hunspell is None:
         raise ImportError('hunspell is not installed on your system. If you want '
                           'to run `ontutils spell` please run pipenv install --dev --skip-lock. '
@@ -227,6 +227,7 @@ def scigraph_stress(rate, timeout=5, verbose=False, debug=False, scigraph=auth.g
 
 
 def deadlinks(filenames, rate, timeout=5, verbose=False, debug=False):
+    from joblib import Parallel, delayed
     urls = list(set(u for r in Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames) for u in r))
     url_blaster(urls, rate, timeout, verbose, debug)
 
@@ -315,6 +316,7 @@ def furls(filename):
 
 
 def version_iris(*filenames, epoch=None):
+    from joblib import Parallel, delayed
     # TODO make sure that when we add versionIRIs the files we are adding them to are either unmodified or in the index
     if epoch is None:
         epoch = int(time())
@@ -527,6 +529,7 @@ def uri_switch_values(utility_graph):
     return fragment_prefixes, ureps
 
 def uri_switch(filenames, get_values):
+    from joblib import Parallel, delayed
     replacement_graph = createOntology('NIF-NIFSTD-mapping',
                                        'NIF* to NIFSTD equivalents',
                                        makePrefixes(
@@ -708,6 +711,7 @@ def swapBackend(trip, ureps):
             yield spo, None, None
 
 def backend_refactor(filenames, get_values):
+    from joblib import Parallel, delayed
     ureps = get_values()
     print('Start writing')
     if len(filenames) == 1:
