@@ -469,9 +469,9 @@ class OntIdIri(OntRes):
             return OntIdPath(parsed.path)._get()
         else:
             if send_data is None:
-                return requests.get(self.iri, stream=True, headers=send_successor)  # worth a shot ...
+                return self._requests.get(self.iri, stream=True, headers=send_successor)  # worth a shot ...
             else:
-                return requests.post(self.iri, stream=True,
+                return self._requests.post(self.iri, stream=True,
                                     headers=send_successor,
                                     data=send_data)
 
@@ -483,7 +483,7 @@ class OntIdIri(OntRes):
     def headers(self):  # FIXME vs get vs post
         """ request headers """
         if not hasattr(self, '_headers'):
-            resp = requests.head(self.identifier)  # TODO status handling for all these
+            resp = self._requests.head(self.identifier)  # TODO status handling for all these
             self._headers = resp.headers
 
         return self._headers
@@ -900,7 +900,7 @@ class OntIdPath(OntRes):
         return self.path.as_posix()
 
     def _get(self, *args, **kwargs):  # some functions that go back the other way can't use more info
-        resp = requests.Response()
+        resp = self._requests.Response()
         with open(self.path, 'rb') as f:
             resp.raw = io.BytesIO(f.read())  # FIXME streaming file read should be possible ...
 
@@ -1021,7 +1021,7 @@ class OntIdGit(OntIdPath):
         return self._metadata
 
     def _get(self, *args, **kwargs):  # TODO mimicArgs
-        resp = requests.Response()
+        resp = self._requests.Response()
         if self.ref is None:
             with open(self.path, 'rb') as f:
                 resp.raw = io.BytesIO(f.read())  # FIXME can't we stream/seek these?
