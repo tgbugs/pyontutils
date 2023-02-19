@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import tempfile
-from pyontutils.core import auth
+from pyontutils.config import auth
 __doc__ = f"""Use SciGraph to load an ontology from a loacal git repository.
 Remote imports are replaced with local imports.
 NIF -> http://ontology.neuinfo.org/NIF
@@ -69,7 +69,6 @@ from os.path import join as jpth
 from contextlib import contextmanager
 from collections import namedtuple
 import rdflib
-import requests
 from lxml import etree
 from git.repo import Repo
 from docopt import parse_defaults
@@ -543,6 +542,7 @@ io.scigraph.owlapi.loader.BatchOwlLoader $@'''
 
 
 def do_patch(patch_config, local_base):
+    import requests
     repo_base = Path(local_base)
     config_path = Path(patch_config)
     with open(patch_config, 'rt') as f:
@@ -575,6 +575,7 @@ def do_patch(patch_config, local_base):
                     raise e
 
 def load_header(filepath, remote=False):
+    import requests
     oo = b'owl:Ontology'
     path = Path(filepath)
     if path.suffix == '.ttl':
@@ -613,6 +614,7 @@ def get_imports(graph):
 
 def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), readonly=False, dobig=False, revert=False):
     """ Read the import closure and use the local versions of the files. """
+    import requests
     done = []
     triples = set()
     imported_iri_vs_ontology_iri = {}

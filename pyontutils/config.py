@@ -6,8 +6,8 @@ from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
 import orthauth as oa
-from pyontutils.utils import TermColors as tc, log
-from pyontutils.utils import get_working_dir
+from pyontutils.utils_fast import TermColors as tc, log
+from pyontutils.utils_fast import get_working_dir
 
 oa.utils.log.removeHandler(oa.utils.log.handlers[0])
 oa.utils.log.addHandler(log.handlers[0])

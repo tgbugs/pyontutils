@@ -18,7 +18,6 @@ from collections import namedtuple
 from urllib.parse import urlparse
 import ontquery as oq
 import augpathlib as aug
-import requests
 import htmlfn as hfn
 from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer, natsort

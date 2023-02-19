@@ -7,11 +7,9 @@ from urllib.parse import quote
 from collections import namedtuple
 from collections import defaultdict as base_dd
 import htmlfn as hfn
-import requests
 from pyontutils.core import OntId, log as _log
 from pyontutils.utils import TermColors as tc
 from ttlser import natsort
-from pyontutils.scigraph import Graph
 from pyontutils.namespaces import PREFIXES as uPREFIXES
 try:
     breakpoint
@@ -726,6 +724,7 @@ def inv_edges(json):
 
 
 def main():
+    from pyontutils.scigraph import Graph
     sgg = Graph(cache=True)
     sgg_local = Graph(cache=True)
 

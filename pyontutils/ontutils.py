@@ -39,7 +39,6 @@ from time import time, localtime, strftime
 from random import shuffle
 from pathlib import Path, PurePath
 import rdflib
-import requests
 import augpathlib as aug
 from git.repo import Repo
 from pyontutils.core import makeGraph, createOntology
@@ -120,6 +119,7 @@ class ontologySection:
 # utils
 
 def catalog_extras(fetch=False):
+    import requests
     path = Path(auth.get_path('ontology-local-repo'), 'ttl')
     cat = (path / 'catalog-v001.xml').as_posix()
     with open((path / '../catalog-extras').as_posix(), 'rt') as ce, open(cat, 'rt') as c:
@@ -234,6 +234,7 @@ def deadlinks(filenames, rate, timeout=5, verbose=False, debug=False):
 
 def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head',
                 fail=False, negative=False, ok_test=lambda r: r.ok):
+    import requests
     shuffle(urls)  # try to distribute timeout events evenly across workers
     if verbose:
         [print(u) for u in sorted(urls)]

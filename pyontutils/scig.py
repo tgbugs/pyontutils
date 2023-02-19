@@ -26,15 +26,10 @@ Options:
 """
 import tempfile
 from pathlib import Path
-import rdflib
 import htmlfn as hfn
 from docopt import docopt
-from pyontutils.core import qname, OntId, OntGraph
-from pyontutils.utils import TermColors as tc, getSourceLine, UTCNOWISO
-from pyontutils.utils import Async, deferred
-from pyontutils.ontload import import_tree
-from pyontutils.scigraph import *
-from pyontutils.namespaces import PREFIXES
+from pyontutils.utils_fast import TermColors as tc, getSourceLine, UTCNOWISO
+from pyontutils.curies import PREFIXES
 
 
 def makeProv(pred, root, wgb):
@@ -54,6 +49,9 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
         return self.results
 
     def get_itrips(self, root=None, extras=tuple()):
+        import rdflib
+        from pyontutils.core import OntId
+        from pyontutils.utils import Async, deferred
         results = self.get_scigraph_onts()
         iris = sorted(set(r['iri'] for r in results))
         gin = lambda i: (i, self.sgg.getNeighbors(i, relationshipType='isDefinedBy',
@@ -87,6 +85,8 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
 
     def make_import_chain(self, root='TEMP:NIF-SCIGRAPH-ROOT',
                           ontologies=tuple()):
+        from pyontutils.core import OntGraph
+        from pyontutils.ontload import import_tree
         itrips, extras = self.get_itrips(root, ontologies)
         if not ontologies:
             ontologies = extras
@@ -227,6 +227,7 @@ class scigPrint:
 
     @staticmethod
     def pprint_meta(meta, print_iri=True):
+        from pyontutils.core import qname
         if print_iri:
             if 'curie' in meta:
                 print(meta['curie'])
@@ -286,6 +287,7 @@ class scigPrint:
 
 
 def main():
+    import pyontutils.scigraph as sg
     args = docopt(__doc__, version='scig 0')
     #print(args)
     server = None
@@ -304,7 +306,7 @@ def main():
         kwargs['prefix'] = args['--prefix']
 
     if args['i'] or args['v']:
-        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
+        v = sg.Vocabulary(server, verbose) if server else sg.Vocabulary(verbose=verbose)
         for id_ in args['<id>']:
             out = v.findById(id_, **kwargs)
             if out:
@@ -312,7 +314,7 @@ def main():
                 for key, value in sorted(out.items()):
                     print('\t%s:' % key, value)
     elif args['s'] or args['t']:
-        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
+        v = sg.Vocabulary(server, verbose) if server else sg.Vocabulary(verbose=verbose)
         for term in args['<term>']:
             print(term)
             limit = args['--limit']
@@ -328,14 +330,14 @@ def main():
                         print('\t\t%s:' % key, value)
                 print()
     elif args['g']:
-        g = Graph(server, verbose) if server else Graph(verbose=verbose)
+        g = sg.Graph(server, verbose) if server else sg.Graph(verbose=verbose)
         for id_ in args['<id>']:
             out = g.getNeighbors(id_, relationshipType=args['--rt'])
             if out:
                 print(id_,)
                 scigPrint.pprint_neighbors(out, nodes=not args['--edges'])
     elif args['e']:
-        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
+        v = sg.Vocabulary(server, verbose) if server else sg.Vocabulary(verbose=verbose)
         p, s, o = args['<p>'], args['<s>'], args['<o>']
         def getl(e):
             r = v.findById(e)
@@ -353,14 +355,14 @@ def main():
 
         print('(%s %s %s)' % tuple([_.replace(' ', '-') for _ in (p, s, o)]))
     elif args['c']:
-        c = Cypher(server, verbose) if server else Cypher(verbose=verbose)
+        c = sg.Cypher(server, verbose) if server else sg.Cypher(verbose=verbose)
         curies = c.getCuries()
         align = max([len(c) for c in curies]) + 2
         fmt = '{: <%s}' % align
         for curie, iri in sorted(curies.items()):
             print(fmt.format(repr(curie)), repr(iri))
     elif args['cy']:
-        c = Cypher(server, verbose) if server else Cypher(verbose=verbose)
+        c = sg.Cypher(server, verbose) if server else sg.Cypher(verbose=verbose)
         import pprint
         #results = c.execute(args['<query>'], args['--limit'])
         results = c.execute(args['<query>'], args['--limit'], 'application/json')
@@ -372,8 +374,8 @@ def main():
         else:
             print('Error?')
     elif args['onts']:
-        sgc = Cypher(server, verbose) if server else Cypher(verbose=verbose)
-        sgg = Graph(server, verbose) if server else Graph(verbose=verbose)
+        sgc = sg.Cypher(server, verbose) if server else sg.Cypher(verbose=verbose)
+        sgg = sg.Graph(server, verbose) if server else sg.Graph(verbose=verbose)
         ic = ImportChain(sgg, sgc)
         ic.write_import_chain()
         fields = ('iri', 'rdfs:label', 'dc:title', 'definition', 'skos:definition',
