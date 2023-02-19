@@ -985,7 +985,12 @@ def run(args):
     if itrips:
         import_graph = OntGraph()
         [import_graph.add(t) for t in itrips]
-        for tree, extra in import_tree(import_graph, ontologies):
+        if len(ontologies) == 1:
+            ontology, = ontologies
+        else:
+            ontology = ontologies  # FIXME will error
+
+        for tree, extra in import_tree(import_graph, ontology):
             name = Path(next(iter(tree.keys()))).name
             with open(jpth(zip_location, f'{name}-import-closure.html'), 'wt') as f:
                 f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
