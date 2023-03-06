@@ -1,49 +1,59 @@
 from pathlib import Path as p
 from .interlex_sql import IlxSql
+
 # from tools import create_pickle
 import pickle
 import os
 
 
+HOME = p.home() / "DropboxPersonal/.interlex_backups"
+if HOME.exists is False:
+    HOME.mkdir()
+
+
 def create_pickle(data, outfilename):
-    with open(outfilename, 'wb') as outfile:
+    with open(outfilename, "wb") as outfile:
         pickle.dump(data, outfile)
 
 
 def main():
-    sql = IlxSql(db_url=os.environ.get('SCICRUNCH_DB_URL_PRODUCTION'))
+    sql = IlxSql(db_url=os.environ.get("SCICRUNCH_DB_URL_PRODUCTION"))
+
+    users = sql.get_users()
+    create_pickle(users, HOME / "ilx_db_users_backup.pickle")
+    print("=== Users backup complete ===")
+    del users
 
     terms = sql.get_terms()
-    create_pickle(terms, p.home() / 'Dropbox/interlex_backups/ilx_db_terms_backup.pickle')
-    print('=== terms backup complete ===')
+    create_pickle(terms, HOME / "ilx_db_terms_backup.pickle")
+    print("=== terms backup complete ===")
     del terms
 
     annos = sql.get_annotations()
-    create_pickle(annos, p.home() / 'Dropbox/interlex_backups/ilx_db_annos_backup.pickle')
-    print('=== annotations backup complete ===')
+    create_pickle(annos, HOME / "ilx_db_annos_backup.pickle")
+    print("=== annotations backup complete ===")
     del annos
 
     ex = sql.get_existing_ids()
-    create_pickle(ex, p.home() / 'Dropbox/interlex_backups/ilx_db_ex_backup.pickle')
-    print('=== existing ids backup complete ===')
+    create_pickle(ex, HOME / "ilx_db_ex_backup.pickle")
+    print("=== existing ids backup complete ===")
     del ex
 
     synonyms = sql.get_synonyms()
-    create_pickle(synonyms, p.home() / 'Dropbox/interlex_backups/ilx_db_synonyms_backup.pickle')
-    print('=== synonyms backup complete ===')
+    create_pickle(synonyms, HOME / "ilx_db_synonyms_backup.pickle")
+    print("=== synonyms backup complete ===")
     del synonyms
 
     superclasses = sql.get_superclasses()
-    create_pickle(superclasses, p.home() / 'Dropbox/interlex_backups/ilx_db_superclasses_backup.pickle')
-    print('=== superclasses backup complete ===')
+    create_pickle(superclasses, HOME / "ilx_db_superclasses_backup.pickle")
+    print("=== superclasses backup complete ===")
     del superclasses
 
     relationships = sql.get_relationships()
-    create_pickle(relationships, p.home() / 'Dropbox/interlex_backups/ilx_db_relationships_backup.pickle')
-    print('=== relationships backup complete ===')
+    create_pickle(relationships, HOME / "ilx_db_relationships_backup.pickle")
+    print("=== relationships backup complete ===")
     del relationships
-        
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
