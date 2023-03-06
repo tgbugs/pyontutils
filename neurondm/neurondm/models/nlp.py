@@ -46,7 +46,9 @@ def map_predicates(sheet_pred):
         'Axon sensory terminal': ilxtr.hasAxonSensorySubcellularElementIn,
         'hasInstanceInTaxon': ilxtr.hasInstanceInTaxon,
         'hasPhenotype': ilxtr.hasPhenotype,
+        'hasBiologicalSex': ilxtr.hasBiologicalSex,
         'hasCircuitRolePhenotype': ilxtr.hasCircuitRolePhenotype,
+        'hasForwardConnectionPhenotype': ilxtr.hasForwardConnectionPhenotype,
     }[sheet_pred]
     return p
 
@@ -105,6 +107,10 @@ def main():
         except KeyError as e:
             log.error(f'sigh {s}')
             raise e
+
+        if p == ilxtr.hasForwardConnectionPhenotype:
+            _o = nlpns[_o]
+
         o = OntId(_o)
 
         if p == owl.equivalentClass:
@@ -130,6 +136,7 @@ def main():
 
         nrns.append(n)
 
+    Phenotype.in_graph.bind('mmset4', snames['MM Set 4'][-1])  # XXX FIXME UGH
     config.write()
     labels = (
         #ilxtr.genLabel,
