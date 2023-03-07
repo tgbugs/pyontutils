@@ -48,7 +48,7 @@ def map_predicates(sheet_pred):
         'hasPhenotype': ilxtr.hasPhenotype,
         'hasBiologicalSex': ilxtr.hasBiologicalSex,
         'hasCircuitRolePhenotype': ilxtr.hasCircuitRolePhenotype,
-        'hasForwardConnectionPhenotype': ilxtr.hasForwardConnectionPhenotype,
+        'hasForwardConnectionPhenotype': ilxtr.hasForwardConnectionPhenotype,  # FIXME this needs to be unionOf
     }[sheet_pred]
     return p
 
@@ -91,6 +91,8 @@ def main():
                 asdf(s, ilxtr.reviewNote, r.review_notes)
                 asdf(s, ilxtr.reference, r.reference_pubmed_id__doi_or_text)
                 asdf(s, rdfs.label, r.neuron_population_label_a_to_b_via_c)
+                if hasattr(r, 'alert_explanation'):
+                    asdf(s, ilxtr.alertNote, r.alert_explanation)
 
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
