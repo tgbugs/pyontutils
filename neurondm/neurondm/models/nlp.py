@@ -3,7 +3,7 @@ from collections import defaultdict
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
-from neurondm.core import Config, NeuronEBM, Phenotype, log, OntId
+from neurondm.core import Config, NeuronEBM, Phenotype, NegPhenotype, log, OntId
 
 
 class NeuronSparcNlp(NeuronEBM):
@@ -75,6 +75,7 @@ def main():
             # (e.g. OntId vs rdflib.URIRef)
             to_add.append((s.u, p, v))
 
+    ec = {}
     for cl in cs:
         _, nlpns = snames[cl.sheet_name]
         for r in cl.rows():
@@ -93,6 +94,11 @@ def main():
                 asdf(s, rdfs.label, r.neuron_population_label_a_to_b_via_c)
                 if hasattr(r, 'alert_explanation'):
                     asdf(s, ilxtr.alertNote, r.alert_explanation)
+
+                if hasattr(r, 'explicit_complement') and r.explicit_complement().value:
+                    p = map_predicates(r.relationship().value)
+                    o = OntId(r.explicit_complement().value)
+                    ec[(s, p)] = o
 
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
@@ -124,6 +130,9 @@ def main():
         except TypeError as e:
             log.error(f'bad data for {c} {s} {p} {o}')
             raise e
+
+        if ec and (s, p) in ec:
+            dd[s].append(NegPhenotype(ec[(s, p)], p))
 
 
     config = Config('sparc-nlp')
