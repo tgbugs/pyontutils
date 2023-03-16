@@ -90,8 +90,9 @@ Tangle this block so you can source [[file:./../bin/python-release-functions.sh]
 <<&final-release>>
 #+end_src
 ** Build release
+# XXX FIXME AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA absolute insanity where this is parsed as an emacs float and embedded as such so the trailing zero is lost temp fix is to use string
 #+name: &default-python-version
-: 3.9
+: "3.10"
 
 #+NAME: &vars-build-release
 #+begin_src bash :eval never :exports code :noweb yes
@@ -164,11 +165,11 @@ build-release () {
 
     if [ -d ${clone_target} ]; then
         pushd ${clone_target}
-        rurl="$(git remote get-url origin)"
+        rurl="$(git remote get-url origin)" || return $?
         if [[ -z ${CLONEFROM} && ! $rurl =~ "https://" && ! $rurl =~ "git@" ]]; then
-            git remote set-url origin https://github.com/${org}/${repo}.git ${clone_target}
+            git remote set-url origin https://github.com/${org}/${repo}.git ${clone_target} || return $?
         elif [[ -n ${CLONEFROM} && "$rurl" != "${CLONEFROM}" ]]; then
-            git remote set-url origin "${CLONEFROM}"
+            git remote set-url origin "${CLONEFROM}" || return $?
         fi
         git fetch || return $?  # fail on bad clone to prevent testing against stale code
         git reset --hard origin/master
