@@ -167,7 +167,7 @@ build-release () {
         pushd ${clone_target}
         rurl="$(git remote get-url origin)" || return $?
         if [[ -z ${CLONEFROM} && ! $rurl =~ "https://" && ! $rurl =~ "git@" ]]; then
-            git remote set-url origin https://github.com/${org}/${repo}.git ${clone_target} || return $?
+            git remote set-url origin https://github.com/${org}/${repo}.git || return $?
         elif [[ -n ${CLONEFROM} && "$rurl" != "${CLONEFROM}" ]]; then
             git remote set-url origin "${CLONEFROM}" || return $?
         fi
@@ -177,9 +177,9 @@ build-release () {
         popd
     else
         if [[ -n ${CLONEFROM} ]]; then
-            git clone ${CLONEFROM} ${clone_target}
+            git clone ${CLONEFROM} ${clone_target} || return $?
         else
-            git clone https://github.com/${org}/${repo}.git ${clone_target}
+            git clone https://github.com/${org}/${repo}.git ${clone_target} || return $?
         fi
     fi
     # TODO __version__ check against ${version}
