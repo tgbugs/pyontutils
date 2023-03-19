@@ -513,11 +513,28 @@ from pyontutils import clifun as clif
 eilog.set_threshold(99)
 
 last_output = [None]
-def fake_setup(*args, **kwargs):
+def fake_setup(*args, _setup=setuptools.setup, **kwargs):
     last_output[0] = args, kwargs
 
 
-setuptools.setup = fake_setup
+def _run_setup(setup_file, *args, **kwargs):
+    setuptools.setup = fake_setup
+    spec = importlib.util.spec_from_file_location('setup', setup_file)
+    setup = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(setup)
+    args, kwargs = last_output[0]
+    return setup, args, kwargs
+
+
+# https://docs.python.org/3/distutils/apiref.html#distutils.core.run_setup
+setup_use_kwargs = False
+if setup_use_kwargs:
+    from distutils.core import run_setup as SIGH
+    # yes the random writes to stdout are because we call run_setup
+    # not just import it and yes, it was someone touching the root logger
+    run_setup = _run_setup
+else:
+    from distutils.core import run_setup
 
 
 def vinc(thing, prefix=None):
@@ -533,6 +550,7 @@ def vinc(thing, prefix=None):
                 return 0
         else:
             return thing + 1
+
 
 def current_state(ver):
     if ver.local is not None: return 'local'
@@ -601,6 +619,8 @@ def cons_next(d, ver, next):
         d.update(ver._version._asdict())
         d['local'] = vinc(ver.local),
     elif next is None:
+        # FIXME this fails if you want to bump the release to go from release to dev
+        # e.g. 0.1.27 -> 0.1.27.dev0 which is not a valid transition
         pass  # truncate to release from dev and pre
     else:
         raise ValueError('wat')
@@ -633,22 +653,33 @@ def next_version(ver, next_phase='current', rel_comp='release'):
 
 class SetupPath(aug.RepoPath):
     # TODO get latest release info from github and pypi
-
+    _debug = False
+    _sk = setup_use_kwargs
     @property
     def setupfu(self):
         # FIXME sometimes this can fail if there are nested setup.py files !??!
         # and the base path is relative !??! temp workaround is to resolve all
         # paths before use, but there is still a bug
+        import logging
+        sigh = logging.getLogger().level
         with self.folder:
             #print('cwd', aug.AugmentedPath.cwd(), '\nsf', self.setup_file)
-            spec = importlib.util.spec_from_file_location('setup', self.setup_file)
-            setup = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(setup)
-            args, kwargs = last_output[0]
-            return setup, args, kwargs
+            try:
+                return run_setup(self.setup_file, stop_after='config')
+            finally:
+                logging.getLogger().setLevel(sigh)
+
+    @property
+    def setup_dist(self):
+        if not hasattr(self, '_setup_dist'):
+            duo = self.setupfu
+            self._setup_dist = duo
+
+        return self._setup_dist
 
     @property
     def setup_kwargs(self):
+        #raise NotImplementedError('use setup_dist')
         if not hasattr(self, '_setup_kwargs'):
             mod, args, kwargs = self.setupfu
             self._setup_kwargs = kwargs
@@ -664,6 +695,10 @@ class SetupPath(aug.RepoPath):
                 return
 
             self._pypi_json = self._pypi_request.json()
+            # XXX sometimes the pypi api spews stale data :/
+            if self._debug:
+                import pprint
+                pprint.pprint(self._pypi_json)
 
         return self._pypi_json
 
@@ -764,7 +799,10 @@ class SetupPath(aug.RepoPath):
 
     @property
     def version_repo(self):
-        return parse_version(self.setup_kwargs['version'])
+        if self._sk:
+            return parse_version(self.setup_kwargs['version'])
+        else:
+            return parse_version(self.setup_dist.get_version())
         #return Version(self.setup_kwargs['version'])
 
     @property
@@ -817,9 +855,14 @@ class SetupPath(aug.RepoPath):
 
     @property
     def module(self):
-        kwargs = self.setup_kwargs
-        name = kwargs['name']
-        packages = kwargs['packages']
+        if self._sk:
+            kwargs = self.setup_kwargs
+            name = kwargs['name']
+            packages = kwargs['packages']
+        else:
+            name = self.arg_packagename
+            packages = self.setup_dist.packages
+
         for package in packages:
             if package == name:
                 return self.folder / name
@@ -862,7 +905,10 @@ class SetupPath(aug.RepoPath):
 
     @property
     def arg_packagename(self):
-        return self.setup_kwargs['name']
+        if self._sk:
+            return self.setup_kwargs['name']
+        else:
+            return self.setup_dist.get_name()
 
     @property
     def arg_rest(self):
@@ -886,7 +932,7 @@ class SetupPath(aug.RepoPath):
         breakpoint()
         if pretend:
             print('would bump module', self.module_init_file,
-                  'for package name', self.setup_kwargs['name'],
+                  'for package name', self.arg_packagename,
                   'from', self.version_repo,
                   'to', nv)
             return
@@ -976,10 +1022,10 @@ class Main(clif.Dispatcher):
         for sp in self.options.paths:
             cslr = sp.commits_since_last_release()
             print('path                 ', sp)
-            print('package              ', sp.setup_kwargs['name'])
+            print('package              ', sp.arg_packagename)
             print('commits since release', len(cslr))
             print('next                 ', sp.version_next(self.options.next_phase, self.options.rel_comp))
-            print('repo module version  ', sp.version_repo)
+            print('repo module version  ', sp.version_repo)  # FIXME super confusing when the change has not been committed
             print('latest release pypi  ', sp.version_latest_pypi)
             print('latest release github', sp.version_latest_github)
             print('latest repo tag      ', sp.version_tag)  # should not update until after github release?
