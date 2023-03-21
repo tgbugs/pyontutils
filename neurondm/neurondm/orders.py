@@ -36,7 +36,7 @@ def inest(adj, start, seen):
     return ((start, *l) if l else (start,)), seen
 
 
-def adj_to_nested(adj, start=None):
+def adj_to_nst(adj, start=None):
     keys = set([a[0] for a in adj])
     values = set([a[1] for a in adj])
     inverted = [(a[1], a[0]) for a in adj]
@@ -84,7 +84,7 @@ def test():
         ("f", "g"),
     )
 
-    nested = adj_to_nested(adj_test)
+    nested = adj_to_nst(adj_test)
     print('nested', nested)
     print('asdf', list(dvals('a', adj_test)))
     print('asdf', list(dvals('c', adj_test)))
@@ -114,14 +114,14 @@ def test():
         (ilxtr.a, ilxtr.f),
         (ilxtr.f, ilxtr.g),
     )
-    nst_2 = adj_to_nested(adj_2)
+    nst_2 = adj_to_nst(adj_2)
     print('nst_2', nst_2)
     bn = to_rdf(g, nst_2)
     g.add((ilxtr['sub-2'], ilxtr.predicate, bn))
 
     lin_3 = [1, 2, 3, 4, 5, 6]
     adj_3 = lin_to_adj(lin_3)
-    nst_3 = adj_to_nested(adj_3)
+    nst_3 = adj_to_nst(adj_3)
     print('nst_3', nst_3)
     bn = to_rdf(g, nst_3)
     g.add((ilxtr['sub-3'], ilxtr.predicate, bn))
@@ -132,7 +132,7 @@ def test():
                        ([1, 2, 3, 4, 5],
                         [3, 6, 7],)
              for pair in lin_to_adj(lin)]))
-    nst_4 = adj_to_nested(adj_4)
+    nst_4 = adj_to_nst(adj_4)
     print('nst_4', nst_4)
     bn = to_rdf(g, nst_4)
     g.add((ilxtr['sub-4'], ilxtr.predicate, bn))
