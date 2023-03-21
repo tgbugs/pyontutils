@@ -37,7 +37,6 @@ def inest(adj, start, seen):
 
 
 def adj_to_nested(adj, start=None):
-    # FIXME (a (b) (c))
     keys = set([a[0] for a in adj])
     values = set([a[1] for a in adj])
     inverted = [(a[1], a[0]) for a in adj]
@@ -57,6 +56,10 @@ def adj_to_nested(adj, start=None):
         return l[0]
     else:
         return "blank", l
+
+
+def lin_to_adj(linear):
+    return tuple(zip(linear[:-1], linear[1:]))
 
 
 def to_rdf(g, nested):
@@ -100,7 +103,7 @@ def test():
 
 
     bn = to_rdf(g, nested)
-    g.add((ilxtr.subject, ilxtr.predicate, bn))
+    g.add((ilxtr['sub-1'], ilxtr.predicate, bn))
 
     adj_2 = (
         (ilxtr.a, ilxtr.b),
@@ -116,7 +119,26 @@ def test():
     bn = to_rdf(g, nst_2)
     g.add((ilxtr['sub-2'], ilxtr.predicate, bn))
 
+    lin_3 = [1, 2, 3, 4, 5, 6]
+    adj_3 = lin_to_adj(lin_3)
+    nst_3 = adj_to_nested(adj_3)
+    print('nst_3', nst_3)
+    bn = to_rdf(g, nst_3)
+    g.add((ilxtr['sub-3'], ilxtr.predicate, bn))
+
+    # multiple linear should work if we concat
+    # the outputs together
+    adj_4 = tuple(set([pair for lin in
+                       ([1, 2, 3, 4, 5],
+                        [3, 6, 7],)
+             for pair in lin_to_adj(lin)]))
+    nst_4 = adj_to_nested(adj_4)
+    print('nst_4', nst_4)
+    bn = to_rdf(g, nst_4)
+    g.add((ilxtr['sub-4'], ilxtr.predicate, bn))
+
     g.debug()
+
 
 if __name__ == '__main__':
     test()
