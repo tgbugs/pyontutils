@@ -1,10 +1,10 @@
-def make_adj(l):
+def nst_to_adj(l):
     start = l[0]
     if (isinstance(start, list) or isinstance(start, tuple)):
         raise ValueError('malformed')
 
     first = [] if start == "blank" else [(start, e[0]) for e in l[1:] if e]
-    second = [p for r in l[1:] if r for p in make_adj(r)]
+    second = [p for r in l[1:] if r for p in nst_to_adj(r)]
     return tuple(first + second)
 
 def assoc(k, ass):
@@ -55,11 +55,19 @@ def adj_to_nst(adj, start=None):
     if len(l) == 1 and (isinstance(l[0], list) or isinstance(l[0], tuple)):
         return l[0]
     else:
-        return "blank", l
+        return ["blank", *l]
 
 
 def lin_to_adj(linear):
     return tuple(zip(linear[:-1], linear[1:]))
+
+
+def adj_to_lin(adj):
+    # this is not deterministic when there are runs of equal length
+    # this should return a list of linear paths from longest to
+    # shortest that are sufficient to cover all nodes, essentially
+    # the longest single path through the tree and then branches
+    raise NotImplementedError('TODO')
 
 
 def to_rdf(g, nested):
@@ -82,6 +90,9 @@ def test():
 
         ("a", "f"),
         ("f", "g"),
+
+        ("h", "i"),
+        ("i", "j"),
     )
 
     nested = adj_to_nst(adj_test)
@@ -90,7 +101,7 @@ def test():
     print('asdf', list(dvals('c', adj_test)))
     print('asdf', list(dvals('d', adj_test)))
 
-    adj_out = make_adj(nested)
+    adj_out = nst_to_adj(nested)
     print(adj_out)
 
     assert set(adj_test) == set(adj_out), 'oops'
