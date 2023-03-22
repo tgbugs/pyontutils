@@ -22,15 +22,16 @@ def dvals(k, ass):
 def inest(adj, start, seen):
     nl = tuple()
     out = []
+    seen = {start} | seen
     for next_start in dvals(start, adj):
-        seen = {start} | seen
         if next_start in seen:
+            # do not append if next_start already in seen
             nl, snext = (next_start,), seen
         else:
             nl, snext = inest(adj, next_start, seen)
+            out.append(nl)
 
         seen = snext
-        out.append(nl)
 
     l = tuple(out)
     return ((start, *l) if l else (start,)), seen
@@ -70,23 +71,60 @@ def adj_to_lin(adj):
     raise NotImplementedError('TODO')
 
 
-def to_rdf(g, nested):
-    bn0 = rdflib.BNode()
-    if isinstance(nested, list) or isinstance(nested, tuple):
-        rdflib.collection.Collection(g, bn0, (to_rdf(g, n) for n in nested))
-        return bn0
-    elif isinstance(nested, rdflib.term.Node):
-        return nested
-    else:
-        return rdflib.Literal(nested)
+def bind_rdflib():
+    import rdflib
+    def to_rdf(g, nested):
+        if isinstance(nested, list) or isinstance(nested, tuple):
+            bn0 = rdflib.BNode()
+            rdflib.collection.Collection(g, bn0, (to_rdf(g, n) for n in nested))
+            return bn0
+        elif isinstance(nested, rl):
+            bn1 = rdflib.BNode()
+            return nested.to_rdf(to_rdf, g, bn1)
+        elif isinstance(nested, rdflib.term.Node):
+            return nested
+        else:
+            return rdflib.Literal(nested)
+
+    return to_rdf
+
+
+class rl:
+    def __init__(self, region, layer=None):
+        self.region = region
+        self.layer = layer
+
+    def __repr__(self):
+        if self.layer:
+            return f"{self.__class__.__name__}({self.region!r}, {self.layer!r})"
+        else:
+            return f"{self.__class__.__name__}({self.region!r})"
+
+    def to_rdf(self, to_rdf, g, bn):
+        r = to_rdf(g, self.region)
+        if self.layer is None:
+            return r
+
+        l = to_rdf(g, self.layer)
+        g.add((bn, r, l))
+        return bn
+
+    def __eq__(self, other):
+        return type(self) == type(other) and self.region == other.region and self.layer == self.layer
+
+    def __hash__(self):
+        return hash((self.__class__, self.region, self.layer))
 
 
 def test():
+    from pprint import pprint
+    to_rdf = bind_rdflib()
     adj_test = (
         ("a", "b"),
         ("b", "c"),
         ("c", "d"),
         ("d", "e"),
+        ("d", "k"),
 
         ("a", "f"),
         ("f", "g"),
@@ -106,7 +144,6 @@ def test():
 
     assert set(adj_test) == set(adj_out), 'oops'
 
-    import rdflib
     from pyontutils.core import OntGraph
     from pyontutils.namespaces import ilxtr, rdf
 
@@ -121,6 +158,7 @@ def test():
         (ilxtr.b, ilxtr.c),
         (ilxtr.c, ilxtr.d),
         (ilxtr.d, ilxtr.e),
+        (ilxtr.d, ilxtr.h),
 
         (ilxtr.a, ilxtr.f),
         (ilxtr.f, ilxtr.g),
@@ -147,6 +185,19 @@ def test():
     print('nst_4', nst_4)
     bn = to_rdf(g, nst_4)
     g.add((ilxtr['sub-4'], ilxtr.predicate, bn))
+
+    adj_5 = (
+        (rl(ilxtr.a,), rl(ilxtr.b,)),
+        (rl(ilxtr.b,), rl(ilxtr.c, ilxtr.l1)),
+        #(rl(ilxtr.c, ilxtr.l1), rl(ilxtr.d,)),  # alt end # this one does not duplicate the final node in adj_to_nst
+        (rl(ilxtr.c, ilxtr.l1), rl(ilxtr.c, ilxtr.l2)),
+        (rl(ilxtr.c, ilxtr.l2), rl(ilxtr.c, ilxtr.l3)),
+        (rl(ilxtr.c, ilxtr.l3), rl(ilxtr.d,)),
+    )
+    nst_5 = adj_to_nst(adj_5)
+    pprint(('nst_5', nst_5))
+    bn = to_rdf(g, nst_5)
+    g.add((ilxtr['sub-5'], ilxtr.predicate, bn))
 
     g.debug()
 
