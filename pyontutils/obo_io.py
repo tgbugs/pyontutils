@@ -725,7 +725,11 @@ class TVPairStore:
             if isinstance(value, list):
                 value = value[0]
 
-            return index.index(value.tag)
+            try:
+                return index.index(value.tag)
+            except ValueError as e:
+                msg = f'{value.tag!r} not in index'
+                raise ValueError(msg) from e
 
         out = []
         for tvp in sorted(source_dict.values(), key=key):
@@ -841,6 +845,7 @@ class Header(TVPairStore):
             'default-namespace',
             'treat-xrefs-as-equivalent',
             'treat-xrefs-as-is_a',
+            'remark',
             'import',
             'ontology',
             'property_value',
