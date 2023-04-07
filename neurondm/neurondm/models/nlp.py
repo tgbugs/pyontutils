@@ -4,6 +4,9 @@ import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
 from neurondm.core import Config, NeuronEBM, Phenotype, NegPhenotype, log, OntId
+from neurondm import orders
+
+orders.to_rdf = orders.bind_rdflib()
 
 
 class NeuronSparcNlp(NeuronEBM):
@@ -53,6 +56,28 @@ def map_predicates(sheet_pred):
     return p
 
 
+def ind_to_adj(ind_uri):
+    inds = sorted(set([i for i, u in ind_uri]))
+    edges = []
+    for a, b in zip(inds[:-1], inds[1:]):
+        for i, iu in ind_uri:
+            # XXX yes this is a horribly inefficient way to do this
+            # index them in a dict if it becomes an issue
+            if i == a:
+                for j, ju in ind_uri:
+                    if j == b:
+                        edge =  iu, ju
+                        edges.append(edge)
+
+    return edges
+
+
+def add_partial_orders(graph, nested):
+    for s, nst in nested.items():
+        bn = orders.to_rdf(graph, nst)
+        graph.add((s, ilxtr.neuronPartialOrder, bn))
+
+
 def main():
     cs = [c() for c in sheet_classes]
     trips = [[cl] + [c.value for c in
@@ -75,6 +100,7 @@ def main():
             # (e.g. OntId vs rdflib.URIRef)
             to_add.append((s.u, p, v))
 
+    dd = defaultdict(list)
     ec = {}
     for cl in cs:
         _, nlpns = snames[cl.sheet_name]
@@ -99,6 +125,14 @@ def main():
                     p = map_predicates(r.relationship().value)
                     o = OntId(r.explicit_complement().value)
                     ec[(s, p)] = o
+                if hasattr(r, 'axonal_course_poset') and r.axonal_course_poset().value:
+                    # s.u and OntId(...).u to avoid duplicate subjects/objects in the graph
+                    # due to type vs instance issues for rdflib.URIRef and OntId
+                    dd[s.u].append((int(r.axonal_course_poset().value), OntId(r.identifier().value).u))
+
+    sorders = {k:sorted(v) for k, v in dd.items()}
+    sadj = {k:ind_to_adj(v) for k, v in sorders.items()}
+    snst = {k:orders.adj_to_nst(v) for k, v in sadj.items()}
 
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
@@ -156,6 +190,9 @@ def main():
     to_remove = [t for t in config._written_graph if t[1] in labels]
     [config._written_graph.remove(t) for t in to_remove]
     [config._written_graph.add(t) for t in to_add]
+    add_partial_orders(config._written_graph, snst)
+    # uncomment to debug type vs instance issues
+    #sigh = sorted(set(s for s in config._written_graph.subjects() if isinstance(s, rdflib.URIRef)))
     config._written_graph.write()
     config.write_python()
     return config,

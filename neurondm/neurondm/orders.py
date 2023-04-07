@@ -22,16 +22,23 @@ def dvals(k, ass):
 def inest(adj, start, seen):
     nl = tuple()
     out = []
+    maybe_out = []
     seen = {start} | seen
     for next_start in dvals(start, adj):
         if next_start in seen:
             # do not append if next_start already in seen
             nl, snext = (next_start,), seen
+            if not out:  # multi-parent case
+                # maybe out can already have results due to multi-child case
+                maybe_out.append(nl)
         else:
             nl, snext = inest(adj, next_start, seen)
             out.append(nl)
 
         seen = snext
+
+    if not out and maybe_out:
+        out = maybe_out
 
     l = tuple(out)
     return ((start, *l) if l else (start,)), seen
@@ -198,6 +205,29 @@ def test():
     pprint(('nst_5', nst_5))
     bn = to_rdf(g, nst_5)
     g.add((ilxtr['sub-5'], ilxtr.predicate, bn))
+
+    # multi-parent multi-child case
+    adj_6 = (
+        (3, 1),
+        (3, 2),
+        (4, 1),
+        (4, 2),
+        (5, 1),
+        (5, 2),
+        (6, 1),
+        (6, 2),
+        (1, 7),
+        (1, 8),
+        (2, 7),
+        (2, 8),
+    )
+    nst_6 = adj_to_nst(adj_6)
+    rej_6 = nst_to_adj(nst_6)
+    pprint(('nst_6', nst_6))
+    pprint(('rej_6', rej_6))
+    assert sorted(adj_6) == sorted(rej_6)
+    bn = to_rdf(g, nst_6)
+    g.add((ilxtr['sub-6'], ilxtr.predicate, bn))
 
     g.debug()
 
