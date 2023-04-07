@@ -32,6 +32,7 @@ from datetime import date
 import rdflib
 from docopt import parse_defaults
 from sqlalchemy import create_engine, inspect
+from sqlalchemy.sql import text as sql_text
 from pyontutils.core import Ont, Source, build, OntId
 from pyontutils.utils import mysql_conn_helper, log
 from pyontutils.namespaces import makePrefixes, NIFRID, definition
@@ -206,12 +207,12 @@ def get_records(user=defaults['--user'],
     #resource_fields = [c['name'] for c in insp.get_columns('resource_fields')]
     #resources = [c['name'] for c in insp.get_columns('resources')]
     #conn.execute('SELECT * from registry;')
-    if 1:  # this if for indentation purposes only
-    #with engine.connect() as conn:
-        conn = engine
+    #if 1:  # this if for indentation purposes only
+    with engine.connect() as conn:
+        #conn = engine
         tables = ('resource_columns', 'resource_data', 'resource_fields', 'resources')
-        data = {t:([c['name'] for c in insp.get_columns(t)], conn.execute('SELECT * from %s limit 20;' % t).fetchall()) for t in tables}
-        all_fields = [n[0] for n in conn.execute('SELECT distinct(name) FROM resource_fields;').fetchall()]
+        data = {t:([c['name'] for c in insp.get_columns(t)], conn.execute(sql_text('SELECT * from %s limit 20;' % t)).fetchall()) for t in tables}
+        all_fields = [n[0] for n in conn.execute(sql_text('SELECT distinct(name) FROM resource_fields;')).fetchall()]
 
         #query = conn.execute('SELECT r.rid, r.original_id, r.type, rc.name, rc.value from resources as r JOIN'
                             #' resource_columns as rc ON r.id=rc.rid'
@@ -226,11 +227,11 @@ def get_records(user=defaults['--user'],
 
         #print('running join')
         log.info('running 1')
-        r_query = conn.execute('SELECT id, rid, original_id, type, status FROM resources WHERE id >= 0;')  # avoid the various test entries :(
+        r_query = conn.execute(sql_text('SELECT id, rid, original_id, type, status FROM resources WHERE id >= 0;'))  # avoid the various test entries :(
         log.info('fetching 1 ')
         r = r_query.fetchall()
         log.info('running 2')
-        rc_query = conn.execute('SELECT rid, name, value, version FROM resource_columns as rc WHERE rc.rid >= 0 AND rc.name IN %s;' % str(tuple([n for n in field_mapping if n != 'MULTI'])))
+        rc_query = conn.execute(sql_text('SELECT rid, name, value, version FROM resource_columns as rc WHERE rc.rid >= 0 AND rc.name IN %s;' % str(tuple([n for n in field_mapping if n != 'MULTI']))))
         log.info('fetching 2')
         rc = rc_query.fetchall()
 
