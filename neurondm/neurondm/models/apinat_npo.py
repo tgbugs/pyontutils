@@ -43,6 +43,7 @@ def map_predicates(sheet_pred):
         'Equivalent-To': owl.equivalentClass,
         'Functional-Circuit-Role': ilxtr.hasFunctionalCircuitRolePhenotype,
         'entail:hasInstanceInTaxon': ilxtr.hasInstanceInTaxon,
+        'Organ-Destination': ilxtr.hasOrganTarget,
     }[sheet_pred]
     return p
 
@@ -72,7 +73,7 @@ def main():
             raise e
         o = OntId(_o)
 
-        if p == owl.equivalentClass:
+        if p == owl.equivalentClass or p == ilxtr.hasOrganTarget:
             to_add.append((s.u, p, o.u))
             continue
 
