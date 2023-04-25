@@ -114,7 +114,8 @@ def _loadPrefixes():
         'ilx.anno.hasNarrowSynonym': 'http://uri.interlex.org/base/ilx_0737163',
         'ilx.anno.hasBroadSynonym': 'http://uri.interlex.org/base/ilx_0737164',
 
-        'ilx.anno.hasDefinitionSource': 'http://uri.interlex.org/base/ilx_0739292',
+        'ilx.hasDefinitionSource': 'http://uri.interlex.org/base/ilx_0739292',
+        'ilx.anno.hasDefinitionSource': 'http://uri.interlex.org/base/ilx_0777130',
 
         'ilx.hasDbXref': 'http://uri.interlex.org/base/ilx_0381360',
         'ilx.hasUnit': 'http://uri.interlex.org/base/ilx_0381384',
