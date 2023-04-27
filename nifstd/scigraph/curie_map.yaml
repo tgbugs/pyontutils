@@ -9,6 +9,7 @@ owl:  http://www.w3.org/2002/07/owl#
 skos: http://www.w3.org/2004/02/skos/core#
 foaf: http://xmlns.com/foaf/0.1/
 prov: http://www.w3.org/ns/prov#
+doap: http://usefulinc.com/ns/doap#
 
 dc:      http://purl.org/dc/elements/1.1/
 dcterms: http://purl.org/dc/terms/
@@ -50,11 +51,23 @@ TEMP:       http://uri.interlex.org/temp/uris/
 ILXREPLACE: http://ILXREPLACE.org/
 
 # interlex user/org namespaces
-DICOM: http://uri.interlex.org/dicom/uris/terms/
-PAR: http://uri.interlex.org/fakeobo/uris/obo/PAR_
+MIRO:   http://uri.interlex.org/MIRO/uris/readable/
+DICOM:  http://uri.interlex.org/dicom/uris/terms/
+PAR:    http://uri.interlex.org/fakeobo/uris/obo/PAR_
 PAXRAT: http://uri.interlex.org/paxinos/uris/rat/labels/
 PAXMUS: http://uri.interlex.org/paxinos/uris/mouse/labels/
 PAXSPN: http://uri.interlex.org/paxinos/uris/spine/labels/
+pax:         http://uri.interlex.org/paxinos/uris/
+pax.mus:     http://uri.interlex.org/paxinos/uris/mouse/
+pax.mus.ver: http://uri.interlex.org/paxinos/uris/mouse/versions/
+pax.rat:     http://uri.interlex.org/paxinos/uris/rat/
+pax.rat.ver: http://uri.interlex.org/paxinos/uris/rat/versions/
+aibs.hum.ver:   http://uri.interlex.org/aibs/uris/human/versions/
+aibs.mus.lab:   http://uri.interlex.org/aibs/uris/mouse/labels/
+aibs.mus.ver:   http://uri.interlex.org/aibs/uris/mouse/versions/
+fsl.ats:     http://uri.interlex.org/fsl/uris/atlases/
+hcp.mmp.ver: http://uri.interlex.org/hcp/uris/mmp/versions/
+wax.sd.ver:  http://uri.interlex.org/waxholm/uris/sd/versions/
 NDA.CDE: http://uri.interlex.org/NDA/uris/datadictionary/elements/
 ilxtr: http://uri.interlex.org/tgbugs/uris/readable/
 ilxti: http://uri.interlex.org/tgbugs/uris/indexes/
@@ -63,6 +76,10 @@ ilxtio: http://uri.interlex.org/tgbugs/uris/indexes/ontologies/
 build: http://uri.interlex.org/tgbugs/uris/readable/build/
 buildid: http://uri.interlex.org/tgbugs/uris/readable/build/id/
 npokb: http://uri.interlex.org/npo/uris/neurons/
+mmset1: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset1/
+mmset2cn: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset2cn/
+mmset3: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset3/
+mmset4: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset4/
 
 # alternate ids
 GBIF:    http://www.gbif.org/species/
@@ -110,8 +127,13 @@ CHEBI:     http://purl.obolibrary.org/obo/CHEBI_
 chebi:     http://purl.obolibrary.org/obo/chebi/
 FMA:       http://purl.org/sig/ont/fma/fma
 fma:       http://purl.org/sig/ont/fma/
+
+# AIBS api endpoints
 HBA:      'http://api.brain-map.org:80/api/v2/data/Structure/'  # FIXME hack :/
 MBA:       http://api.brain-map.org/api/v2/data/Structure/
+AIBS.TL:   http://api.brain-map.org/api/v2/data/TransgenicLine/  # FIXME see what we did locally
+AIBS.SPEC: http://api.brain-map.org/api/v2/data/Specimen/
+
 #NEMOANN:   http://purl.bioontology.org/NEMO/ontology/NEMO_annotation_properties.owl
 #NEMO:      http://purl.bioontology.org/NEMO/ontology/NEMO.owl#NEMO_
 BFO1:      http://www.ifomis.org/bfo/1.1#
@@ -187,5 +209,6 @@ PMID: http://www.ncbi.nlm.nih.gov/pubmed/
 doi: https://doi.org/
 
 # resource prefixes
-JAX: http://jaxmice.jax.org/strain/
+JAX:  http://jaxmice.jax.org/strain/  # FIXME redirects to http://www.jax.org/strain/ ... but that seems to be the preferred id ?
+#JAXw:     http://www.jax.org/strain/   # copy paste issue we should not have this as a compact form unless we do a full switchover
 MMRRC: http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=
