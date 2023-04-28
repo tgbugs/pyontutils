@@ -333,6 +333,35 @@ class OntRes(idlib.Stream):
             done.add(rid)
             yield from resource._process_import_chain(done, imps_attr)
 
+    def import_closure_graph(
+            self, local=False,
+            import_ontology_type=ilxtr.Ontology,
+            import_ontology_predicate=ilxtr.imports):
+        # TODO abstract for local ic case
+        if not hasattr(self, '_ic_graph'):
+            ic_res = list(self.import_chain)
+            all_res = [self] + ic_res  # TODO consider retaining in debug case
+            merged = self.Graph()
+            _ = [merged.namespace_manager.populate_from(ontres.metadata().graph) for ontres in all_res]
+            # swap owl:imports for ilxtr:imports to avoid double import in merged file but still allow tracing the chain
+            _ = [merged.add(t)
+                 if t[1] != owl.imports
+                 else merged.add((t[0], import_ontology_predicate, t[2]))
+                 for t in self.graph.metadata()]
+            # ensure that there is only a single top level owl:Ontology but retain imported metadata sections
+            # also have to swap the owl:imports for ilxtr:imports in this case as well because owlapi will
+            # type pun and infer types super hard and thus pull in all the transitive chain >_<
+            _ = [(merged.add(t)
+                  if t[1] != owl.imports
+                  else merged.add((t[0], import_ontology_predicate, t[2])))
+                 if t[2] != owl.Ontology
+                 else merged.add((t[0], t[1], import_ontology_type))
+                 for ontres in ic_res for t in ontres.graph.metadata()]
+            _ = [merged.add(t) for ontres in all_res for t in ontres.graph.data]
+            self._ic_graph = merged
+
+        return self._ic_graph
+
     def __eq__(self, other):
         raise NotImplementedError
 
