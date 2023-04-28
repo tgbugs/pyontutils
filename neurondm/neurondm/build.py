@@ -1410,7 +1410,7 @@ def make_devel():
             if not terms:
                 raise BaseException('WHAT')
 
-            skip = 'TEMPIND', 'npokb'
+            skip = 'TEMPIND', 'npokb', 'mmset'
             while terms:
                 next_terms = []
                 for term in terms:
@@ -1469,7 +1469,9 @@ def make_devel():
                                     for s, p, o in ot._graph.subjectGraphClosure(ot.u):
                                         yield s, p, o
                                         if str(p) == ipo and isinstance(o, rdflib.URIRef):
-                                            if (s, o) not in _ipo_done:
+                                            if s == o:
+                                                pass  # prevent partOf self from creeping in via scigraph
+                                            elif (s, o) not in _ipo_done:
                                                 _ipo_done.append((s, o))
                                                 yield from cmb.restriction(
                                                     BFO_partOf, o)(s)

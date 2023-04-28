@@ -540,7 +540,7 @@ class OntTerm(bOntTerm, OntId):
 
     @property
     def triples_simple(self):
-        skips = 'pheno:parvalbumin',
+        skips = 'pheno:parvalbumin', 'owl:Thing', self.curie
         bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP', 'NLXANAT',
                 'NLXCELL', 'NLXNEURNT', 'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX',
                 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID', 'TEMPIND', 'npokb')
@@ -592,7 +592,8 @@ class OntTerm(bOntTerm, OntId):
             if self(predicate, asTerm=True):
                 for superpart in self.predicates[predicate]:
                     if (superpart.prefix in bads or
-                        superpart.prefix == 'FMA' and 'UBERON' in s):  # XXX FIXME hardcoded hack to work around bad sparc community terms cross hierarchy issues
+                        superpart.prefix == 'FMA' and 'UBERON' in s or  # XXX FIXME hardcoded hack to work around bad sparc community terms cross hierarchy issues
+                        superpart.curie == self.curie):  # prevent partOfSelf polution
                         continue
 
                     if (predicate, superpart) not in done:
@@ -2115,7 +2116,7 @@ class LogicalPhenotype(graphBase):
     def __init__(self, op, *edges):
         super().__init__()
         self.op = op  # TODO more with op
-        self.pes = tuple(sorted(edges))
+        self.pes = tuple(sorted(set(edges)))  # XXX SIGH must use set here
         _pesDict = {}
         for e in self.e:
             for pe in self.pes:

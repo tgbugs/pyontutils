@@ -37,12 +37,7 @@ class AllenCellTypes:
 
     branch = auth.get('neurons-branch')
 
-    prefixes = {**{'JAX': 'http://jaxmice.jax.org/strain/',
-                   'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=',
-                   'AllenTL': 'http://api.brain-map.org/api/v2/data/TransgenicLine/'},
-                **makePrefixes('definition', 'ilxtr', 'owl')}
-    prefixes['AllenTransgenicLine'] = 'http://api.brain-map.org/api/v2/data/TransgenicLine/'
-    prefixes['AIBSSPEC'] = str(AIBSSPEC)
+    prefixes = makePrefixes('definition', 'ilxtr', 'owl', 'AIBSTL', 'JAX', 'MMRRC', 'AIBSSPEC')
 
     def __init__(self, input, name):
         self.name = name
@@ -153,7 +148,7 @@ class AllenCellTypes:
             line_names = []
             if prefix and suffix and prefix in ['AIBS', 'MMRRC', 'JAX']:
                 if prefix == 'AIBS':
-                    prefix = 'AllenTL'
+                    prefix = 'AIBSTL'
                 iri = self.ns[prefix][suffix]
                 phenotypes.append(Phenotype(iri, pred))
         return phenotypes
@@ -315,7 +310,7 @@ class AllenCellTypes:
                     print(tc.red('WARNING:'), 'unknown prefix', prefix, json.dumps(tl, indent=4))
                     continue
                 elif prefix == 'AIBS':
-                    prefix = 'AllenTL'
+                    prefix = 'AIBSTL'
 
                 _class = self.ns[prefix][str(_id)]
                 triples.append((_class, rdf.type, owl.Class))
