@@ -82,9 +82,11 @@ ilxtr:CorticoStriatal,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
 ilxtr:ThalamoCortical,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
 ilxtr:StriatoCortical,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
 ilxtr:CorticoSpinal,ilxtr:ProjectionPhenotype,,,,,,hasProjectionPhenotype
-ilxtr:SpinalCordAscendingProjectionPhenotype,ilxtr:ProjectionPhenotype,,,,,projects in the anterior direction of the spinal cord,hasProjectionPhenotype
-ilxtr:SpinalCordDescendingProjectionPhenotype,ilxtr:ProjectionPhenotype,,,,,projects in the posterior direction of the spinal cord,hasProjectionPhenotype
+ilxtr:AnteriorProjecting,ilxtr:ProjectionPhenotype,,,,,projects in the anterior direction of the housing structure,hasProjectionPhenotype
+ilxtr:PosteriorProjecting,ilxtr:ProjectionPhenotype,,,,,projects in the posterior direction of the housing structure,hasProjectionPhenotype
 ilxtr:IntestinoFugalProjectionPhenotype,ilxtr:ProjectionPhenotype,,,,,projects out of the intestines,hasProjectionPhenotype
+ilxtr:SpinalCordAscendingProjectionPhenotype,ilxtr:AnteriorProjecting,,,,,projects in the anterior direction of the spinal cord,hasProjectionPhenotype
+ilxtr:SpinalCordDescendingProjectionPhenotype,ilxtr:PosteriorProjecting,,,,,projects in the posterior direction of the spinal cord,hasProjectionPhenotype
 ,,,,,,,
 ilxtr:PerforantPathwayAssociated,,,,,,Needs work,
 ilxtr:DirectPathway,,,,,,Needs work,
