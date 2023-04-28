@@ -80,6 +80,7 @@ mmset1: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset1/
 mmset2cn: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset2cn/
 mmset3: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset3/
 mmset4: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset4/
+atom:   http://uri.interlex.org/tgbugs/uris/readable/atlas/
 
 # alternate ids
 GBIF:    http://www.gbif.org/species/
@@ -131,8 +132,8 @@ fma:       http://purl.org/sig/ont/fma/
 # AIBS api endpoints
 HBA:      'http://api.brain-map.org:80/api/v2/data/Structure/'  # FIXME hack :/
 MBA:       http://api.brain-map.org/api/v2/data/Structure/
-AIBS.TL:   http://api.brain-map.org/api/v2/data/TransgenicLine/  # FIXME see what we did locally
-AIBS.SPEC: http://api.brain-map.org/api/v2/data/Specimen/
+AIBSTL:    http://api.brain-map.org/api/v2/data/TransgenicLine/  # FIXME see what we did locally
+AIBSSPEC:  http://api.brain-map.org/api/v2/data/Specimen/
 
 #NEMOANN:   http://purl.bioontology.org/NEMO/ontology/NEMO_annotation_properties.owl
 #NEMO:      http://purl.bioontology.org/NEMO/ontology/NEMO.owl#NEMO_
