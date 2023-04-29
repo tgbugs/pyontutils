@@ -44,6 +44,8 @@ def map_predicates(sheet_pred):
         'Functional-Circuit-Role': ilxtr.hasFunctionalCircuitRolePhenotype,
         'entail:hasInstanceInTaxon': ilxtr.hasInstanceInTaxon,
         'Organ-Destination': ilxtr.hasOrganTarget,
+        'Has-Phenotype': ilxtr.hasPhenotype,  # needed for aacar 7 and 8
+        'Projection-Phenotype': ilxtr.hasProjectionPhenotype,
     }[sheet_pred]
     return p
 
