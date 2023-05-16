@@ -15,16 +15,17 @@ only = tuple()
 
 lasts = tuple()
 
-neurons = ('neurondm/example',
-           'neurondm/phenotype_namespaces',
-           'neurondm/models/allen_cell_types',
-           'neurondm/models/phenotype_direct',
-           'neurondm/models/basic_neurons',
-           'neurondm/models/huang2017',
-           'neurondm/models/ma2015',
-           'neurondm/models/cuts',
-           'neurondm/build',
-           'neurondm/sheets',)
+neurons = (#'neurondm/example',
+           #'neurondm/phenotype_namespaces',
+           #'neurondm/models/allen_cell_types',
+           'neurondm/models/phenotype_direct',  # needs NIF-Neuron-Defined.ttl
+           'neurondm/models/basic_neurons',  # needs swanson.ttl
+           #'neurondm/models/huang2017',
+           #'neurondm/models/ma2015',
+           #'neurondm/models/cuts',
+           #'neurondm/build',
+           #'neurondm/sheets',
+)
 
 skip = tuple()
 olr = auth.get_path('ontology-local-repo')
@@ -39,13 +40,14 @@ if olr.exists():
     print('checkout ok:', checkout_ok)
     ont_branch = ont_repo.active_branch.name
     if not checkout_ok and ont_branch != 'neurons':
-        neurons += ('neurondm/core', 'neurondm/lang',)  # FIXME these two are ok for no repo but not wrong branch?!
+        #neurons += ('neurondm/core', 'neurondm/lang',)  # FIXME these two are ok for no repo but not wrong branch?!
         skip += tuple(n.split('/')[-1] for n in neurons)
     else:
         lasts += tuple(f'neurondm/{s}.py' for s in neurons)
 
 else:
-    skip += tuple(n.split('/')[-1] for n in neurons)
+    #skip += tuple(n.split('/')[-1] for n in neurons)  # should be able to run without repo ?
+    pass
 
 
 ### build mains

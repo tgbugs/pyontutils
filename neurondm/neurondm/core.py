@@ -765,7 +765,8 @@ class Config:
             if not isinstance(ttl_export_dir, Path):
                 ttl_export_dir = Path(ttl_export_dir).resolve()
 
-            local_base = get_working_dir(ttl_export_dir)
+            _lbwd = get_working_dir(ttl_export_dir)
+            local_base = ttl_export_dir if _lbwd is None else _lbwd
             # FIXME there are cases where ttl_export_dir
             # and local_base will both be None???
             # reasonable failover?
@@ -798,7 +799,10 @@ class Config:
                                   for c in graphBase.python_subclasses]
 
         imports = list(imports)
-        remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/')
+        remote = OntId('NIFTTL:') if branch == 'master' else (
+            # XXX EVIL HARDCODED defaulting to dev/ by convention KILL IT WITH FIRE
+            # DO NOT CHANGE branch IN THIS CASE
+            OntId(f'NIFRAW:dev/') if branch is None else OntId(f'NIFRAW:{branch}/'))
         imports += [remote.iri + 'ttl/phenotype-core.ttl',
                     remote.iri + 'ttl/phenotypes.ttl',
                     remote.iri + 'ttl/phenotype-indicators.ttl']
@@ -808,6 +812,7 @@ class Config:
                              .relative_to(local_base.resolve())))
         out_remote_base = os.path.join(remote.iri, remote_path)
         imports = [OntId(i) for i in imports]
+        imports = sorted(set(imports))
 
         remote_base = remote.iri.rsplit('/', 2)[0] if branch == 'master' else remote
 
@@ -935,18 +940,49 @@ class Config:
             compiled_location = Path(compiled_location).resolve()
             kwargs['compiled_location'] = compiled_location
 
-        for name, value in kwargs.items():
+        for _name, value in kwargs.items():
             # FIXME only works if we do this in __new__
             #@property
             def nochangepls(v=value):
                 return v
 
-            setattr(self, name, nochangepls)
+            setattr(self, _name, nochangepls)
             # FIXME need a way to make it clear that changing kwargs values
             # will only confuse you ...
-            #setattr(self, name, value)
+            #setattr(self, _name, value)
 
-        graphBase.configGraphIO(**kwargs)  # FIXME KILL IT WITH FIRE
+        try:
+            graphBase.configGraphIO(**kwargs)  # FIXME KILL IT WITH FIRE
+        except graphBase.GitRepoOnWrongBranch as e:
+            #breakpoint()
+            log.exception(e)
+            # XXX ALSO KILL THIS WITH FIRE
+            # XXX NOTE that since _lb will not be a git repo baring some insanity
+            # the path {:user-data-path}/neurondm/git-repo set above in configGraphIO
+            # will take precedence (UGH what a mess), _lb is forced to match the behavior above
+            # otherwise this will get out of sync an be even more confusing than they already are
+            _lb = cfg._pathit('{:user-data-path}/neurondm/git-repo')  # XXX isn't actually used
+            # this whole layer should never care about where a graph will be serialized, unfortunately
+            # the legacy codebase assumes that this layer does handle it, so we need a stopgap
+            sigh = Config(
+                 name =                 name,
+                 prefixes =             prefixes,
+                 imports =              imports,
+                 import_as_local =      import_as_local,
+                 load_from_local =      load_from_local,
+                 branch =               None,
+                 sources =              sources,
+                 source_file =          source_file,
+                 ignore_existing =      ignore_existing,
+                 py_export_dir=         py_export_dir,
+                 ttl_export_dir=        _lb,
+                 git_repo=              None,
+                 file =                 file,
+                 local_conventions =    local_conventions,
+                 import_no_net =        import_no_net,
+            )
+            self.__dict__ = sigh.__dict__
+            return
 
         graphBase.config = self  # a nice hack ... can do this for self.activate() too
         # temporary fix to persist graphs and neurons with a config
@@ -993,7 +1029,7 @@ class Config:
 
     def activate(self):
         """ set this config as the active config """
-        raise NotImplemented
+        raise NotImplementedError()
 
     def write(self):
         # FIXME per config prefixes using derived OntCuries?
@@ -1119,6 +1155,13 @@ class Config:
             #self.load_graph = module.config.load_graph
             #graphBase.load_graph = self.load_graph
 
+
+class AcceptAllPreds:
+    def __getattr__(self, attr):
+        log.warning(f'fake predicate! {attr}')
+        return TEMP[attr]
+
+
 # the monstrosity
 
 class graphBase:
@@ -1126,7 +1169,7 @@ class graphBase:
     in_graph = 'ASSIGN ME AFTER IMPORT!'
     out_graph = 'ASSIGN ME AFTER IMPORT'
 
-    _predicates = 'ASSIGN ME AFTER IMPORT'
+    _predicates = AcceptAllPreds()
 
     LocalNames = {}
 
@@ -1147,7 +1190,7 @@ class graphBase:
 
     def __init__(self):
         if type(self.core_graph) == str:
-            raise TypeError('You must have at least a core_graph')
+            raise TypeError(f'You must have at least a core_graph: {self.core_graph!r}')
 
         if type(self.in_graph) == str:
             self.in_graph = self.core_graph
@@ -1275,7 +1318,7 @@ class graphBase:
         graphBase.remote_base = remote_base
 
         def makeLocalRemote(suffixes):
-            remote = [os.path.join(graphBase.remote_base, branch, s)
+            remote = [os.path.join(graphBase.remote_base, s)  # XXX WHY was branch passed here ?!??! HOW DID THIS EVER WORK !?
                       if '://' not in s else  # 'remote' is file:// or http[s]://
                       s for s in suffixes]
             # TODO the whole thing needs to be reworked to not use suffixes...
@@ -1334,7 +1377,7 @@ class graphBase:
                     local_working_dir = get_working_dir(graphBase.local_base)
                     if local_working_dir is None:
                         log.exception(e)
-                        udp = cfg._pathit('{:user-data-path}/neurondm/git-repo')
+                        udp = cfg._pathit('{:user-data-path}/neurondm/git-repo')  # XXX hardcoded
                         trp = RepoPath(udp)
                         if not trp.exists():
                             trp.init()
@@ -1766,7 +1809,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             return predicates[0]
         else:
             # TODO check if falls in one of the expression categories
-            predicates = [_[1] for _ in self.in_graph.subject_predicates(phenotype) if _ in self._predicates.__dict__.values()]
+            predicates = [_[1] for _ in self.in_graph.subject_predicates(phenotype)
+                          if _ in self._predicates.__dict__.values()]
             mapping = {
                 'NCBITaxon':self._predicates.hasInstanceInTaxon,
                 'CHEBI':self._predicates.hasExpressionPhenotype,
@@ -1784,7 +1828,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         op = self.expand(ObjectProperty)
 
         if isinstance(self._predicates, str):
-            if not hasattr(cls, '_first_time'):
+            if not hasattr(self, '_first_time'):
                 log.warning('No reference predicates have been set, you are on your own!')
                 self._first_time = False
 
@@ -1792,6 +1836,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         if op in self._predicates.__dict__.values():
             return op
+        elif isinstance(self._predicates, AcceptAllPreds):
+            return op  # XXX possibly warn?
         else:
             raise TypeError(f'WARNING: Unknown ObjectProperty {op!r}')
             #t = OntTerm(ObjectProperty)  # will fail here?
@@ -3535,7 +3581,15 @@ should be implemented here. This is only in the case where the underlying
 rules cannot be implemented in a consistent way in the ontology. The ultimate
 objective for any entry here should be to have it ultimately implemented as
 a rule plus operating from single standard ontology file. """
-Config(import_no_net=True)  # explicitly load the core graph TODO need a lighter weight way to do this
+if False:  # calling Config at top level breaks import for all normal users
+    Config(import_no_net=True)  # explicitly load the core graph TODO need a lighter weight way to do this
+else:
+    # note: this solves part of the problem, but mostly defers it until later
+    _g = OntConjunctiveGraph()
+    graphBase.core_graph = _g
+    graphBase.out_graph = None  # XXX must be set to None to get correct internal behavior
+
+
 OntologyGlobalConventions = _ogc = injective_dict(
     Vertebrata = Phenotype('NCBITaxon:7742', 'ilxtr:hasInstanceInTaxon'),  # fix annoying labels
 

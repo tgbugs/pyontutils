@@ -161,13 +161,12 @@ config.write()
 config.write_python()
 
 # cleanup
-repo_relative_path = 'ttl/generated/neurons/apinat-pops-more.ttl'
-olr = aug.LocalPath(auth.get('ontology-local-repo')).expanduser()
-og = OntGraph(path=olr / repo_relative_path)
+ogp = aug.LocalPath(config.out_graph_path())
+og = OntGraph(path=ogp)
 og.parse()
 ng = OntGraph().populate_from_triples((t for t in og if 'able' not in t[1] and 'abel' not in t[1]))
 ng.namespace_manager.populate_from(og)
-ng.write(olr / repo_relative_path)
+ng.write(ogp)
 
 if False:
     pprint([(a, b, c, d) for a, b, c, d in bagged if not a])
