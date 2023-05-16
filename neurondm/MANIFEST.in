@@ -1,6 +1,7 @@
 recursive-include test *
 include .coveragerc
 exclude MANIFEST.in
+recursive-exclude neurondm/compiled *
 recursive-exclude * *.pyc
 recursive-exclude * *.swp
 recursive-exclude * *.swo
