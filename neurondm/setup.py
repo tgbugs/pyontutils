@@ -29,17 +29,7 @@ def _ontology_data_files():
                 'ttl/generated/part-of-self.ttl',]
     if RELEASE:
         from augpathlib import RepoPath as Path
-        ### KILL IT WITH FIRE
-        try:
-            from neurondm.core import auth  ### this is NOT ok
-        except Exception:
-            # can't catch an error that you can never import because
-            # it will be raised before you can import it ... SIGH
-            import orthauth as oa
-            from pyontutils.config import auth as pauth
-            auth = oa.configure(Path('neurondm/auth-config.py').resolve(), include=pauth)
-        ###
-
+        from neurondm.core import auth  ### this is NOT ok
         olr = Path(auth.get_path('ontology-local-repo'))
 
         ### KILL IT WITH FIRE
