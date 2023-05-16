@@ -30,6 +30,7 @@ def _ontology_data_files():
     if RELEASE:
         from augpathlib import RepoPath as Path
         from neurondm.core import auth  ### this is NOT ok
+        from pyontutils.core import OntResGit
         olr = Path(auth.get_path('ontology-local-repo'))
 
         ### KILL IT WITH FIRE
@@ -37,18 +38,24 @@ def _ontology_data_files():
             original = auth.get('ontology-local-repo')
             raise FileNotFoundError(f'ontology local repo does not exist: {olr}'
                                     f'path expanded from {original}')
-        elif olr.repo.active_branch.name != auth.get('neurons-branch'):
+        #elif olr.repo.active_branch.name != auth.get('neurons-branch'):
             # FIXME yes indeed having to call Config in a way that is
             # invoked at import time is REALLY REALLY BAD :/
-            raise ValueError('git is on the wrong branch! '
-                             f'{olr.repo.active_branch}')
+            #raise ValueError('git is on the wrong branch! '
+                             #f'{olr.repo.active_branch}')
         ###
 
+        ref = auth.get('neurons-branch')
         resources = Path(resources)
         resources.mkdir()  # if we add resources to git, this will error before we delete by accident
         paths = [olr / rp for rp in relpaths]
         for p in paths:
-            p.copy_to(resources / p.name)
+            org = OntResGit(p, ref=ref)
+            target = resources / p.name
+            generator = org.data
+            with open(target, 'wb') as f:
+                for chunk in generator:
+                    f.write(chunk)
 
     else:
         from pathlib import Path
