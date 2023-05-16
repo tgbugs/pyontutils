@@ -11,7 +11,7 @@ from pathlib import Path
 #from augpathlib import AugmentedPath as Path
 from git import Repo as baseRepo
 from pyontutils.utils import TermColors as tc
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 
 
 SKIP_NETWORK = ('SKIP_NETWORK' in os.environ or
@@ -93,9 +93,9 @@ class Folders:
     _folders =  ('ttl', 'ttl/generated', 'ttl/generated/parcellation', 'ttl/bridge')
     def setUp(self):
         super().setUp()
-        #print('SET UP')
-        #print(devconfig.ontology_local_repo)
-        if devconfig.ontology_local_repo.isDefault:
+        olr = auth.get_path('ontology-local-repo').resolve()
+        olr_default = auth.get_path_default('ontology-local-repo').resolve()
+        if olr == olr_default:
             self.fake_local_repo = auth.get_path('git-local-base') / auth.get('ontology-repo')
             if not self.fake_local_repo.exists():  # do not klobber existing
                 self.folders = [(self.fake_local_repo / folder)
@@ -355,7 +355,18 @@ class _TestScriptsBase(unittest.TestCase):
             # FIXME TODO regularize this so that the same tests can run
             # when we are not in the repo ...
             import pkgutil
-            modinfos = list(pkgutil.iter_modules(module_to_test.__path__))
+            modinfos = []
+            def _rec(mod):
+                for mi in pkgutil.iter_modules(mod):
+                    if mi.ispkg:
+                        sfl = mi.module_finder.find_module(mi.name)
+                        m = sfl.load_module()
+                        _rec(m.__path__)
+                        # TODO __main__.py detection
+                    else:
+                        modinfos.append(mi)
+
+            _rec(module_to_test.__path__)
             ppaths = [modinfo_to_path(m) for m in modinfos]
 
         cls.populate_from_paths(ppaths, mains, tests, do_mains, post_load, post_main,
