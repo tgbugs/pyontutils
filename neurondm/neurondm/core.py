@@ -810,7 +810,7 @@ class Config:
                        else (ttl_export_dir
                              .resolve()
                              .relative_to(local_base.resolve())))
-        out_remote_base = os.path.join(remote.iri, remote_path)
+        out_remote_base = remote.iri.rstrip('/') + '/' + remote_path.as_posix()
         imports = [OntId(i) for i in imports]
         imports = sorted(set(imports))
 
@@ -915,7 +915,7 @@ class Config:
         out_graph_path = (out_local_base / f'{name}.ttl')
 
         class lConfig(self.__class__):
-            iri = os.path.join(out_remote_base, f'{name}.ttl')
+            iri = out_remote_base.rstrip('/') + f'/{name}.ttl'
 
         self.__class__._subclasses.add(lConfig)
 
@@ -1331,7 +1331,7 @@ class graphBase:
         graphBase.remote_base = remote_base
 
         def makeLocalRemote(suffixes):
-            remote = [os.path.join(graphBase.remote_base, s)  # XXX WHY was branch passed here ?!??! HOW DID THIS EVER WORK !?
+            remote = [(graphBase.remote_base.rstrip('/') + '/' + s)  # XXX WHY was branch passed here ?!??! HOW DID THIS EVER WORK !?
                       if '://' not in s else  # 'remote' is file:// or http[s]://
                       s for s in suffixes]
             # TODO the whole thing needs to be reworked to not use suffixes...
