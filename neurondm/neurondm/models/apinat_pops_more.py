@@ -161,7 +161,7 @@ config.write()
 config.write_python()
 
 # cleanup
-ogp = aug.LocalPath(config.out_graph_path())
+ogp = config._written_graph.path  # XXX cannot trust config.out_graph_path() due to failover if path does not exist in graphBase >_< hooray
 og = OntGraph(path=ogp)
 og.parse()
 ng = OntGraph().populate_from_triples((t for t in og if 'able' not in t[1] and 'abel' not in t[1]))

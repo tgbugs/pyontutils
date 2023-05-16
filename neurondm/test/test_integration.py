@@ -46,8 +46,7 @@ if olr.exists():
         lasts += tuple(f'neurondm/{s}.py' for s in neurons)
 
 else:
-    #skip += tuple(n.split('/')[-1] for n in neurons)  # should be able to run without repo ?
-    pass
+    skip += tuple(n.split('/')[-1] for n in neurons)  # should be able to run without repo ?
 
 
 ### build mains

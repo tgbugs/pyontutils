@@ -1162,6 +1162,12 @@ class AcceptAllPreds:
         return TEMP[attr]
 
 
+class AcceptAllKeys:
+    def __getitem__(self, key):
+        log.warning(f'fake super! {key}')
+        return tuple()
+
+
 # the monstrosity
 
 class graphBase:
@@ -1170,12 +1176,19 @@ class graphBase:
     out_graph = 'ASSIGN ME AFTER IMPORT'
 
     _predicates = AcceptAllPreds()
-
     LocalNames = {}
 
     _registered = False
 
     __import_name__ = __name__
+
+    # variables that cause errors if they are not present at the class level
+    # when trying to use graphBase before configGraphIO has been called (sigh)
+    config = None  # XXX ICK avoid AttributeError when no call to Config()
+    _predicate_supers = AcceptAllKeys()  # XXX also ick
+    _location_predicates = tuple()  # XXX SIGH
+    _location_predicate_supers = {}  # XXX SIGH
+    local_conventions = False  # XXX SIGH
 
     #_sgv = Vocabulary(cache=True)
 
@@ -1899,7 +1912,13 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         pn = self.in_graph.namespace_manager.qname(self.p)
         try:
-            resp = self._sgv.findById(pn)
+            if hasattr(self, '_sgv'):
+                resp = self._sgv.findById(pn)
+            else:
+                msg = ('no scigraph instance bound, graphBase.configGraphIO '
+                       'probably has not been called')
+                log.warning(msg)
+                resp = None
         except ConnectionError as e:
             #print(tc.red('WARNING:'), f'Could not set label for {pn}. No SciGraph was instance found at', self._sgv._basePath)
             log.info(f'Could not set label for {pn}. No SciGraph was instance found at ' + self._sgv._basePath)
@@ -3587,7 +3606,6 @@ else:
     # note: this solves part of the problem, but mostly defers it until later
     _g = OntConjunctiveGraph()
     graphBase.core_graph = _g
-    graphBase.out_graph = None  # XXX must be set to None to get correct internal behavior
 
 
 OntologyGlobalConventions = _ogc = injective_dict(
