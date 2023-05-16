@@ -122,6 +122,16 @@ class rl:
     def __hash__(self):
         return hash((self.__class__, self.region, self.layer))
 
+    def __lt__(self, other):
+        # FIXME unstable
+        return (type(self) == type(other) and
+                type(self.region) == type(other.region) and
+                self.region is not None and
+                self.region < other.region and
+                type(self.layer) == type(self.layer) and
+                self.layer is not None and
+                self.layer < self.layer)
+
 
 def test():
     from pprint import pprint
