@@ -1205,7 +1205,10 @@ class Edge(tuple):
 class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
 
     def __init__(self, *args, bind_namespaces='core', **kwargs):
-        super().__init__(*args, bind_namespaces=bind_namespaces, **kwargs)
+        try:
+            super().__init__(*args, bind_namespaces=bind_namespaces, **kwargs)
+        except TypeError as e:
+            super().__init__(*args, **kwargs)
 
     def __call__(self, **kwargs):
         """ set prefixes """
