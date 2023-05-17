@@ -25,7 +25,7 @@ def for_composer(n):
         dest_presyn = lg(n, ilxtr.hasAxonPresynapticElementIn),
         dest_sens = lg(n, ilxtr.hasAxonSensorySubcellularElementIn),
         dest_dend = lg(n, ilxtr.hasDendriteLocatedIn),
-        path = lg(n, ilxtr.hasAxonLocatedIn),
+        path = lg(n, ilxtr.hasAxonLocatedIn),  # TODO pull ordering from partial orders (not implemented in core atm)
         #laterality = lg(n, ilxtr.hasLaterality),  # left/rigth tricky ?
         #projection_laterality = lg(n, ilxtr.???),  # axon located in contra ?
         species = lg(n, ilxtr.hasInstanceInTaxon),
@@ -33,6 +33,11 @@ def for_composer(n):
         circuit_type = lg(n, ilxtr.hasCircuitRolePhenotype),
         # there are a number of dimensions that we aren't converting right now
         dont_know_fcrp = lg(n, ilxtr.hasFunctionalCircuitRolePhenotype),
+        phenotype = (lg(n, ilxtr.hasPhenotype)  # FIXME currently a grab bag of other types here
+                     + lg(n, ilxtr.hasMolecularPhenotype)
+                     + lg(n, ilxtr.hasProjectionPhenotype)),
+        forward_connection = lg(n, ilxtr.hasForwardConnectionPhenotype),
+        # TODO more ...
     )
 
 
