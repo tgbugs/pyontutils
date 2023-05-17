@@ -2987,12 +2987,31 @@ class Neuron(NeuronBase):
             #raise TypeError('TEMP id, no need to bag')
         out = set()  # prevent duplicates in cases where phenotypes are duplicated in the hierarchy
         embeddedKnownClasses = set()
+        def process_pe(pe):
+            if isinstance(pe, tuple):
+                for p in pe:
+                    if p in self.knownClasses:
+                        embeddedKnownClasses.add(p)
+
+                # strip out any known iris
+                out.update([_ for _ in pe if _ not in self.knownClasses])
+            else:
+                if pe in self.knownClasses:
+                    embeddedKnownClasses.add(pe)
+
+                out.add(pe)
 
         c = None
         # support CUT pattern  # FIXME maybe reimplement this method on NeuronCUT?
         for c in self.Class.subClassOf:
             if c.identifier in self.knownClasses:
                 embeddedKnownClasses.add(c.identifier)
+            else:
+                epe = self._unpackPheno(c, type_=EntailedPhenotype)
+                if epe:
+                    process_pe(epe)
+                else:
+                    log.error(f'hrm!? {epe}')
 
         for c in self.Class.equivalentClass:
             if isinstance(c.identifier, rdflib.URIRef):
@@ -3003,18 +3022,7 @@ class Neuron(NeuronBase):
 
             pe = self._unpackPheno(c)
             if pe:
-                if isinstance(pe, tuple):
-                    for p in pe:
-                        if p in self.knownClasses:
-                            embeddedKnownClasses.add(p)
-
-                    # strip out any known iris
-                    out.update([_ for _ in pe if _ not in self.knownClasses])
-                else:
-                    if pe in self.knownClasses:
-                        embeddedKnownClasses.add(pe)
-
-                    out.add(pe)
+                process_pe(pe)
             else:
                 raise self.ShouldNotHappenError('bah!')
 
@@ -3143,8 +3151,17 @@ class Neuron(NeuronBase):
 
                 return tuple(pes)
             else:
-                log.critical('WHAT')  # FIXME something is wrong for negative phenotypes...
                 pr = putativeBooleanClass
+                if isinstance(pr, infixowl.Restriction):
+                    # entailed case is nearly always direct subClassOf restriction
+                    pes = []
+                    expand_restriction(pr, pes)
+                    if len(pes) > 1:
+                        log.error(f'unexpected multiple phenotypes for: {self.id_}\n{pes}')
+                    return pes[0]
+                else:
+                    log.critical(f'WHAT\n{list(c.graph.subjectGraph(c.identifier))!r}')  # FIXME something is wrong for negative phenotypes...
+
                 p = pr.someValuesFrom
                 e = pr.onProperty
                 if p and e:
