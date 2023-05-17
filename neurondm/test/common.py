@@ -27,8 +27,6 @@ class _TestNeuronsBase(unittest.TestCase):
 
         repo = Repo.init(testing_base.as_posix())
 
-        sys.path.append(testing_base.as_posix())
-
     def tearDown(self):
         def recursive_clean(path):
             for thing in path.iterdir():
@@ -42,5 +40,3 @@ class _TestNeuronsBase(unittest.TestCase):
         path = testing_base
         if path.exists():
             recursive_clean(path)
-
-        sys.path.remove(testing_base.as_posix())

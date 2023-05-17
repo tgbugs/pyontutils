@@ -1052,7 +1052,7 @@ class Config:
         # FIXME hack, will write other configs if call after graphbase has switched
         graphBase.write_python()
 
-    def load_existing(self):
+    def load_existing(self, load_graph=None):
         """ advanced usage allows loading multiple sets of neurons and using a config
             object to keep track of the different graphs """
         # bag existing
@@ -1094,10 +1094,14 @@ class Config:
         # below seems to be the primary suspect for the issue
         if not graphBase.ignore_existing:
             ogp = Path(graphBase.ng.filename)  # FIXME ng.filename <-> out_graph_path property ...
-            if ogp.exists():
+            if ogp.exists() or load_graph is not None:
                 from itertools import chain
-                from rdflib import Graph  # FIXME
-                self.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
+                if load_graph is None:
+                    from rdflib import Graph  # FIXME
+                    self.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
+                else:
+                    self.load_graph = load_graph
+
                 graphBase.load_graph = self.load_graph
                 # FIXME memory inefficiency here ...
                 _ = [graphBase.in_graph.add(t) for t in graphBase.load_graph]  # FIXME use conjuctive ...
@@ -1135,7 +1139,7 @@ class Config:
                 raise self.NotCurrentConifgError('This config is not the active config!')
             containing = graphBase.compiled_location.parent.as_posix()
             if containing not in sys.path:
-                sys.path.append(containing)
+                sys.path = [containing] + sys.path
             full_path = graphBase.compiled_location / graphBase.filename_python()
             module_path = graphBase.compiled_location.name + '.' + full_path.stem
             module = import_module(module_path)  # this returns the submod
@@ -2795,16 +2799,20 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         raise AttributeError(f'{self} has no aspect with the phenotype {t!r}')  # FIXME AttributeError seems wrong
 
     def getObject(self, predicate):
-        for p in self.pes:
-            if p.e == predicate:  # FIXME probably need to munge the object
-                return p.p  # just to confuse you, the second p here is phenotype not predicate >_<
-
-        return rdf.nil  # FIXME how to indicate all values?
+        msg = 'deprecated, use .getObjects'
+        raise NotImplementedError(msg)
+        #return rdf.nil  # FIXME how to indicate all values?
         # predicate is different than object in the sense that it is possible
         # for neurons to have aspects (aka phenotype dimensions) without anyone
         # having measured those values, also handy when we don't know how to parse a value
         # but there is note attached
         #raise AttributeError(f'{self} has no phenotype for {predicate}')  # FIXME AttributeError seems wrong
+
+
+    def getObjects(self, predicate):
+        for p in self.pes:
+            if p.e == predicate:  # FIXME probably need to munge the object
+                yield p.p  # just to confuse you, the second p here is phenotype not predicate >_<
 
     def __expanded__(self):
         args = '(' + ', '.join([_.__expanded__() for _ in self.pes]) + ')'
