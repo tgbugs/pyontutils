@@ -41,6 +41,25 @@ def for_composer(n):
     )
 
 
+def location_summary(neurons, services):
+    import csv
+    OntTerm.query._services = services
+    locations = sorted(set(
+        OntTerm(pe.p) for n in neurons for pe in n.pes
+        if pe.e in n._location_predicates))
+    [_.fetch() for _ in locations]
+    def key(t):
+        return (t.prefix, t.label[0].lower()
+                if isinstance(t, tuple)
+                else t.lower())
+    header = 'label', 'curie', 'iri'
+    rows = (
+        [header] +
+        [(_.label, _.curie, _.iri) for _ in sorted(locations, key=key)])
+    with open('/tmp/npo-nlp-apinat-location-summary.csv', 'wt') as f:
+        csv.writer(f).writerows(rows)
+
+
 def main():
     config = Config('random-merge')
     g = OntGraph()  # load and query graph
@@ -48,6 +67,7 @@ def main():
     # remove scigraph and interlex calls
     graphBase._sgv = None
     del graphBase._sgv
+    _old_query_services = OntTerm.query._services
     OntTerm.query._services = (RDFL(g, OntId),)
 
     b = ('https://raw.githubusercontent.com/SciCrunch/'
@@ -83,6 +103,9 @@ def main():
     # example neuron
     n = mvp_ingest[0]
     fc = for_composer(n)
+
+    if True:
+        location_summary(neurons, _old_query_services)
 
     breakpoint()
 
