@@ -104,7 +104,7 @@ def main():
     n = mvp_ingest[0]
     fc = for_composer(n)
 
-    if True:
+    if False:
         location_summary(neurons, _old_query_services)
 
     breakpoint()
