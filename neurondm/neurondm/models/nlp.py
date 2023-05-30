@@ -85,7 +85,7 @@ def main():
              for cl in cs for r in cl.rows()
              if r.row_index > 0 and r.id().value
              #and (not hasattr(r, 'exclude') or not r.exclude().value)
-             and r.proposed_action().value != "Don't add"
+             and r.proposed_action().value.lower() != "don't add"
              ]
 
     to_add = []
@@ -107,7 +107,7 @@ def main():
         for r in cl.rows():
             if (r.row_index > 0 and
                 r.id().value and
-                r.proposed_action().value != "Don't add"):
+                r.proposed_action().value.lower() != "don't add"):
                 # extra trips
                 #print(repr(r.id()))
                 s = OntId(nlpns[r.id().value])
