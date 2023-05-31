@@ -19,7 +19,7 @@ from git import Repo
 from ttlser import natsort
 from augpathlib import RepoPath
 from pyontutils import combinators as cmb
-from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm
+from pyontutils.core import Ont, OntId as bOntId, OntTerm as bOntTerm
 from pyontutils.core import OntConjunctiveGraph, OntResAny, OntResIri, OntResPath
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger, cacheout
 from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
@@ -422,6 +422,9 @@ class LabelMaker:
         yield from self._with_thing_located_in('connecting-to', phenotypes)
     @od
     def hasExperimentalPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasAnatomicalSystemPhenotype(self, phenotypes):
         yield from self._default(phenotypes)
     @od
     def hasClassificationPhenotype(self, phenotypes):
@@ -1470,7 +1473,7 @@ class graphBase:
         for ig in use_in_paths:
             in_graph.parse(ig, format='turtle')
 
-        nin_graph = makeGraph('', prefixes=PREFIXES, graph=in_graph)
+        in_graph.namespace_manager.populate_from(PREFIXES)
         graphBase.in_graph = in_graph
         graphBase.ignore_existing = ignore_existing
 
@@ -1501,15 +1504,14 @@ class graphBase:
             NeuronBase.existing_ids = {}
         else:
             no = None
-            graphBase.ng = makeGraph('', prefixes=PREFIXES, graph=out_graph)
-        #new_graph = makeGraph('', prefixes=PREFIXES, graph=out_graph)
+            out_graph.namespace_manager.populate_from(PREFIXES)
+
         graphBase.out_graph = out_graph
 
         # python output setup
         graphBase.compiled_location = compiled_location
 
-        # makeGraph setup
-        new_graph = graphBase.ng #= new_graph
+        new_graph = graphBase.ng  # FIXME remove this usage
         new_graph.filename = out_graph_path
 
         if iri is not None:
@@ -3630,6 +3632,7 @@ if False:  # calling Config at top level breaks import for all normal users
 else:
     # note: this solves part of the problem, but mostly defers it until later
     _g = OntConjunctiveGraph()
+    _g.namespace_manager.populate_from(uPREFIXES)
     graphBase.core_graph = _g
 
 
