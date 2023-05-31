@@ -49,6 +49,7 @@ def map_predicates(sheet_pred):
         'Axon sensory terminal': ilxtr.hasAxonSensorySubcellularElementIn,
         'hasInstanceInTaxon': ilxtr.hasInstanceInTaxon,
         'hasPhenotype': ilxtr.hasPhenotype,
+        'hasAnatomicalSystemPhenotype': ilxtr.hasAnatomicalSystemPhenotype,
         'hasBiologicalSex': ilxtr.hasBiologicalSex,
         'hasCircuitRolePhenotype': ilxtr.hasCircuitRolePhenotype,
         'hasForwardConnectionPhenotype': ilxtr.hasForwardConnectionPhenotype,  # FIXME this needs to be unionOf

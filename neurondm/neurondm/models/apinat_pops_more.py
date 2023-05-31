@@ -1,6 +1,24 @@
 import augpathlib as aug
-from pyontutils.config import auth
 from pyontutils.core import OntGraph, OntResPath
+from pyontutils.config import auth
+from pyontutils.namespaces import makePrefixes
+
+
+#import json
+def path_json(p):
+    with open(p, 'rt') as f:
+        return json.load(f)
+
+
+def asObj(r, name=None):
+    # SIGH functions and errors do not compose well at all
+    d = {h: getattr(r, h)().value for h in r.header}
+    errors = [v for v in d.values() if len(v) != len(v.strip())]
+    if errors:
+        msg = f'BEEP BOOP WHITESPACE VIOLATION IN {name}: {errors!r}'
+        raise ValueError(msg)
+
+    return d
 
 
 def _genlabel(oid):
@@ -24,19 +42,39 @@ def _genlabel(oid):
     return label, x
 
 
-from neurondm.lang import Phenotype, Neuron, Config, OntId
 from pprint import pprint
-from pyontutils.sheets import Sheet
+#from pyontutils.sheets import Sheet
+from sparcur.sheets import Sheet  # FIXME move the caching functionality to pyontutils.sheets
+# XXX for now if you make a change you can e.g. insts[0].fetch(_refresh_cache=True)
+
+Sheet._do_cache = True
 
 amr = aug.LocalPath("~/git/apinatomy-models").expanduser()
 skip = 'too-map', 'dev-layout-conn', 'scaffold-test', 'vagus-nerve', 'wbrcm'
 models = [_.name for _ in (amr / 'models').children if _.name not in skip and (_ / f'source/{_.name}.xlsx').exists()]
+
+# might as well just pull the sheets directly at this point
+#_json_paths = {name: amr / 'models' / name / 'source' / f'{name}.json' for name in models}
+#jsons = {n: path_json(p) for n, p in _json_paths.items()}
+
 classes = []
+main_classes = []  # XXX because abbreviation is not included in the json !!!
+refs_classes = []
+lcnv_classes = []
 for model in models:
     c = type(f'{model.replace("-", "_")}groups', (Sheet,), {'name': f'{model}', 'sheet_name': 'groups'})
     classes.append(c)
+    c = type(f'{model.replace("-", "_")}main', (Sheet,), {'name': f'{model}', 'sheet_name': 'main'})
+    main_classes.append(c)
+    c = type(f'{model.replace("-", "_")}references', (Sheet,), {'name': f'{model}', 'sheet_name': 'references'})
+    refs_classes.append(c)
+    c = type(f'{model.replace("-", "_")}localConventions', (Sheet,), {'name': f'{model}', 'sheet_name': 'localConventions'})
+    lcnv_classes.append(c)
 
-insts = [c() for c in classes]
+insts = [c(fetch=False) for c in classes]
+main_insts = [c(fetch=False) for c in main_classes]
+refs_insts = [c(fetch=False) for c in refs_classes]
+lcnv_insts = [c(fetch=False) for c in lcnv_classes]
 
 #print(block_lines)
 from neurondm.lang import Phenotype, Neuron, Config, OntId
@@ -50,10 +88,10 @@ from neurondm.lang import Phenotype, Neuron, Config, OntId
 #sym_pre =   'ilxtr:neuron-phenotype-sym-pre'
 #sym_post =  'ilxtr:neuron-phenotype-sym-post'
 
-para = Phenotype('ilxtr:ParasympatheticPhenotype')
-sym = Phenotype('ilxtr:SympatheticPhenotype')
-pre = Phenotype('ilxtr:PreGanglionicPhenotype')
-post = Phenotype('ilxtr:PostGanglionicPhenotype')
+para = Phenotype('ilxtr:ParasympatheticPhenotype', 'ilxtr:hasAnatomicalSystemPhenotype')
+sym = Phenotype('ilxtr:SympatheticPhenotype', 'ilxtr:hasAnatomicalSystemPhenotype')
+pre = Phenotype('ilxtr:PreGanglionicPhenotype', 'ilxtr:hasAnatomicalSystemPhenotype')
+post = Phenotype('ilxtr:PostGanglionicPhenotype', 'ilxtr:hasAnatomicalSystemPhenotype')
 
 sens = Phenotype('ilxtr:SensoryPhenotype', 'ilxtr:hasCircuitRolePhenotype')
 motor = Phenotype('ilxtr:MotorPhenotype', 'ilxtr:hasCircuitRolePhenotype')
@@ -103,6 +141,7 @@ exact_sets = {
 frozenset(('')): 'hello',
 }
 
+
 def normalize_type(string):
     raw_bits = set(string.split(' '))
     bits = raw_bits - bad_bits
@@ -113,31 +152,59 @@ def normalize_type(string):
     missed = [b for b in bits if b not in mapping]
     return id_bits, missed
 
-_id_oid_type = [
+
+def parse_refs(refs):
+    return [_ for _ in [r.strip() for r in refs.split(',')] if _]
+
+
+_id_oid_type_refs = [
     (r.id().value,
      r.ontologyterms().value if hasattr(r, 'ontologyterms') else f'ERROR {inst}',
-     r.neurontypes().value if hasattr(r, 'neurontypes') else f'ERROR {inst}')
-    for inst in insts for r in inst.rows()[1:]]
-id_oid_type = [(i, o, t) for i, o, t in _id_oid_type if o]
+     r.neurontypes().value if hasattr(r, 'neurontypes') else f'ERROR {inst}',
+     r.references().value if hasattr(r, 'references') else f'ERROR {inst}',)
+    for inst in insts if hasattr(inst, '_values') or inst.fetch() for r in inst.rows()[1:]]
+id_oid_type_refs = [(i, o, t, refs) for i, o, t, refs in _id_oid_type_refs if o]
 #pprint(id_oid_type)
-raw_types = sorted(set([t for i, o, t in id_oid_type]))
+raw_types = sorted(set([t for i, o, t, refs in id_oid_type_refs]))
 #pprint(raw_types)
 #pprint([(t, normalize_type(t)) for t in raw_types])
-bagged_missed = [(normalize_type(t), t, o) for i, o, t in id_oid_type]
-bagged = [(a, c, d, b) for ((a, b), c, d) in bagged_missed]
+bagged_missed = [(normalize_type(t), t, o, parse_refs(refs)) for i, o, t, refs in id_oid_type_refs]
+bagged = [(a, c, d, b, r) for ((a, b), c, d, r) in bagged_missed]
 #pprint(bagged, width=240)
+
+
+id_sn = {r.id().value: r.abbreviation().value if hasattr(r, 'abbreviation') else 'MISSING ???'
+         for i in main_insts if hasattr(i, '_values') or i.fetch() for r in i.rows()[1:]}
+sn_id = {s:i for i, s in id_sn.items()}
+
+# model level refs
+mrefs = {i.name: [asObj(r, i.name) for r in i.rows()[1:]] for i in refs_insts if hasattr(i, '_values') or i.fetch()}
+
+lcnv = {i.name: {r.prefix().value if hasattr(r, 'prefix') else 'AAAA':  # r.namespace().value
+                 r.namespace().value if hasattr(r, 'namespace') else 'BBBB'
+                 for r in i.rows()[1:]} for i in lcnv_insts if hasattr(i, '_values') or i.fetch()}
+
 neuron_classes = {
-    sn: type(f'Neuron{sn.capitalize()}', (Neuron,), {'owlClass': f'ilxtr:Neuron{sn.capitalize()}'})
+    sn: type(f'Neuron{sn.capitalize()}', (Neuron,), {'owlClass': f'ilxtr:Neuron{sn.capitalize()}',
+                                                     '_model_refs': mrefs[sn_id[sn]]
+                                                     })
     for sn in [('kblad' if _ == 'keast' else
                 ('bolew' if _ == 'unbranched' else _))
                for _ in
                set(oid.rsplit("-", 3)[-3]
                    if oid.endswith('-prime')
                    else oid.rsplit("-", 2)[-2]
-                   for _, oid, _ in id_oid_type)]
+                   for _, oid, _, _ in id_oid_type_refs)]
 }
 
-def dophen(oid, bag):
+# TODO add citations to parent classes or individual neurons, TODO probably also link to the apinatomy model itself
+# TODO add links to svgs to the Neuron{Model} classes
+svg_template = (
+    'https://raw.githubusercontent.com/open-physiology/apinatomy-models/'
+    'master/models/{id_model}/docs/{id_model}.svg')
+
+
+def dophen(oid, bag, refs):
     label, x = _genlabel(oid)
     neuron_class = neuron_classes[x]
     # FIXME this doesn't work because entailed phenotypes don't work
@@ -146,13 +213,35 @@ def dophen(oid, bag):
     # so for now we just stick the neuron id itself in and don't worry about it
     u = OntId(oid).u
     up = OntId(oid).u.replace('neuron-type', 'neuron-phenotype')
-    return neuron_class(Phenotype(up), *(p.asEntailed() for p in bag),
-                        #label=label,
-                        id_=u)
+    nc = neuron_class(Phenotype(up, 'ilxtr:hasClassificationPhenotype'), *(p.asEntailed() for p in bag),
+                      #label=label,
+                      id_=u)
+    nc._refs = refs
+    return nc
+
+
+def citations(ncs, neus):
+    p = OntId('ilxtr:literatureCitation').u
+    for things, attr, idf in ((ncs, '_model_refs', lambda c: OntId(c.owlClass).u),
+                              (neus, '_refs', lambda c: c.identifier)):
+        for thing in things:
+            s = idf(thing)
+            for ref in getattr(thing, attr):
+                if isinstance(ref, dict):
+                    ref = ref['id']  # XXX FIXME WARNING EVIL
+
+                try:
+                    o = OntId(ref).u
+                except Exception as e:
+                    raise ValueError(s) from e
+
+                yield s, p, o
+
 
 # XXX TODO need to ensure that the type phenotype axioms so that the model superclass is included
 config = Config('apinat-pops-more')
-neus = [dophen(oid, bag) for bag, _, oid, _ in bagged]
+neus = [dophen(oid, bag, refs) for bag, _, oid, _, refs in bagged]
+#test = list(citations(neuron_classes.values(), neus))
 pprint(neus)
 #sys.modules['__main__'].__file__ = __file__
 #import linecache
@@ -165,7 +254,9 @@ ogp = config._written_graph.path  # XXX cannot trust config.out_graph_path() due
 og = OntGraph(path=ogp)
 og.parse()
 ng = OntGraph().populate_from_triples((t for t in og if 'able' not in t[1] and 'abel' not in t[1]))
+ng.populate_from(citations(neuron_classes.values(), neus))
 ng.namespace_manager.populate_from(og)
+ng.namespace_manager.populate_from(makePrefixes('PMID', 'doi'))
 ng.write(ogp)
 
 if False:
