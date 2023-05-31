@@ -1343,6 +1343,11 @@ class OntGraph(rdflib.Graph):
                                  _set_namespace_manager,
                                  doc="this graph's namespace-manager")
 
+    def compute_qname(self, uri, generate=False):
+        # XXX need to flip to generate=False so that things like
+        # infixowl can't silently insert madness into namespaces
+        return super().compute_qname(uri, generate=generate)
+
     @property
     def prefixes(self):
         """ the prefix/curie/qname section of an rdf file """
