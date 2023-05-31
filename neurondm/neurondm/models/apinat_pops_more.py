@@ -186,7 +186,8 @@ lcnv = {i.name: {r.prefix().value if hasattr(r, 'prefix') else 'AAAA':  # r.name
 
 neuron_classes = {
     sn: type(f'Neuron{sn.capitalize()}', (Neuron,), {'owlClass': f'ilxtr:Neuron{sn.capitalize()}',
-                                                     '_model_refs': mrefs[sn_id[sn]]
+                                                     '_model_refs': mrefs[sn_id[sn]],
+                                                     '_model_id': sn_id[sn],
                                                      })
     for sn in [('kblad' if _ == 'keast' else
                 ('bolew' if _ == 'unbranched' else _))
@@ -222,10 +223,16 @@ def dophen(oid, bag, refs):
 
 def citations(ncs, neus):
     p = OntId('ilxtr:literatureCitation').u
+    #hsa = OntId('ilxtr:hasSourceArtifact').u  # XXX doesn't quite match usage because it is pseudo ontological
+    source = OntId('dc:source').u  # more reasonable given the complexity of the process
     for things, attr, idf in ((ncs, '_model_refs', lambda c: OntId(c.owlClass).u),
                               (neus, '_refs', lambda c: c.identifier)):
         for thing in things:
             s = idf(thing)
+
+            if attr == '_model_refs':
+                yield s, source, OntId(svg_template.format(id_model=thing._model_id)).u
+
             for ref in getattr(thing, attr):
                 if isinstance(ref, dict):
                     ref = ref['id']  # XXX FIXME WARNING EVIL
@@ -256,7 +263,7 @@ og.parse()
 ng = OntGraph().populate_from_triples((t for t in og if 'able' not in t[1] and 'abel' not in t[1]))
 ng.populate_from(citations(neuron_classes.values(), neus))
 ng.namespace_manager.populate_from(og)
-ng.namespace_manager.populate_from(makePrefixes('PMID', 'doi'))
+ng.namespace_manager.populate_from(makePrefixes('PMID', 'doi', 'dc'))
 ng.write(ogp)
 
 if False:
