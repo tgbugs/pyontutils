@@ -2465,14 +2465,14 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         if not cls._loading:
             NeuronBase._loading = True  # block all other neuron loading
             try:
-                log.debug(str([i for i in iris if '4164' in i or '100212' in i]))
+                #log.debug(str([i for i in iris if '4164' in i or '100212' in i]))
                 for iri in iris:
                         # rod/cone issue
                         #breakpoint()
                     try:
                         n = cls(id_=iri, override=True)#, out_graph=cls.config.load_graph)  # I think we can get away without this
-                        if iri.endswith('4164') or iri.endswith('100212'):
-                            log.debug(f'{iri} -> {n}')
+                        #if iri.endswith('4164') or iri.endswith('100212'):
+                            #log.debug(f'{iri} -> {n}')
 
                         # because we just call Config again an everything resets
                     except cls.owlClassMismatch as e:

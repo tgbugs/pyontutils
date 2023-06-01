@@ -649,6 +649,9 @@ class OntMetaIri(OntMeta, OntIdIri):
                              conventions_type,
                              yield_response_gen,
                              ):
+        if not resp.ok:
+            resp.raise_for_status()
+
         first = next(gen)
         # TODO better type detection
 

@@ -118,6 +118,7 @@ def main():
                 asdf(s, ilxtr.curatorNote, r.curation_notes)
                 asdf(s, ilxtr.reviewNote, r.review_notes)
                 asdf(s, ilxtr.reference, r.reference_pubmed_id__doi_or_text)
+                asdf(s, ilxtr.literatureCitation, r.literature_citation)
                 asdf(s, rdfs.label, r.neuron_population_label_a_to_b_via_c)
                 if hasattr(r, 'alert_explanation'):
                     asdf(s, ilxtr.alertNote, r.alert_explanation)
@@ -126,6 +127,7 @@ def main():
                     p = map_predicates(r.relationship().value)
                     o = OntId(r.explicit_complement().value)
                     ec[(s, p)] = o
+
                 if hasattr(r, 'axonal_course_poset') and r.axonal_course_poset().value:
                     # s.u and OntId(...).u to avoid duplicate subjects/objects in the graph
                     # due to type vs instance issues for rdflib.URIRef and OntId
