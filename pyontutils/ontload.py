@@ -990,10 +990,14 @@ def run(args):
         else:
             ontology = ontologies  # FIXME will error
 
-        for tree, extra in import_tree(import_graph, ontology):
-            name = Path(next(iter(tree.keys()))).name
-            with open(jpth(zip_location, f'{name}-import-closure.html'), 'wt') as f:
-                f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
+        if ontology.startswith('/'):
+            ontology = 'file://' + ontology
+
+        for tree, extra in (import_tree(import_graph, ontology),):
+            if tree is not None:
+                name = Path(next(iter(tree.keys()))).name
+                with open(jpth(zip_location, f'{name}-import-closure.html'), 'wt') as f:
+                    f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
 
     if debug:
         breakpoint()
