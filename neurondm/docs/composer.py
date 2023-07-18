@@ -97,16 +97,36 @@ def location_summary(neurons, services, anatent_simple=False):
         OntTerm(pe.p) for n in neurons for pe in n.pes
         if pe.e in n._location_predicates))
     [_.fetch() for _ in locations]
+
+    _loc_src = sorted(set(
+        (OntTerm(pe.p), n.id_) for n in neurons for pe in n.pes
+        if pe.e in n._location_predicates))
+
+    ls2 = dict()
+    for _l, _s in _loc_src:
+        if _l not in ls2:
+            ls2[_l] = []
+
+        ls2[_l].append(_s)
+
+    loc_src = dict()
+    for k, v in ls2.items():
+        nlp = [iri for iri in v if '/sparc-nlp/' in iri]
+        apinat = [iri for iri in v if '/neuron-type-' in iri]
+        both = apinat and nlp
+        source = 'both' if both else 'nlp' if nlp else 'apinat' if apinat else 'unknown'
+        loc_src[k] = source
+
     def key(t):
         return (t.prefix, t.label[0].lower()
                 if isinstance(t, tuple)
                 else t.lower())
 
     if anatent_simple:
-        header = 'label', 'curie', 'iri'
+        header = 'label', 'curie', 'iri', 'source'
         rows = (
             [header] +
-            [(_.label, _.curie, _.iri) for _ in sorted(locations, key=key)])
+            [(_.label, _.curie, _.iri, loc_src[_]) for _ in sorted(locations, key=key)])
         with open('/tmp/npo-nlp-apinat-location-summary.csv', 'wt') as f:
             csv.writer(f, lineterminator='\n').writerows(rows)
 
