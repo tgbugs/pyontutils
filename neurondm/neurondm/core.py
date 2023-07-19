@@ -30,6 +30,9 @@ from pyontutils.annotation import AnnotationMixin
 from pyontutils.namespaces import makePrefixes, OntCuries, definition, replacedBy, partOf
 from pyontutils.namespaces import TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NIFRID
 from pyontutils.namespaces import rdf, rdfs, owl, skos
+from . import orders
+
+orders.to_rdf, orders.from_rdf = orders.bind_rdflib()
 
 log = makeSimpleLogger('neurondm')
 auth = oa.configure_here('auth-config.py', __name__, include=pauth)
@@ -38,6 +41,7 @@ ont_checkout_ok = auth.get('nifstd-checkout-ok')
 RDFL = oq.plugin.get('rdflib')
 _SGR = oq.plugin.get('SciGraph')
 _done = set()
+_partial_order_linker = ilxtr.neuronPartialOrder
 
 __all__ = [
     'AND',
@@ -109,6 +113,12 @@ def getPhenotypePredicates(graph, *roots):
                                 if o != s) for s in out}
 
     return phenoPreds, predicate_supers
+
+
+def add_partial_orders(graph, nested):
+    for s, nst in nested.items():
+        bn = orders.to_rdf(graph, nst)
+        graph.add((s, _partial_order_linker, bn))
 
 # label maker
 
@@ -1114,6 +1124,8 @@ class Config:
                             if not graphBase.knownClasses.append(s)]
                 else:
                     ebms = []
+
+                graphBase._nested = orders.from_rdf(self.load_graph, _partial_order_linker)
 
                 class_types = [(type, s) for s in self.load_graph[:rdf.type:owl.Class]
                                for type in mostDerived(getClassType(s, self.load_graph)) if type]
@@ -2470,7 +2482,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                         # rod/cone issue
                         #breakpoint()
                     try:
-                        n = cls(id_=iri, override=True)#, out_graph=cls.config.load_graph)  # I think we can get away without this
+                        _po = cls._nested[iri] if iri in cls._nested else None
+                        n = cls(id_=iri, override=True, partialOrder=_po)#, out_graph=cls.config.load_graph)  # I think we can get away without this
                         #if iri.endswith('4164') or iri.endswith('100212'):
                             #log.debug(f'{iri} -> {n}')
 
@@ -2485,8 +2498,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 NeuronBase._loading = False
 
     def __init__(self, *phenotypeEdges, id_=None, label=None, override=False,
-                 equivalentNeurons=tuple(), disjointNeurons=tuple(), definition=None):
+                 equivalentNeurons=tuple(), disjointNeurons=tuple(), partialOrder=None, definition=None):
         self._sighed = False
+        self._nested_partial_order = partialOrder
         if id_ and (equivalentNeurons or disjointNeurons):
             # FIXME does this work!?
             raise TypeError('Neurons defined by id may not use equivalent or disjoint')
@@ -2622,7 +2636,22 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             for p, *os in rep:
                 self.add_objects(p, *os)
 
+        if self._nested_partial_order is not None:
+            bn = orders.to_rdf(graph, self._nested_partial_order)
+            graph.add((s, ilxtr.neuronPartialOrder, bn))
+
         self._sighed = True
+
+    def partialOrder(self, nested=None):
+        """ nested is a the nested list version of the partial order
+
+            if you have an adj list use orders.adj_to_nst before
+            passing in here """
+
+        if self._nested_partial_order is None and nested is not None:
+            self._nested_partial_order = nested
+
+        return self._nested_partial_order
 
     def removeDuplicateSuperProperties(self, rawpes):
         # find any duplicate phenotype values

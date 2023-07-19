@@ -3,10 +3,8 @@ from collections import defaultdict
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
-from neurondm.core import Config, NeuronEBM, Phenotype, NegPhenotype, log, OntId
+from neurondm.core import Config, NeuronEBM, Phenotype, NegPhenotype, log, OntId, add_partial_orders
 from neurondm import orders
-
-orders.to_rdf = orders.bind_rdflib()
 
 
 class NeuronSparcNlp(NeuronEBM):
@@ -71,12 +69,6 @@ def ind_to_adj(ind_uri):
                         edges.append(edge)
 
     return edges
-
-
-def add_partial_orders(graph, nested):
-    for s, nst in nested.items():
-        bn = orders.to_rdf(graph, nst)
-        graph.add((s, ilxtr.neuronPartialOrder, bn))
 
 
 def main():
