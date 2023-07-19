@@ -80,6 +80,8 @@ mmset1: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset1/
 mmset2cn: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset2cn/
 mmset3: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset3/
 mmset4: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/mmset4/
+semves: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/semves/
+prostate: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/prostate/
 atom:   http://uri.interlex.org/tgbugs/uris/readable/atlas/
 PRECISETBI.CDE: http://uri.interlex.org/precise-tbi/uris/cde/
 

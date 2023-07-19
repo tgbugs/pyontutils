@@ -20,6 +20,14 @@ class NLP2(Sheet):
     name = 'off-nlp-2'
 
 
+class NLPSemVes(Sheet):
+    name = 'off-nlp-il-semves'
+
+
+class NLPProst(Sheet):
+    name = 'off-nlp-il-prostate'
+
+
 def nlp_ns(name):
     return rdflib.Namespace(interlex_namespace(f'tgbugs/uris/readable/sparc-nlp/{name}/'))
 
@@ -28,6 +36,8 @@ snames = {
     'MM Set 1': (NLP1, nlp_ns('mmset1')),
     'MM Set 2 Cranial Nerves': (NLP1, nlp_ns('mmset2cn')),
     'MM Set 4': (NLP2, nlp_ns('mmset4')),
+    'Seminal Vesicles': (NLPSemVes, nlp_ns('semves')),
+    'Prostate': (NLPProst, nlp_ns('prostate')),
 }
 
 
@@ -86,12 +96,22 @@ def main():
     def vl(meth):
         return rdflib.Literal(meth().value)
 
-    def asdf(s, p, rm):
+    def asdf(s, p, rm, split=False, rdf_type=rdflib.Literal):
         v = vl(rm)
         if v:
             # XXX watch out for non-homogenous subject types
             # (e.g. OntId vs rdflib.URIRef)
-            to_add.append((s.u, p, v))
+            if split:
+                for _v in v.split(split):
+                    to_add.append((s.u, p, rdf_type(_v.strip())))
+            else:
+                to_add.append((s.u, p, v))
+
+    def lcc(uri_or_curie):
+        if '<' in uri_or_curie:  # grrrr dois
+            return rdflib.Literal(uri_or_curie)  # FIXME url encode this instead
+        else:
+            return OntId(uri_or_curie).u
 
     dd = defaultdict(list)
     ec = {}
@@ -106,11 +126,12 @@ def main():
                 s = OntId(nlpns[r.id().value])
                 #print(s)
                 asdf(s, ilxtr.sentenceNumber, r.sentence_number)
-                asdf(s, ilxtr.curatorNote, r.different_from_existing)
+                if hasattr(r, 'different_from_existing'):
+                    asdf(s, ilxtr.curatorNote, r.different_from_existing)
                 asdf(s, ilxtr.curatorNote, r.curation_notes)
                 asdf(s, ilxtr.reviewNote, r.review_notes)
                 asdf(s, ilxtr.reference, r.reference_pubmed_id__doi_or_text)
-                asdf(s, ilxtr.literatureCitation, r.literature_citation)
+                asdf(s, ilxtr.literatureCitation, r.literature_citation, split=',', rdf_type=lcc)
                 asdf(s, rdfs.label, r.neuron_population_label_a_to_b_via_c)
                 if hasattr(r, 'alert_explanation'):
                     asdf(s, ilxtr.alertNote, r.alert_explanation)
@@ -177,6 +198,8 @@ def main():
         nrns.append(n)
 
     Phenotype.in_graph.bind('mmset4', snames['MM Set 4'][-1])  # XXX FIXME UGH
+    Phenotype.in_graph.bind('semves', snames['Seminal Vesicles'][-1])
+    Phenotype.in_graph.bind('prostate', snames['Prostate'][-1])
     config.write()
     labels = (
         #ilxtr.genLabel,
