@@ -80,6 +80,8 @@ def adj_to_lin(adj):
 
 def bind_rdflib():
     import rdflib
+    from pyontutils.namespaces import rdf
+
     def to_rdf(g, nested):
         if isinstance(nested, list) or isinstance(nested, tuple):
             bn0 = rdflib.BNode()
@@ -93,7 +95,51 @@ def bind_rdflib():
         else:
             return rdflib.Literal(nested)
 
-    return to_rdf
+    def from_rdf(g, linker, to_python=False):
+        nested = {}
+        for s, o in g[:linker:]:
+            l = tuple(getlist(g, o, to_python=to_python))
+            nested[s] = l
+
+        return nested
+
+    def getlist(g, bn0, to_python=False):
+        def f(node, g):
+            o = None
+            for o in g[node:rdf.first:]:
+                if isinstance(o, rdflib.BNode):
+                    # unfortunately we have to branch on the result type
+                    # or have to look ahead to see if the list continues
+                    # picked the look ahead so that we don't have to check
+                    # length and we don't have to know about the rl type
+                    if list(g[o:rdf.first]):  # list continues
+                        # XXX watch out for malformed lists that might not
+                        # have a rdf:first ?
+                        yield tuple(getlist(g, o, to_python=to_python))
+                    else:  # likely [ :a :b ] case
+                        yield from getlist(g, o, to_python=to_python)
+
+                else:
+                    if to_python and isinstance(o, rdflib.Literal):
+                        yield o.toPython()
+                    else:
+                        yield o
+
+            for o in g[node:rdf.rest:]:
+                if o != rdf.nil:
+                    yield from getlist(g, o, to_python=to_python)
+
+            if o is None and isinstance(node, rdflib.BNode):  # [ :a  :b ] case
+                for p, o in g[node:]:
+                    if to_python:
+                        yield rl((p.toPython() if isinstance(p, rdflib.Literal) else p),
+                                 (o.toPython() if isinstance(o, rdflib.Literal) else o),)
+                    else:
+                        yield rl(p, o)
+
+        yield from g.transitiveClosure(f, bn0)
+
+    return to_rdf, from_rdf
 
 
 class rl:
@@ -135,7 +181,7 @@ class rl:
 
 def test():
     from pprint import pprint
-    to_rdf = bind_rdflib()
+    to_rdf, from_rdf = bind_rdflib()
     adj_test = (
         ("a", "b"),
         ("b", "c"),
@@ -238,6 +284,14 @@ def test():
     assert sorted(adj_6) == sorted(rej_6)
     bn = to_rdf(g, nst_6)
     g.add((ilxtr['sub-6'], ilxtr.predicate, bn))
+
+    un_rdf = from_rdf(g, ilxtr.predicate, to_python=True)
+    assert un_rdf[ilxtr['sub-1']] == tuple(nested)
+    assert un_rdf[ilxtr['sub-2']] == tuple(nst_2)
+    assert un_rdf[ilxtr['sub-3']] == tuple(nst_3)
+    assert un_rdf[ilxtr['sub-4']] == tuple(nst_4)
+    un_rdf[ilxtr['sub-5']] == tuple(nst_5)  # non-invertable case due to layer=None ambiguity
+    assert un_rdf[ilxtr['sub-6']] == tuple(nst_6)
 
     g.debug()
 
