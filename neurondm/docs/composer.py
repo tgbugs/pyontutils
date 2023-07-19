@@ -1,8 +1,10 @@
 import os
+import rdflib
 from pyontutils.core import OntGraph, OntResIri, OntResPath
 from pyontutils.namespaces import rdfs, ilxtr
 from neurondm.core import Config, graphBase, log
 from neurondm.core import OntTerm, OntId, RDFL
+from neurondm import orders
 
 
 def multi_orig_dest(neuron):
@@ -30,8 +32,28 @@ def makelpesrdf():
     return lpes, lrdf, collect
 
 
+def simplify(e):
+    if e is None:
+        return
+    elif isinstance(e, rdflib.Literal):  # blank case
+        return e.toPython()
+    else:
+        return OntTerm(e).curie
+
+
+def simplify_nested(f, nested):
+    for e in nested:
+        if isinstance(e, list) or isinstance(e, tuple):
+            yield tuple(simplify_nested(f, e))
+        elif isinstance(e, orders.rl):
+            yield orders.rl(f(e.region), f(e.layer))
+        else:
+            yield f(e)
+
+
 def for_composer(n, cull=False):
     lpes, lrdf, collect = makelpesrdf()
+    _po = n.partialOrder()
     fc = dict(
         id = str(n.id_),
         label = str(n.origLabel),
@@ -45,6 +67,7 @@ def for_composer(n, cull=False):
             # short forms are harder to confuse A-T and S-T
             [dict(loc=l, type='AFFERENT-T') for l in lpes(n, ilxtr.hasAxonSensorySubcellularElementIn)]
         ),
+        order = tuple(simplify_nested(simplify, _po)) if _po else [],
         path = (  # TODO pull ordering from partial orders (not implemented in core atm)
             [dict(loc=l, type='AXON') for l in lpes(n, ilxtr.hasAxonLocatedIn)] +
             # XXX dendrites don't really ... via ... they are all both terminal and via at the same time ...
