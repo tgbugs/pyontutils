@@ -1,5 +1,6 @@
 import re
 from collections import defaultdict
+from urllib.parse import quote as url_quote
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
@@ -108,8 +109,9 @@ def main():
                 to_add.append((s.u, p, v))
 
     def lcc(uri_or_curie):
-        if '<' in uri_or_curie:  # grrrr dois
-            return rdflib.Literal(uri_or_curie)  # FIXME url encode this instead
+        if '<' in uri_or_curie:
+            # see pyontutils.utils_extra check_value
+            return rdflib.URIRef(url_quote(uri_or_curie, ':/;()'))
         else:
             return OntId(uri_or_curie).u
 
