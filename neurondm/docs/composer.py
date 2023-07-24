@@ -153,6 +153,13 @@ def location_summary(neurons, services, anatent_simple=False):
         with open('/tmp/npo-nlp-apinat-location-summary.csv', 'wt') as f:
             csv.writer(f, lineterminator='\n').writerows(rows)
 
+        preds = sorted(set(e for n in neurons for e in n.edges))
+        header = ['id'] + [OntId(p).curie for p in preds]
+        _rows = [[n.id_, *[','.join(sorted([OntId(o).curie  for o in n.getObjects(p)])) for p in preds]] for n in neurons]
+        rows = [header] + _rows
+        with open('/tmp/npo-by-predicates.csv', 'wt') as f:
+            csv.writer(f, lineterminator='\n').writerows(rows)
+
     else:
         header = 'o', 'o_label', 'o_synonym'
         rows = (
