@@ -4,11 +4,6 @@ ideally we can get rid of this in idlib
 werkzug@2b2c4c3dd3cf7389e9f4aa06371b7332257c6289
 """
 
-try:
-    import greenlet
-except ImportError:
-    greenlet = None
-
 
 def _mixed_join(iterable, sentinel):
     """concatenate any string type in an intelligent way."""
@@ -121,25 +116,11 @@ class IterI(IterIO):
     """Convert an stream into an iterator."""
 
     def __new__(cls, func, sentinel=""):
-        if greenlet is None:
-            raise RuntimeError("IterI requires greenlet support")
         stream = object.__new__(cls)
-        stream._parent = greenlet.getcurrent()
         stream._buffer = []
         stream.closed = False
         stream.sentinel = sentinel
         stream.pos = 0
-
-        def run():
-            func(stream)
-            stream.close()
-
-        g = greenlet.greenlet(run, stream._parent)
-        while 1:
-            rv = g.switch()
-            if not rv:
-                return
-            yield rv[0]
 
     def close(self):
         if not self.closed:
@@ -147,6 +128,7 @@ class IterI(IterIO):
             self._flush_impl()
 
     def write(self, s):
+        raise NotImplementedError("only IterO is supported")
         if self.closed:
             raise ValueError("I/O operation on closed file")
         if s:
