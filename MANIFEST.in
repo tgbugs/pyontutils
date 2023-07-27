@@ -16,6 +16,8 @@ recursive-exclude htmlfn *
 recursive-exclude librdflib *
 recursive-exclude export *
 recursive-exclude ilxutils *
+recursive-exclude clifn *
+recursive-exclude .pytest_cache *
 recursive-exclude * *.pyc
 recursive-exclude * *.swp
 recursive-exclude * *.swo
