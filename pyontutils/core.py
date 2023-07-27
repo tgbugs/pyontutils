@@ -318,7 +318,8 @@ class OntRes(idlib.Stream):
                  if hasattr(r, '_metadata_class')
                  else r.graph)
             except Exception as e:
-                msg = f'something failed for {r}'
+                msg = (f'something failed for {r} '
+                       f'imported by {self.identifier_bound}')
                 raise Exception(msg) from e
 
         Async()(deferred(internal)(_) for _ in imps)
