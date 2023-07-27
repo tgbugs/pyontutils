@@ -776,7 +776,7 @@ class Sheet:
 
     def metadata(self):
         # TODO figure out the caching here
-        resp = (self._spreadsheet_service
+        resp = (self._spreadsheet_service  # FIXME annoying attribute error here when _only_cache = True
                 .get(spreadsheetId=self._sheet_id())
                 .execute())
         self._meta = resp
@@ -1082,8 +1082,10 @@ class Sheet:
                 cell = self.cell_object(row_index, col_index)
                 self._incomplete_removes[cell] = value
 
-    def _row_from_index(self, index_column=None, value=None, row=None,
-                        fail=False):
+    def _row_from_index(self, index_column=None, value=None, row=None, fail=False):
+        """ REMINDER: this expects the passed row to have the same structure
+            as the remote row """
+
         if index_column is None:
             index_column = self.index_columns[0]
 
@@ -1098,6 +1100,7 @@ class Sheet:
             index_value = value
 
         row_object = getattr(cell_index_header.column, index_value)().row
+
         return row_object, index_value
 
     def insert(self, *rows):
@@ -1143,6 +1146,7 @@ class Sheet:
             WARNING: DO NOT USE THIS IF THE PRIMARY INDEX COLUMN IS NOT UNIQUE
             We do not currently have support for composite primary keys. """
 
+        # FIXME this assumes that the column headers are the same
         for row in rows:
             try:
                 row_object, index_value = self._row_from_index(row=row)
