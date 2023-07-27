@@ -22,6 +22,8 @@ from types import GeneratorType
 from keyword import kwlist
 from terminaltables import AsciiTable
 
+__version__ = '0.0.1'
+
 
 def python_identifier(string:str):
     """ pythonify a string for use as an identifier """
