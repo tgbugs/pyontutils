@@ -523,12 +523,25 @@ class OntTerm(bOntTerm, OntId):
             if uris[0] == ilxtr.PhenotypeIndicator:
                 return self
 
-            ind = sco[0]
-            # FIXME it being first is by accident of implementation only
-            log.debug(f'{sco} {self}')
-            assert ind.predicates['rdfs:subClassOf']
-            assert ilxtr.PhenotypeIndicator == rdflib.URIRef(ind.predicates['rdfs:subClassOf'][0].iri)
-            self._cache_ind[self] = ind
+            done = False
+            for ind in sco:
+                if ind.URIRef == ilxtr.PhenotypeIndicator:
+                    continue
+                elif ind.predicates and ind.predicates['rdfs:subClassOf']:
+                    for _sco in ind.predicates['rdfs:subClassOf']:
+                        if _sco.URIRef == ilxtr.PhenotypeIndicator:
+                            done = True
+                            self._cache_ind[self] = ind
+                            break
+
+                    if done:
+                        break
+
+                else:
+                    msg = f'missing predicates {ind}'
+                    log.debug(msg)
+
+            assert done
             return ind
         else:
             self._cache_ind[self] = self  # avoid repeated lookup cost which is quite high
