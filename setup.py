@@ -83,6 +83,7 @@ setup(
     tests_require=tests_require,
     install_requires=[
         'augpathlib>=0.0.23',
+        'clifn',
         'colorlog',
         'docopt',
         "funowl; python_version >= '3.8'",
