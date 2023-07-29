@@ -163,7 +163,7 @@ class rl:
         return bn
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.region == other.region and self.layer == self.layer
+        return type(self) == type(other) and self.region == other.region and self.layer == other.layer
 
     def __hash__(self):
         return hash((self.__class__, self.region, self.layer))
@@ -292,6 +292,98 @@ def test():
     assert un_rdf[ilxtr['sub-4']] == tuple(nst_4)
     un_rdf[ilxtr['sub-5']] == tuple(nst_5)  # non-invertable case due to layer=None ambiguity
     assert un_rdf[ilxtr['sub-6']] == tuple(nst_6)
+
+    adj_raw_7 = [  # aacar-6 (confusingly)
+        # the issue here is that the graph is not fully connected
+        # AND that some of the disconnected parts have auto cycles
+        (('ILX:0774266', None), ('ILX:0787082', None)),
+        (('ILX:0786141', None), ('ILX:0784439', None)),
+        (('ILX:0786228', None), ('ILX:0791105', None)),
+        (('ILX:0786272', None), ('ILX:0788945', None)),
+        (('ILX:0786722', None), ('ILX:0787562', None)),
+        (('ILX:0789947', None), ('ILX:0787946', None)),
+        (('ILX:0793555', None), ('UBERON:0000948', 'UBERON:0015129')),
+        (('ILX:0793556', None), ('UBERON:0000948', 'UBERON:0015129')),
+        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0000948', 'UBERON:0002348')),
+        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0002078', 'UBERON:0002349')),
+        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0002079', 'UBERON:0002349')),
+        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0002080', 'UBERON:0002349')),
+        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0002084', 'UBERON:0002349')),
+        (('UBERON:0000948', 'UBERON:0015129'), ('ILX:0793555', None)),
+        (('UBERON:0000948', 'UBERON:0015129'), ('ILX:0793556', None)),
+        (('UBERON:0000948', 'UBERON:0015129'), ('UBERON:0000948', 'UBERON:0002348')),
+        (('UBERON:0002078', 'UBERON:0002349'), ('UBERON:0002078', 'UBERON:0002165')),
+        (('UBERON:0002079', 'UBERON:0002349'), ('UBERON:0002079', 'UBERON:0002165')),
+        (('UBERON:0002080', 'UBERON:0002349'), ('UBERON:0002080', 'UBERON:0002165')),
+        (('UBERON:0002084', 'UBERON:0002349'), ('UBERON:0002084', 'UBERON:0002165')),
+    ]
+
+    adj_raw_7 = [
+        # the issue here is the auto cyclic nodes
+        (('ILX:0793556', None), ('ILX:0793556', None)),
+        (('ILX:0793556', None), ('UBERON:0000948', 'UBERON:0015129')),
+        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0000948', 'UBERON:0002348')),
+        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0002080', 'UBERON:0002349')),
+        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0002084', 'UBERON:0002349')),
+        (('UBERON:0000948', 'UBERON:0015129'), ('UBERON:0000948', 'UBERON:0002348')),
+        (('UBERON:0002080', 'UBERON:0002349'), ('UBERON:0002080', 'UBERON:0002165')),
+        (('UBERON:0002084', 'UBERON:0002349'), ('UBERON:0002084', 'UBERON:0002165'))
+    ]
+    adj_7 = tuple(tuple(rl(*(a if a is None else a for a in _rl)) for _rl in rls) for rls in adj_raw_7)
+    nst_7 = adj_to_nst(adj_7)
+    rej_7 = nst_to_adj(nst_7)
+    pprint(('nst_7', nst_7))
+    pprint(('adj_7', adj_7))
+    pprint(('rej_7', rej_7))
+    #assert sorted(adj_7) == sorted(rej_7)  # expected to fail due to cycles
+    bn = to_rdf(g, nst_7)
+    g.add((ilxtr['sub-7'], ilxtr.predicate, bn))
+
+    adj_raw_8 = [
+        # this produces complete nonsense
+#        (('ILX:0793559', None), ('UBERON:0001258', 'UBERON:0002384')),
+#        (('ILX:0793559', None), ('UBERON:0006082', 'UBERON:0002384')),
+#        (('UBERON:0001258', 'UBERON:0001135'), ('UBERON:0001258', 'UBERON:0000483')),
+#        (('UBERON:0001258', 'UBERON:0002384'), ('ILX:0793663', 'UBERON:0035965')),
+#        (('UBERON:0001258', 'UBERON:0002384'), ('UBERON:0001258', 'UBERON:0001135')),
+#        (('UBERON:0002856', None), ('UBERON:0006450', 'UBERON:0002318')),
+#        (('UBERON:0002856', None), ('UBERON:0018683', None)),
+        #(('UBERON:0002857', None), ('UBERON:0006448', 'UBERON:0002318')),
+#        (('UBERON:0002857', None), ('UBERON:0018683', None)),
+#        (('UBERON:0005303', None), ('UBERON:0016508', None)),
+#        (('UBERON:0005453', None), ('UBERON:0005303', None)),
+#        (('UBERON:0006082', 'UBERON:0001135'), ('UBERON:0006082', 'UBERON:0000483')),
+#        (('UBERON:0006082', 'UBERON:0002384'), ('ILX:0793664', 'UBERON:0035965')),
+#        (('UBERON:0006082', 'UBERON:0002384'), ('UBERON:0006082', 'UBERON:0001135')),
+        #(('UBERON:0006448', 'UBERON:0002318'), ('UBERON:0006448', 'UBERON:0002181')),
+        #(('UBERON:0006448', 'UBERON:0002318'), ('UBERON:0006448', 'UBERON:0004677')),
+        #(('UBERON:0006448', 'UBERON:0002318'), ('UBERON:0006448', 'UBERON:0006118')),
+        #(('UBERON:0006448', 'UBERON:0002318'), ('UBERON:0006448', 'UBERON:0016576')),
+        #(('UBERON:0006448', 'UBERON:0002318'), ('UBERON:0006448', 'UBERON:0016578')),
+        # XXX why the, how the, heck does this produce the result ...
+        (('UBERON:0006450', 'UBERON:0002318'), ('UBERON:0006450', 'UBERON:0002181')),
+        (('UBERON:0006450', 'UBERON:0002318'), ('UBERON:0006450', 'UBERON:0004677')),
+        (('UBERON:0006450', 'UBERON:0002318'), ('UBERON:0006450', 'UBERON:0006118')),
+        (('UBERON:0006450', 'UBERON:0002318'), ('UBERON:0006450', 'UBERON:0016576')),
+        (('UBERON:0006450', 'UBERON:0002318'), ('UBERON:0006450', 'UBERON:0016578')),
+        #(('UBERON:0016508', None), ('ILX:0793559', None)),
+        #(('UBERON:0018683', None), ('UBERON:0005453', None)),
+    ]
+    adj_8 = tuple(tuple(rl(*(a if a is None else a for a in _rl)) for _rl in rls) for rls in adj_raw_8)
+    adj_alt_8 = tuple(tuple('-'.join(('' if a is None else a for a in _rl)) for _rl in rls) for rls in adj_raw_8)
+    nst_alt_8 = adj_to_nst(adj_alt_8)  # XXX the issue is clearly in rl
+    nst_raw_8 = adj_to_nst(adj_raw_8)  # XXX the issue is clearly in rl
+    he = hash(adj_8[0][0]) == hash(adj_8[1][0])
+    ee = adj_8[0][0] == adj_8[1][0]
+    #rej_raw_8 = nst_to_adj(nst_raw_8)  # though we can't convert tuples back because of type issues
+    nst_8 = adj_to_nst(adj_8)
+    rej_8 = nst_to_adj(nst_8)
+    pprint(('nst_8', nst_8), width=120)
+    pprint(('adj_8', adj_8), width=120)
+    pprint(('rej_8', rej_8), width=120)
+    assert sorted(adj_8) == sorted(rej_8)
+    bn = to_rdf(g, nst_8)
+    g.add((ilxtr['sub-8'], ilxtr.predicate, bn))
 
     g.debug()
 
