@@ -1,3 +1,6 @@
+from collections import Counter
+
+
 def nst_to_adj(l):
     start = l[0]
     if (isinstance(start, list) or isinstance(start, tuple)):
@@ -19,26 +22,27 @@ def dvals(k, ass):
     yield from ((pair[1], *dvals(k, tail)) if tail else pair[1:]) if pair else tuple()
 
 
-def inest(adj, start, seen):
+def inest(adj, start, seen, expect, starts):
     nl = tuple()
     out = []
     maybe_out = []
-    seen = {start} | seen
+    seen[start] += 1
     for next_start in dvals(start, adj):
-        if next_start in seen:
-            # do not append if next_start already in seen
+        if next_start in seen and seen[next_start] > 0:
+            # do not append if next_start already seen more than expected
             nl, snext = (next_start,), seen
-            if not out:  # multi-parent case
-                # maybe out can already have results due to multi-child case
-                maybe_out.append(nl)
+            if seen[next_start] < expect[next_start]:
+                out.append(nl)
+                seen[next_start] += 1
+            elif next_start in starts and seen[next_start] == expect[next_start]:
+                out.append(nl)
+            else:
+                pass  # pretty sure should never get here now
         else:
-            nl, snext = inest(adj, next_start, seen)
+            nl, snext = inest(adj, next_start, seen, expect, starts)
             out.append(nl)
 
         seen = snext
-
-    if not out and maybe_out:
-        out = maybe_out
 
     l = tuple(out)
     return ((start, *l) if l else (start,)), seen
@@ -47,15 +51,21 @@ def inest(adj, start, seen):
 def adj_to_nst(adj, start=None):
     keys = set([a[0] for a in adj])
     values = set([a[1] for a in adj])
-    inverted = [(a[1], a[0]) for a in adj]
+    #inverted = [(a[1], a[0]) for a in adj]  # unused
     starts = keys - values
-    ends = values - keys
+    #ends = values - keys  # unused
 
-    seen = set()
+    if not starts:
+        # the graph forms a full cycle with all potential starting points
+        # involved in a cycle, therefore pick an arbitrary but stable start
+        starts = {sorted(adj)[0][0]}
+
+    seen = {thing: 0 for thing in (keys | values)}
+    expect = dict(Counter([a[1] for a in adj]))
     nl = None
     out = []
     for start in starts:
-        nl, snext = inest(adj, start, seen)
+        nl, snext = inest(adj, start, seen, expect, starts)
         seen = snext
         out.append(nl)
 
@@ -169,14 +179,12 @@ class rl:
         return hash((self.__class__, self.region, self.layer))
 
     def __lt__(self, other):
-        # FIXME unstable
-        return (type(self) == type(other) and
-                type(self.region) == type(other.region) and
-                self.region is not None and
-                self.region < other.region and
-                type(self.layer) == type(self.layer) and
-                self.layer is not None and
-                self.layer < self.layer)
+        if type(self) == type(other):
+            sreg = '' if self.region is None else self.region
+            slay = '' if self.layer is None else self.layer
+            oreg = '' if other.region is None else other.region
+            olay = '' if other.layer is None else other.layer
+            return sreg < oreg or slay < olay
 
 
 def test():
@@ -280,6 +288,7 @@ def test():
     nst_6 = adj_to_nst(adj_6)
     rej_6 = nst_to_adj(nst_6)
     pprint(('nst_6', nst_6))
+    pprint(('adj_6', adj_6))
     pprint(('rej_6', rej_6))
     assert sorted(adj_6) == sorted(rej_6)
     bn = to_rdf(g, nst_6)
@@ -320,54 +329,37 @@ def test():
 
     adj_raw_7 = [
         # the issue here is the auto cyclic nodes
-        (('ILX:0793556', None), ('ILX:0793556', None)),
+        # when all these are run reg_7 -> empty
+        #(('ILX:0793556', None), ('ILX:0793556', None)),  # cycle here
+        # somehow the autocycle will cause output issues if it is placed in the 0th position in the list
+        # but not down below ??? answer: because rl.__lt__ was using and instead of or (derp)
+        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0000948', 'UBERON:0002348')),  # cycle here
         (('ILX:0793556', None), ('UBERON:0000948', 'UBERON:0015129')),
-        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0000948', 'UBERON:0002348')),
-        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0002080', 'UBERON:0002349')),
-        (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0002084', 'UBERON:0002349')),
-        (('UBERON:0000948', 'UBERON:0015129'), ('UBERON:0000948', 'UBERON:0002348')),
-        (('UBERON:0002080', 'UBERON:0002349'), ('UBERON:0002080', 'UBERON:0002165')),
-        (('UBERON:0002084', 'UBERON:0002349'), ('UBERON:0002084', 'UBERON:0002165'))
+          (('UBERON:0000948', 'UBERON:0015129'), ('UBERON:0000948', 'UBERON:0002348')),  # when only this and cycle it works ish ???
+            #(('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0000948', 'UBERON:0002348')),  # cycle here
+            (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0002084', 'UBERON:0002349')),
+              (('UBERON:0002084', 'UBERON:0002349'), ('UBERON:0002084', 'UBERON:0002165')),
+            (('UBERON:0000948', 'UBERON:0002348'), ('UBERON:0002080', 'UBERON:0002349')),
+              (('UBERON:0002080', 'UBERON:0002349'), ('UBERON:0002080', 'UBERON:0002165')),
     ]
     adj_7 = tuple(tuple(rl(*(a if a is None else a for a in _rl)) for _rl in rls) for rls in adj_raw_7)
     nst_7 = adj_to_nst(adj_7)
     rej_7 = nst_to_adj(nst_7)
     pprint(('nst_7', nst_7))
-    pprint(('adj_7', adj_7))
-    pprint(('rej_7', rej_7))
-    #assert sorted(adj_7) == sorted(rej_7)  # expected to fail due to cycles
+    pprint(('adj_7', sorted(adj_7)))
+    pprint(('rej_7', sorted(rej_7)))
+    assert sorted(adj_7) == sorted(rej_7)
     bn = to_rdf(g, nst_7)
     g.add((ilxtr['sub-7'], ilxtr.predicate, bn))
 
     adj_raw_8 = [
         # this produces complete nonsense
-#        (('ILX:0793559', None), ('UBERON:0001258', 'UBERON:0002384')),
-#        (('ILX:0793559', None), ('UBERON:0006082', 'UBERON:0002384')),
-#        (('UBERON:0001258', 'UBERON:0001135'), ('UBERON:0001258', 'UBERON:0000483')),
-#        (('UBERON:0001258', 'UBERON:0002384'), ('ILX:0793663', 'UBERON:0035965')),
-#        (('UBERON:0001258', 'UBERON:0002384'), ('UBERON:0001258', 'UBERON:0001135')),
-#        (('UBERON:0002856', None), ('UBERON:0006450', 'UBERON:0002318')),
-#        (('UBERON:0002856', None), ('UBERON:0018683', None)),
-        #(('UBERON:0002857', None), ('UBERON:0006448', 'UBERON:0002318')),
-#        (('UBERON:0002857', None), ('UBERON:0018683', None)),
-#        (('UBERON:0005303', None), ('UBERON:0016508', None)),
-#        (('UBERON:0005453', None), ('UBERON:0005303', None)),
-#        (('UBERON:0006082', 'UBERON:0001135'), ('UBERON:0006082', 'UBERON:0000483')),
-#        (('UBERON:0006082', 'UBERON:0002384'), ('ILX:0793664', 'UBERON:0035965')),
-#        (('UBERON:0006082', 'UBERON:0002384'), ('UBERON:0006082', 'UBERON:0001135')),
-        #(('UBERON:0006448', 'UBERON:0002318'), ('UBERON:0006448', 'UBERON:0002181')),
-        #(('UBERON:0006448', 'UBERON:0002318'), ('UBERON:0006448', 'UBERON:0004677')),
-        #(('UBERON:0006448', 'UBERON:0002318'), ('UBERON:0006448', 'UBERON:0006118')),
-        #(('UBERON:0006448', 'UBERON:0002318'), ('UBERON:0006448', 'UBERON:0016576')),
-        #(('UBERON:0006448', 'UBERON:0002318'), ('UBERON:0006448', 'UBERON:0016578')),
-        # XXX why the, how the, heck does this produce the result ...
+        # XXX why the, how the, heck does this produce the result ... (answer: only check equality of region)
         (('UBERON:0006450', 'UBERON:0002318'), ('UBERON:0006450', 'UBERON:0002181')),
         (('UBERON:0006450', 'UBERON:0002318'), ('UBERON:0006450', 'UBERON:0004677')),
         (('UBERON:0006450', 'UBERON:0002318'), ('UBERON:0006450', 'UBERON:0006118')),
         (('UBERON:0006450', 'UBERON:0002318'), ('UBERON:0006450', 'UBERON:0016576')),
         (('UBERON:0006450', 'UBERON:0002318'), ('UBERON:0006450', 'UBERON:0016578')),
-        #(('UBERON:0016508', None), ('ILX:0793559', None)),
-        #(('UBERON:0018683', None), ('UBERON:0005453', None)),
     ]
     adj_8 = tuple(tuple(rl(*(a if a is None else a for a in _rl)) for _rl in rls) for rls in adj_raw_8)
     adj_alt_8 = tuple(tuple('-'.join(('' if a is None else a for a in _rl)) for _rl in rls) for rls in adj_raw_8)
@@ -385,7 +377,53 @@ def test():
     bn = to_rdf(g, nst_8)
     g.add((ilxtr['sub-8'], ilxtr.predicate, bn))
 
+    adj_raw_9 = [  # from keast 11 branching issue 18683 same as for adj_raw_8
+        (('UBERON:0002856', None), ('UBERON:0006450', None #'UBERON:0002318'
+                                    )),
+        (('UBERON:0002856', None), ('UBERON:0018683', None)),
+        (('UBERON:0002857', None), ('UBERON:0006448', None #'UBERON:0002318'
+                                    )),
+        (('UBERON:0002857', None), ('UBERON:0018683', None)),
+
+        #(('UBERON:0018683', None), ('UBERON:0005453', None)),
+    ]
+    adj_9 = tuple(tuple(rl(*(a if a is None else a for a in _rl)) for _rl in rls) for rls in adj_raw_9)
+    nst_9 = adj_to_nst(adj_9)
+    rej_9 = nst_to_adj(nst_9)
+    pprint(('nst_9', nst_9))
+    pprint(('adj_9', adj_9))
+    pprint(('rej_9', rej_9))
+    assert sorted(adj_9) == sorted(rej_9), [a for a in adj_9 if a not in rej_9]
+    bn = to_rdf(g, nst_9)
+    g.add((ilxtr['sub-9'], ilxtr.predicate, bn))
+
+    adj_10 = [
+        (1, 2),
+        (2, 3),
+        (3, 4),
+        (4, 5),
+        (5, 6),
+        (5, 2),  # long cycle not including start
+        (6, 1),  # long cycle including "start"
+    ]
+    nst_10 = adj_to_nst(adj_10)
+    rej_10 = nst_to_adj(nst_10)
+    pprint(('nst_10', nst_10))
+    pprint(('adj_10', adj_10))
+    pprint(('rej_10', rej_10))
+    assert sorted(adj_10) == sorted(rej_10), [a for a in adj_10 if a not in rej_10]
+    bn = to_rdf(g, nst_10)
+    g.add((ilxtr['sub-10'], ilxtr.predicate, bn))
+
     g.debug()
+
+    # cycle tests
+    adj_to_nst([(1, 2), (2, 3), (2, 2)])  # ok because does not include start
+    adj_to_nst([(1, 2), (2, 3), (3, 3)])  # ok because does not include start
+    adj_to_nst([(4, 2), (1, 2), (2, 3), (3, 1)])  # ok because does not include all starts
+    adj_to_nst([(4, 2), (1, 2), (2, 3), (3, 1), (3, 4)])  # includes all start node
+    adj_to_nst([(1, 2), (2, 3), (3, 1)])  # includes all start node
+    adj_to_nst([(1, 2), (2, 3), (1, 1)])  # includes all start nodes
 
 
 if __name__ == '__main__':
