@@ -233,6 +233,9 @@ def main(local=False, anatomical_entities=False, anatent_simple=False):
     n = mvp_ingest[0]
     fc = for_composer(n)
 
+    # example partial orders
+    view_partial_orders = [tuple(simplify_nested(simplify, n.partialOrder())) for n in neurons]
+
     if anatomical_entities:
         location_summary(neurons, _noloc_query_services, anatent_simple)
 
