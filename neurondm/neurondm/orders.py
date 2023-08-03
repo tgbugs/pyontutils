@@ -49,6 +49,9 @@ def inest(adj, start, seen, expect, starts):
 
 
 def adj_to_nst(adj, start=None):
+    if not adj:
+        return tuple()
+
     keys = set([a[0] for a in adj])
     values = set([a[1] for a in adj])
     #inverted = [(a[1], a[0]) for a in adj]  # unused
