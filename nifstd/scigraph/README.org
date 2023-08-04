@@ -829,7 +829,7 @@ cp -a data/*.ttl <<&path-build-sparc-sckan()>>/
 popd
 
 pushd <<&path-build-sparc-sckan()>>
-cat curation-export-published.ttl | \
+cat curation-export-published.ttl | sed 's,\x00,^@,g' | \
 ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export-published.owl || exit 1
 cat protcur.ttl | \
 ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/protcur.owl || exit 2
