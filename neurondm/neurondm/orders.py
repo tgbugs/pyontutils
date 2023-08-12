@@ -80,8 +80,20 @@ def adj_to_nst(adj, start=None):
         return ["blank", *l]
 
 
-def lin_to_adj(linear):
-    return tuple(zip(linear[:-1], linear[1:]))
+def lin_to_adj(distinct_paths, linkers=tuple()):
+    adj = []
+    for linear in distinct_paths:
+        adj.extend(tuple(zip(linear[:-1], linear[1:])))
+
+    adj.extend(linkers)
+    # [(t, c) for t, c in sigh.most_common() if c > 1]
+    # FIXME the cycle detection in tsort in adj_to_lin is not working ???
+    if len(adj) != len(set(adj)):
+        sigh = Counter(adj)
+        msg = f'duplicate paths in linear representation\n{adj}'
+        raise Exception(msg)
+
+    return tuple(adj)
 
 
 def toposort(adj):
@@ -93,7 +105,7 @@ def toposort(adj):
     _values = set([b for a, b in adj])
     starts = list(_keys - _values)
 
-    unmarked = list(_keys | _values)
+    unmarked = sorted((_keys | _values), key=lambda t: (t if isinstance(t, rl) else rl(t, None)))
     temp = set()
     out = []
     def visit(n):
@@ -132,12 +144,19 @@ def adj_to_lin(adj):
     [_dd[b].append(a) for a, b in adj]
     incoming = dict(_dd)
 
+    if len(tsorted) != len(set(tsorted)):
+        raise Exception('sigh al')
+
     paths = {n: [n] for n in tsorted}
     for v in tsorted:
         if v in incoming:
             for w in incoming[v]:
-                if len(paths[w]) <= len(paths[v]):
-                    paths[w].extend(paths[v])
+                lpw, lpv = len(paths[w]), len(paths[v])
+                if lpw <= lpv:
+                    # always add the w to paths[v] never extend
+                    # paths[w] it works in a subset of cases but is
+                    # fundamentally incorrect and can lead to cycles
+                    paths[w] = [w] + paths[v]
 
     seen = set()
     distinct = set()
@@ -151,7 +170,9 @@ def adj_to_lin(adj):
         if start not in seen and end not in seen:
             if start in incoming:
                 inc = incoming[start]
-                distinct.add((inc[0], *path))
+                _path = inc[0], *path
+                distinct.add(_path)
+                _intermediate.update(list(zip(_path[:-1], _path[1:])))
                 linkers.update([(i, start) for i in inc[1:]])
                 linked.add(start)
             else:
@@ -161,7 +182,12 @@ def adj_to_lin(adj):
 
             seen.update(path)
         elif start not in seen and end in seen:  # multi-parent case
-            path_prefix = []
+            if start in incoming:
+                inc = incoming[start]
+                path_prefix = [inc[0]]
+            else:
+                inc = None
+                path_prefix = []
             for n in path:
                 path_prefix.append(n)
                 if n in seen:
@@ -169,6 +195,10 @@ def adj_to_lin(adj):
                     break
 
             distinct.add(tuple(path_prefix))
+            _intermediate.update(list(zip(path_prefix[:-1], path_prefix[1:])))
+            if inc is not None:
+                linkers.update([(i, start) for i in inc[1:]])
+                linked.add(start)
             seen.update(path_prefix)
 
         elif start in incoming and start not in linked:  # multiparent case
@@ -349,23 +379,21 @@ def test():
     bn = to_rdf(g, nst_2)
     g.add((ilxtr['sub-2'], ilxtr.predicate, bn))
 
-    lin_3 = [1, 2, 3, 4, 5, 6]
+    lin_3 = ([1, 2, 3, 4, 5, 6],)
     adj_3 = lin_to_adj(lin_3)
     nst_3 = adj_to_nst(adj_3)
     lln_3 = adj_to_lin(adj_3)
+    assert lin_3 == tuple(list(l) for l in lln_3[0]) and not lln_3[1], (lin_3, tuple(list(l) for l in lln_3[0]), lln_3[1])
     print('nst_3', nst_3)
     print('lln_3', lln_3)
     bn = to_rdf(g, nst_3)
     g.add((ilxtr['sub-3'], ilxtr.predicate, bn))
 
-    # multiple linear should work if we concat
-    # the outputs together
-    adj_4 = tuple(set([pair for lin in
-                       ([1, 2, 3, 4, 5],
-                        [3, 6, 7],)
-             for pair in lin_to_adj(lin)]))
+    lin_4 = ([1, 2, 3, 4, 5], [3, 6, 7],)
+    adj_4 = lin_to_adj(lin_4)
     nst_4 = adj_to_nst(adj_4)
     lln_4 = adj_to_lin(adj_4)
+    assert lin_4 == tuple(list(l) for l in lln_4[0]) and not lln_4[1], (lin_4, tuple(list(l) for l in lln_4[0]), lln_4[1])
     print('lln_4', lln_4)
     print('nst_4', nst_4)
     bn = to_rdf(g, nst_4)
@@ -404,11 +432,13 @@ def test():
     nst_6 = adj_to_nst(adj_6)
     lln_6 = adj_to_lin(adj_6)
     rej_6 = nst_to_adj(nst_6)
+    rel_6 = lin_to_adj(*lln_6)
     pprint(('nst_6', nst_6))
     pprint(('adj_6', adj_6))
     pprint(('rej_6', rej_6))
+    pprint(('rel_6', rel_6))
     pprint(('lln_6', lln_6))
-    assert sorted(adj_6) == sorted(rej_6)
+    assert sorted(adj_6) == sorted(rej_6) == sorted(rel_6), breakpoint()
     bn = to_rdf(g, nst_6)
     g.add((ilxtr['sub-6'], ilxtr.predicate, bn))
 
@@ -491,11 +521,12 @@ def test():
     nst_8 = adj_to_nst(adj_8)
     lln_8 = adj_to_lin(adj_8)
     rej_8 = nst_to_adj(nst_8)
+    rel_8 = lin_to_adj(*lln_8)
     pprint(('nst_8', nst_8), width=120)
     pprint(('adj_8', adj_8), width=120)
     pprint(('rej_8', rej_8), width=120)
     pprint(('lln_8', lln_8))
-    assert sorted(adj_8) == sorted(rej_8)
+    assert sorted(adj_8) == sorted(rej_8) == sorted(rel_8)
     bn = to_rdf(g, nst_8)
     g.add((ilxtr['sub-8'], ilxtr.predicate, bn))
 
@@ -513,11 +544,12 @@ def test():
     nst_9 = adj_to_nst(adj_9)
     lln_9 = adj_to_lin(adj_9)
     rej_9 = nst_to_adj(nst_9)
+    rel_9 = lin_to_adj(*lln_9)
     pprint(('nst_9', nst_9))
     pprint(('adj_9', adj_9))
     pprint(('rej_9', rej_9))
     pprint(('lln_9', lln_9))
-    assert sorted(adj_9) == sorted(rej_9), [a for a in adj_9 if a not in rej_9]
+    assert sorted(adj_9) == sorted(rej_9) == sorted(rel_9), [a for a in adj_9 if a not in rej_9]
     bn = to_rdf(g, nst_9)
     g.add((ilxtr['sub-9'], ilxtr.predicate, bn))
 
@@ -538,6 +570,21 @@ def test():
     assert sorted(adj_10) == sorted(rej_10), [a for a in adj_10 if a not in rej_10]
     bn = to_rdf(g, nst_10)
     g.add((ilxtr['sub-10'], ilxtr.predicate, bn))
+
+    lin_11 = [
+        [0, 1, 2,       5, 6, 7, 8,],
+        [      2, 3, 4, 5,         ],
+    ]
+    adj_11 = lin_to_adj(lin_11)
+    lln_11 = adj_to_lin(adj_11)
+
+    adj_12 = (
+        (1, 3),
+        (1, 2),
+        (2, 4),)
+    lln_12 = adj_to_lin(adj_12)
+    rel_12 = lin_to_adj(*lln_12)
+    assert sorted(adj_12) == sorted(rel_12), breakpoint()
 
     g.debug()
 
