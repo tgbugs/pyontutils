@@ -51,6 +51,18 @@ def simplify_nested(f, nested):
             yield f(e)
 
 
+def filter_cycles(adj):
+    out = []
+    for a, b in adj:
+        if a == b:
+            log.warning(f'cycle removed on {a}')
+            continue
+
+        out.append((a, b))
+
+    return out
+
+
 def for_composer(n, cull=False):
     lpes, lrdf, collect = makelpesrdf()
     _po = n.partialOrder()
@@ -235,6 +247,25 @@ def main(local=False, anatomical_entities=False, anatent_simple=False):
 
     # example partial orders
     view_partial_orders = [tuple(simplify_nested(simplify, n.partialOrder())) for n in neurons]
+
+    # example linearized orders
+    def linearize(n):
+        try:
+            adj = filter_cycles(orders.nst_to_adj(tuple(simplify_nested(simplify, n.partialOrder()))))
+            dis, lin = orders.adj_to_lin(adj)
+            return dis, lin
+        except Exception as e:
+            log.exception(e)
+            log.error(f'cycle in\n{n}')
+            return [], []
+
+    def _rend(dislin):
+        dis, lin = dislin
+        return [' '.join([n.hash_thing() if isinstance(n, orders.rl) else n for n in d])
+                for d in sorted(dis, key=len, reverse=True)], [[n.hash_thing() if isinstance(n, orders.rl) else n for n in d] for d in lin]
+
+    linear_orders = sorted([(n.id_, linearize(n)) for n in neurons])
+    view_linear_orders = [(i, _rend(dislin)) for i, dislin in linear_orders]
 
     if anatomical_entities:
         location_summary(neurons, _noloc_query_services, anatent_simple)
