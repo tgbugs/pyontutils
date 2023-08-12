@@ -1,4 +1,5 @@
-from collections import Counter
+from pyontutils import identity_bnode as idbn
+from collections import Counter, defaultdict
 
 
 def nst_to_adj(l):
@@ -83,12 +84,106 @@ def lin_to_adj(linear):
     return tuple(zip(linear[:-1], linear[1:]))
 
 
+def toposort(adj):
+    _dd = defaultdict(list)
+    [_dd[a].append(b) for a, b in adj]
+    nexts = dict(_dd)
+
+    _keys = set([a for a, b in adj])
+    _values = set([b for a, b in adj])
+    starts = list(_keys - _values)
+
+    unmarked = list(_keys | _values)
+    temp = set()
+    out = []
+    def visit(n):
+        if n not in unmarked:
+            return
+        if n in temp:
+            import pprint
+            raise Exception(f'oops you have a cycle {n}\n{pprint.pformat(n)}')
+
+        temp.add(n)
+        if n in nexts:
+            for m in nexts[n]:
+                visit(m)
+
+        temp.remove(n)
+        unmarked.remove(n)
+        out.append(n)
+
+    while unmarked:
+        n = unmarked[0]
+        visit(n)
+
+    return out
+
+
 def adj_to_lin(adj):
     # this is not deterministic when there are runs of equal length
     # this should return a list of linear paths from longest to
     # shortest that are sufficient to cover all nodes, essentially
     # the longest single path through the tree and then branches
-    raise NotImplementedError('TODO')
+
+    # yay dags have a linear time algo
+    tsorted = toposort(adj)
+
+    _dd = defaultdict(list)
+    [_dd[b].append(a) for a, b in adj]
+    incoming = dict(_dd)
+
+    paths = {n: [n] for n in tsorted}
+    for v in tsorted:
+        if v in incoming:
+            for w in incoming[v]:
+                if len(paths[w]) <= len(paths[v]):
+                    paths[w].extend(paths[v])
+
+    seen = set()
+    distinct = set()
+    linkers = set()  # extra linkers are only needed if there is more than one incoming edge for short paths
+    linked = set()
+    spaths = sorted([tuple(v) for v in paths.values()], key=lambda v: len(v), reverse=True)
+    _intermediate = set()
+    for path in spaths:
+        start = path[0]
+        end = path[-1]
+        if start not in seen and end not in seen:
+            if start in incoming:
+                inc = incoming[start]
+                distinct.add((inc[0], *path))
+                linkers.update([(i, start) for i in inc[1:]])
+                linked.add(start)
+            else:
+                distinct.add(path)
+                # FIXME watch out for going quadratic because of this
+                _intermediate.update(list(zip(path[:-1], path[1:])))
+
+            seen.update(path)
+        elif start not in seen and end in seen:  # multi-parent case
+            path_prefix = []
+            for n in path:
+                path_prefix.append(n)
+                if n in seen:
+                    # put the break after so we don't have to add forward linkers
+                    break
+
+            distinct.add(tuple(path_prefix))
+            seen.update(path_prefix)
+
+        elif start in incoming and start not in linked:  # multiparent case
+            # edge case where you have ((1 2) (1 3) (4 2) (4 5)) and (4 2) is not included
+            # but all other potential linkers are so you have to skip potential linkers that
+            # are already in the distinct ... the other possibility would be to simply include
+            # the linkers in distinct, except I think it is clearer to keep them separate?
+            # consider the design tradeoff
+            linkers.update(
+                [(i, start) for i in incoming[start]
+                 # FIXME surely there is a better way to do this than to check intermediates
+                 if (i, start) not in distinct and (i, start) not in _intermediate])
+            linked.add(start)
+
+    return distinct, linkers
 
 
 def bind_rdflib():
@@ -189,6 +284,14 @@ class rl:
             olay = '' if other.layer is None else other.layer
             return sreg < oreg or slay < olay
 
+    def hash_thing(self):
+        pair = self.region, self.layer
+        i = idbn.IdentityBNode(pair)
+        prefix_len = 10
+        a = i.cypher.__name__.split('_')[-1]
+        b = i.identity.hex()[:prefix_len]
+        return f'{a}_{prefix_len}:{b}'
+
 
 def test():
     from pprint import pprint
@@ -208,10 +311,12 @@ def test():
     )
 
     nested = adj_to_nst(adj_test)
+    linlin = adj_to_lin(adj_test)
     print('nested', nested)
     print('asdf', list(dvals('a', adj_test)))
     print('asdf', list(dvals('c', adj_test)))
     print('asdf', list(dvals('d', adj_test)))
+    print('linlin', linlin)
 
     adj_out = nst_to_adj(nested)
     print(adj_out)
@@ -238,6 +343,8 @@ def test():
         (ilxtr.f, ilxtr.g),
     )
     nst_2 = adj_to_nst(adj_2)
+    lln_2 = adj_to_lin(adj_2)
+    print('lln_2', lln_2)
     print('nst_2', nst_2)
     bn = to_rdf(g, nst_2)
     g.add((ilxtr['sub-2'], ilxtr.predicate, bn))
@@ -245,7 +352,9 @@ def test():
     lin_3 = [1, 2, 3, 4, 5, 6]
     adj_3 = lin_to_adj(lin_3)
     nst_3 = adj_to_nst(adj_3)
+    lln_3 = adj_to_lin(adj_3)
     print('nst_3', nst_3)
+    print('lln_3', lln_3)
     bn = to_rdf(g, nst_3)
     g.add((ilxtr['sub-3'], ilxtr.predicate, bn))
 
@@ -256,6 +365,8 @@ def test():
                         [3, 6, 7],)
              for pair in lin_to_adj(lin)]))
     nst_4 = adj_to_nst(adj_4)
+    lln_4 = adj_to_lin(adj_4)
+    print('lln_4', lln_4)
     print('nst_4', nst_4)
     bn = to_rdf(g, nst_4)
     g.add((ilxtr['sub-4'], ilxtr.predicate, bn))
@@ -269,6 +380,8 @@ def test():
         (rl(ilxtr.c, ilxtr.l3), rl(ilxtr.d,)),
     )
     nst_5 = adj_to_nst(adj_5)
+    lln_5 = adj_to_lin(adj_5)
+    pprint(('lln_5', lln_5))
     pprint(('nst_5', nst_5))
     bn = to_rdf(g, nst_5)
     g.add((ilxtr['sub-5'], ilxtr.predicate, bn))
@@ -289,10 +402,12 @@ def test():
         (2, 8),
     )
     nst_6 = adj_to_nst(adj_6)
+    lln_6 = adj_to_lin(adj_6)
     rej_6 = nst_to_adj(nst_6)
     pprint(('nst_6', nst_6))
     pprint(('adj_6', adj_6))
     pprint(('rej_6', rej_6))
+    pprint(('lln_6', lln_6))
     assert sorted(adj_6) == sorted(rej_6)
     bn = to_rdf(g, nst_6)
     g.add((ilxtr['sub-6'], ilxtr.predicate, bn))
@@ -347,10 +462,12 @@ def test():
     ]
     adj_7 = tuple(tuple(rl(*(a if a is None else a for a in _rl)) for _rl in rls) for rls in adj_raw_7)
     nst_7 = adj_to_nst(adj_7)
+    #lln_7 = adj_to_lin(adj_7)  # cycle
     rej_7 = nst_to_adj(nst_7)
     pprint(('nst_7', nst_7))
     pprint(('adj_7', sorted(adj_7)))
     pprint(('rej_7', sorted(rej_7)))
+    #pprint(('lln_7', lln_7))
     assert sorted(adj_7) == sorted(rej_7)
     bn = to_rdf(g, nst_7)
     g.add((ilxtr['sub-7'], ilxtr.predicate, bn))
@@ -372,10 +489,12 @@ def test():
     ee = adj_8[0][0] == adj_8[1][0]
     #rej_raw_8 = nst_to_adj(nst_raw_8)  # though we can't convert tuples back because of type issues
     nst_8 = adj_to_nst(adj_8)
+    lln_8 = adj_to_lin(adj_8)
     rej_8 = nst_to_adj(nst_8)
     pprint(('nst_8', nst_8), width=120)
     pprint(('adj_8', adj_8), width=120)
     pprint(('rej_8', rej_8), width=120)
+    pprint(('lln_8', lln_8))
     assert sorted(adj_8) == sorted(rej_8)
     bn = to_rdf(g, nst_8)
     g.add((ilxtr['sub-8'], ilxtr.predicate, bn))
@@ -392,10 +511,12 @@ def test():
     ]
     adj_9 = tuple(tuple(rl(*(a if a is None else a for a in _rl)) for _rl in rls) for rls in adj_raw_9)
     nst_9 = adj_to_nst(adj_9)
+    lln_9 = adj_to_lin(adj_9)
     rej_9 = nst_to_adj(nst_9)
     pprint(('nst_9', nst_9))
     pprint(('adj_9', adj_9))
     pprint(('rej_9', rej_9))
+    pprint(('lln_9', lln_9))
     assert sorted(adj_9) == sorted(rej_9), [a for a in adj_9 if a not in rej_9]
     bn = to_rdf(g, nst_9)
     g.add((ilxtr['sub-9'], ilxtr.predicate, bn))
