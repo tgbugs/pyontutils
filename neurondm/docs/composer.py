@@ -250,9 +250,19 @@ def main(local=False, anatomical_entities=False, anatent_simple=False):
 
     # example linearized orders
     def linearize(n):
+        def key(d):
+            return tuple((n.region, n.layer) if isinstance(n, orders.rl) else (n, '') for n in d)
+            # FIXME somehow the caste to orders.rl here results in a different sort order than
+            # the version above !?!??!
+            #return tuple(n if isinstance(n, orders.rl) else orders.rl(n) for n in d)
+
         try:
             adj = filter_cycles(orders.nst_to_adj(tuple(simplify_nested(simplify, n.partialOrder()))))
             dis, lin = orders.adj_to_lin(adj)
+            rej = orders.lin_to_adj(dis, lin)
+            sa, sj = sorted(adj, key=key), sorted(rej, key=key)
+            assert set(sa) == set(sj), breakpoint()  # XXX if this passes be the below fails we are in big trouble
+            assert sa == sj, breakpoint()
             return dis, lin
         except Exception as e:
             log.exception(e)
