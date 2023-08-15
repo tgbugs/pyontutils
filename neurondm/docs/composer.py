@@ -182,8 +182,33 @@ def location_summary(neurons, services, anatent_simple=False):
             csv.writer(f, lineterminator='\n').writerows(rows)
 
 
-def main(local=False, anatomical_entities=False, anatent_simple=False):
-    # if (local := True, anatomical_entities := True, anatent_simple := False):
+def reconcile(n):
+    lobjs = set(o for p in n._location_predicates._litmap.values() for o in n.getObjects(p))
+    po_rl = set(e for pair in orders.nst_to_adj(n.partialOrder()) for e in pair)
+    po_r = set(t.region if isinstance(t, orders.rl) else t for t in po_rl)
+    po_rl.difference_update({rdflib.Literal('blank')})
+    po_r.difference_update({rdflib.Literal('blank')})
+    #[if isinstance(e, orders.rl) else ]
+    both = po_r & lobjs
+    either = po_r | lobjs
+    missing_axioms = po_r - lobjs
+    missing_orders = lobjs - po_r
+    withl_missing_axioms = po_rl - lobjs
+    withl_missing_orders = lobjs - po_rl
+    ok_reg = not (missing_axioms or missing_orders)
+    ok_rl = not (withl_missing_axioms or withl_missing_orders)
+    return {
+        'ok_reg': ok_reg,
+        'ok_rl': ok_rl,
+        'withl_missing_axioms': withl_missing_axioms,
+        'withl_missing_orders': withl_missing_orders,
+        'missing_axioms': withl_missing_axioms,
+        'missing_orders': withl_missing_orders,
+    }
+
+
+def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconcile=False):
+    # if (local := True, anatomical_entities := True, anatent_simple := False, do_reconcile := False):
 
     config = Config('random-merge')
     g = OntGraph()  # load and query graph
@@ -276,6 +301,17 @@ def main(local=False, anatomical_entities=False, anatent_simple=False):
 
     linear_orders = sorted([(n.id_, linearize(n)) for n in neurons])
     view_linear_orders = [(i, _rend(dislin)) for i, dislin in linear_orders]
+
+    if do_reconcile:
+        _recs = [(n, reconcile(n)) for n in neurons]
+        recs_reg = [(n, r) for n, r in _recs if not r['ok_reg']]
+        recs_rl = [(n, r) for n, r in _recs if not r['ok_rl']]
+        msg = f'{len(recs_reg)} pops with reg issues, {len(recs_rl)} pops with rl issues'
+        log.info(msg)
+        sigh_reg = sorted([(len(r["missing_axioms"]), len(r["missing_orders"]), n, r) for n, r in recs_reg],
+                          key=lambda t: (t[0] + t[1], t[0], t[1]), reverse=True)
+        sigh_how = [s[:2] + tuple(OntId(_.id_).curie for _ in s[2:3]) for s in sigh_reg]
+        rep_reg = 'a  o  i\n' + '\n'.join(f'{a: >2} {o: >2} {i}' for a, o, i in sigh_how)
 
     if anatomical_entities:
         location_summary(neurons, _noloc_query_services, anatent_simple)
