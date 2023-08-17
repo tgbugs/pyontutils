@@ -210,6 +210,54 @@ def reconcile(n):
     }
 
 
+def lgen(u):
+    l = OntTerm(u).label
+    if isinstance(l, tuple):
+        log.warning(f'sigh {u} {l}')
+        l = l[0]
+    return textwrap.wrap(l, 30)
+
+
+def synviz(neurons):
+    index = {n.id_:n for n in neurons}
+    idstrs = ('keast', 'aacar', 'sstom', 'pancr', 'bolew', 'sdcol', 'splen', 'bromo',  # XXX hack :/
+              # FIXME mmset1 and 2 need ccomp to be easily visualized (ccomp is better for layout anyway)
+              'semves', 'prostate', 'mmset1', 'mmset2', 'mmset4',)
+    done = set()
+    subsets = []
+    for idstr in idstrs:
+        subset = set(n for n in neurons if idstr in n.identifier)
+        done.update(subset)
+        subsets.append((subset, idstr))
+
+    missed = set(neurons) - done
+    if missed:
+        subsets.append((missed, 'missed'))
+
+    for subset, idstr in subsets:
+        edges = [
+            (pre, index[post])
+            for pre in subset
+            for post in pre.getObjects(ilxtr.hasForwardConnectionPhenotype)]
+
+        dot = graphviz.Digraph(comment='forward connection')
+
+        for ne in set(ne for nene in edges for ne in nene):
+            dot.node(OntId(ne.id_).curie.replace(":", "-"),
+                     label=OntId(ne.id_).curie,
+                     #label=ne.origLabel
+                     )
+
+        for pre, post in edges:
+            dot.edge(OntId(pre.id_).curie.replace(":", "-"), OntId(post.id_).curie.replace(":", "-"))
+
+        base = pathlib.Path('/tmp/syntaptic/')
+        if not base.exists():
+            base.mkdir()
+
+        dot.render(base / f'neurons-synaptic-connectivity-{idstr}', format='svg')
+
+
 def gviz(n):
     nid = OntId(n.id_).curie
     dot = graphviz.Digraph(comment=nid)
@@ -220,17 +268,10 @@ def gviz(n):
     adj = [e for e in orders.nst_to_adj(n.partialOrder()) if e[0] != _bl]
     # FIXME labels need to be done once or it will be insanely slow
     nl = '\n'
-    def sigh(u):
-        l = OntTerm(u).label
-        if isinstance(l, tuple):
-            log.warning(f'sigh {u} {l}')
-            l = l[0]
-        return textwrap.wrap(l, 30)
-
     labels = {v: ((f'{v.hash_thing()}\n'
-                   f'{nl.join(sigh(v.region))}\nx\n'
-                   f'{nl.join(sigh(v.layer))}')
-              if isinstance(v, orders.rl) else f'{OntId(v).curie}\n{nl.join(sigh(v))}')
+                   f'{nl.join(lgen(v.region))}\nx\n'
+                   f'{nl.join(lgen(v.layer))}')
+              if isinstance(v, orders.rl) else f'{OntId(v).curie}\n{nl.join(lgen(v))}')
               for v in set(v for e in adj for v in e)}
     for ab in adj:
         a, b = ab
@@ -358,6 +399,7 @@ def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconc
         location_summary(neurons, _noloc_query_services, anatent_simple)
 
     if viz:
+        synviz(neurons)
         OntTerm.query._services = _old_query_services
         [gviz(n) for n in neurons]
 
