@@ -1,5 +1,8 @@
 import os
+import pathlib
+import textwrap
 import rdflib
+import graphviz
 from pyontutils.core import OntGraph, OntResIri, OntResPath
 from pyontutils.namespaces import rdfs, ilxtr
 from neurondm.core import Config, graphBase, log
@@ -207,8 +210,46 @@ def reconcile(n):
     }
 
 
-def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconcile=False):
-    # if (local := True, anatomical_entities := True, anatent_simple := False, do_reconcile := False):
+def gviz(n):
+    nid = OntId(n.id_).curie
+    dot = graphviz.Digraph(comment=nid)
+    dot.attr('graph', labelloc='t')
+    dot.attr('graph', label=n.origLabel)
+    dot.attr('node', fontname='DejaVu Sans Mono')
+    _bl = rdflib.Literal('blank')
+    adj = [e for e in orders.nst_to_adj(n.partialOrder()) if e[0] != _bl]
+    # FIXME labels need to be done once or it will be insanely slow
+    nl = '\n'
+    def sigh(u):
+        l = OntTerm(u).label
+        if isinstance(l, tuple):
+            log.warning(f'sigh {u} {l}')
+            l = l[0]
+        return textwrap.wrap(l, 30)
+
+    labels = {v: ((f'{v.hash_thing()}\n'
+                   f'{nl.join(sigh(v.region))}\nx\n'
+                   f'{nl.join(sigh(v.layer))}')
+              if isinstance(v, orders.rl) else f'{OntId(v).curie}\n{nl.join(sigh(v))}')
+              for v in set(v for e in adj for v in e)}
+    for ab in adj:
+        a, b = ab
+        c, d = [n.hash_thing().replace(":", "-") if isinstance(n, orders.rl) else OntId(n).curie.replace(":", "-") for n in ab]
+        dot.edge(c, d)
+        # XXX dupes
+        dot.node(c, label=labels[a])
+        dot.node(d, label=labels[b])
+
+    #print(dot.source)
+    base = pathlib.Path('/tmp/partial-orders/')
+    if not base.exists():
+        base.mkdir()
+
+    dot.render(base / f'neuron-po-{nid.replace(":", "-")}', format='svg')
+
+
+def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconcile=False, viz=False):
+    # if (local := True, anatomical_entities := True, anatent_simple := False, do_reconcile := False, viz := False):
 
     config = Config('random-merge')
     g = OntGraph()  # load and query graph
@@ -315,6 +356,10 @@ def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconc
 
     if anatomical_entities:
         location_summary(neurons, _noloc_query_services, anatent_simple)
+
+    if viz:
+        OntTerm.query._services = _old_query_services
+        [gviz(n) for n in neurons]
 
 
 if __name__ == '__main__':
