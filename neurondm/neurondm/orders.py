@@ -181,23 +181,29 @@ def adj_to_lin(adj):
                 _intermediate.update(list(zip(path[:-1], path[1:])))
 
             seen.update(path)
+
         elif start not in seen and end in seen:  # multi-parent case
             if start in incoming:
                 inc = incoming[start]
-                path_prefix = [inc[0]]
+                path_prefix = [inc[0]] if inc[0] not in seen else []
             else:
                 inc = None
                 path_prefix = []
             for n in path:
-                path_prefix.append(n)
                 if n in seen:
-                    # put the break after so we don't have to add forward linkers
+                    linkers.add((_prev, n))
+                    # put the break before append because
+                    # trying to detect overlap is an expensive operation
+                    # and this way is consistent with the multi-child case
                     break
+
+                _prev = n
+                path_prefix.append(n)
 
             distinct.add(tuple(path_prefix))
             _intermediate.update(list(zip(path_prefix[:-1], path_prefix[1:])))
             if inc is not None:
-                linkers.update([(i, start) for i in inc[1:]])
+                linkers.update([(i, start) for i in inc])
                 linked.add(start)
             seen.update(path_prefix)
 
