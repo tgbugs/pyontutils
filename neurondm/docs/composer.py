@@ -1,6 +1,7 @@
 import os
 import pathlib
 import textwrap
+from collections import defaultdict
 import rdflib
 import graphviz
 from pyontutils.core import OntGraph, OntResIri, OntResPath
@@ -289,8 +290,262 @@ def gviz(n):
     dot.render(base / f'neuron-po-{nid.replace(":", "-")}', format='svg')
 
 
-def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconcile=False, viz=False):
-    # if (local := True, anatomical_entities := True, anatent_simple := False, do_reconcile := False, viz := False):
+def apinat_ontology_to_internal(blob):
+    fixes = {
+        # white matter issues, cns white matter layer is not a parent class of the spinal cord layer
+        # the proliferation of terms for white matter in uberon without consistent modelling is a problem
+        'UBERON:0016549': 'UBERON:0002318',
+        # epicardium -> epicardial fat, issue is in the NPO representation I think? cause layer mismatch
+        'UBERON:0002348': 'UBERON:0015129',
+    }
+    exclude = (
+        # lingering old id not used anywhere (hopefully)
+        'lyph-cardiovascular-heart-fat-layer',  # -> mat-tissue-cardiovascular-epicardial-fat
+        'lyph-cardiovascular-heart-epicardium',  # related to the fix for 2348 -> 15129 above FIXME this won't work will it ... double replace
+        #'mat-peritoneal-serosa-of-esophagus',  # XXX mismatch between wbcrm and sstom modelling I think?
+
+    )
+    out = {}
+    lc = blob['localConventions']  # FIXME TODO use these to expand to OntId
+    for d in (*blob['lyphs'], *blob['materials']):
+        if 'ontologyTerms' not in d:
+            log.warning(f'missing ontologyTerms: {d}')
+            continue
+        ots = d['ontologyTerms']
+        id = d['id']
+        if id in exclude:
+            continue
+        if len(ots) > 1 or not ots:
+            log.error(ots)
+            continue
+        else:
+            # FIXME use localConventions first
+            ots0 = ots[0]
+            if ots0 in fixes:
+                log.info(f'replaced {ots0} -> {fixes[ots0]}')
+                ots0 = fixes[ots0]
+
+            oid = OntId(ots0)
+            if oid.u in out:
+                log.critical(f'DOUBLE ID FOR {oid}: {out[oid.u]} {id}')
+                continue
+            else:
+                out[oid.u] = id
+
+    return out
+
+
+def npo_to_apinat(neurons):
+    import requests
+    wbrcm = "https://raw.githubusercontent.com/open-physiology/apinatomy-models/master/models/wbrcm/source/wbrcm.json"
+    blob = requests.get(wbrcm).json()
+    lookup = apinat_ontology_to_internal(blob)
+    all_segments = [seggen(n, blob, lookup) for n in neurons]
+    _ok_segs = [(i, segs) for i, segs in enumerate(all_segments) if segs and all([v[0] and v[1] for v in segs.values()])]
+    globals().update(locals())
+    ok = [i for i, s in _ok_segs]
+    ok_segs = [s for i, s in _ok_segs]
+    log.info(f'ok/all: {len(ok_segs)}/{len(all_segments)}')
+    globals().update(locals())
+    all_chains = [c for i, n in enumerate(neurons) for c in chaingen(n, blob, lookup)]
+    ok_chains = [c for i, n in enumerate(neurons) if i in ok for c in chaingen(n, blob, lookup)]  # TODO group probably ...
+    for c in all_chains:
+        c['ok'] = c in ok_chains
+
+    out = {
+        'id': 'npo-neurons',
+        'name': 'NPO neuron types as ApiNATOMY neuron populations',
+        'imports': [wbrcm],
+        'namespace': 'npo-apinat',
+        'localConventions': [],  # TODO populate list of {'prefix': '', 'namespace': ''}
+        'chains': all_chains,
+     }
+    return out
+
+
+def get_layer_index(r_id, l_id, blob):
+    things = [l for l in blob['lyphs'] + blob['materials'] if l['id'] == r_id]
+    if not things:
+        msg = f'sigh? {r_id}'
+        raise ValueError(msg)
+
+    l = things[0]
+    if 'layers' in l:
+        layers = l['layers']
+        if l_id not in layers:
+            log.error(f'sigh: {r_id} {l_id} {layers}')
+        return layers.index(l_id)
+    elif 'supertype' in l:
+        return get_layer_index(l['supertype'], l_id, blob)
+    else:
+        raise ValueError('uhoh')
+
+
+def seggen(n, blob, lookup):
+    segments, dis = _seggen(n, blob, lookup)
+    return segments
+
+
+process_types = {
+    ilxtr.hasAxonLocatedIn: 'axon',
+    ilxtr.hasDendriteLocatedIn: 'dend',
+    ilxtr.hasSomaLocatedIn: 'soma',
+    ilxtr.hasAxonPresynapticElementIn: 'axon-term',
+    ilxtr.hasAxonSensorySubcellularElementIn: 'axon-sens',
+}
+
+
+def _seggen(n, blob, lookup):
+    _blank = rdflib.Literal('blank')
+    adj = [edge for edge in orders.nst_to_adj(n.partialOrder()) if edge[0] != _blank]
+    try:
+        dis, lin = orders.adj_to_lin(adj)
+    except Exception as e:
+        log.exception(e)
+        return {}, None
+
+
+    starts = [seq[0] for seq in dis]
+    int_dis = [seq[-1] for seq in dis if len(seq) > 1 and seq[-1] in starts]
+    assert not int_dis, 'derp'
+    in_linkers = set(v for edge in lin for v in edge)
+    tar_linkers = {}
+    src_linkers = {}
+    dd = defaultdict(set)
+    idp = OntId(n.identifier).curie.replace(":", "-")
+    for i, edge in enumerate(lin):
+        node_id = f'node-{idp}-{i}'
+        a, b = edge
+        if a in tar_linkers and b in src_linkers and tar_linkers[a] != src_linkers[b]:
+            # this is the case where we have to rewrite nodes because we discover that
+            # they converge at some later point because a vertex is present in multiple
+            # linkers, in this case we prefer and thus use the lowest existing node id
+            tla = tar_linkers[a]
+            slb = src_linkers[b]
+            node_id, rewrite = (tla, slb) if tla < slb else (slb, tla)
+            to_rewrite = dd[rewrite]
+            dd[rewrite] = None
+            for thing in to_rewrite:
+                for _d in (tar_linkers, src_linkers):
+                    if thing in _d:
+                        _d[thing] = node_id
+
+        elif a in tar_linkers:
+            node_id = tar_linkers[a]
+        elif b in src_linkers:
+            node_id = src_linkers[b]
+
+        src_linkers[b] = node_id
+        tar_linkers[a] = node_id
+        dd[node_id].update((a, b))
+
+    lindex = dict(dd)
+
+    # axiom lookup
+    alu = {o:p for p in n._location_predicates._litmap.values() for o in n.getObjects(p)}
+    po_rl = set(v for edge in adj for v in edge)
+
+    segments = {}
+    for vertex in po_rl:
+        seg = []
+        for e in ((vertex.region, vertex.layer) if isinstance(vertex, orders.rl) else (vertex, None)):
+            if e in lookup:
+                i = lookup[e]
+            else:
+                i = None
+
+            if e in alu:
+                t = alu[e]
+            else:
+                t = None
+
+            seg.append(i)
+            seg.append(t)
+
+            if e in tar_linkers:
+                ta = tar_linkers[e]
+            else:
+                ta = None
+
+            if e in src_linkers:
+                sr = src_linkers[e]
+            else:
+                sr = None
+
+            seg.append(ta)
+            seg.append(sr)
+
+        r_id, r_type, r_tar, r_src, l_id, l_type, l_tar, l_src = seg
+        if r_type and l_type and r_type != l_type:
+            msg = f'error rendring {n}: {r_type} != {l_type}'
+            log.error(msg)
+            return {}, dis
+        elif r_type:
+            actual_type = process_types[r_type]
+        elif l_type:
+            log.critical(f'uhoh {r_id} {l_id} {l_type}')
+            actual_type = process_types[l_type]
+        else:
+            actual_type = None
+
+        try:
+            layer_index = None if r_id is None or l_id is None else get_layer_index(r_id, l_id, blob)
+        except ValueError as e:
+            log.exception(e)
+            msg = f'error rendring {n}'
+            log.error(msg)
+            return {}, dis
+
+        seg.append(actual_type)
+        seg.append(layer_index)
+        segments[vertex] = seg
+
+    #if int_dis or src_linkers or tar_linkers:
+        #breakpoint()
+
+    return segments, dis
+
+
+def chaingen(n, blob, lookup):
+    segments, dis = _seggen(n, blob, lookup)
+    if not segments:
+        return []
+
+    chains = []
+    for i, seq in enumerate(dis):
+        lyphTemplates = []
+        housingLyphs = []
+        housingLayers = []
+        levels = []
+        root = None
+        #leaf = None
+        for j, vertex in enumerate(seq):  # XXX FIXME have to split chains by type because they can only have a single template :/
+            seg = segments[vertex]
+            r_id, r_type, r_tar, r_src, l_id, l_type, l_tar, l_src, actual_type, layer_index = seg
+            if j == 0 and r_src:
+                root = r_src
+
+            lyphTemplates.append(actual_type)
+            housingLyphs.append(r_id)  # FIXME wbkg:
+            housingLayers.append(layer_index)  # XXX looking at housingLayers in pancreas it is clearly wrong
+            levels.append(r_tar)
+
+        chain = {
+            'id': f'chain-{OntId(n.id_).curie.replace(":", "-")}-{i}',
+            'root': root,
+            #'leaf': '',
+            'lyphTemplates': lyphTemplates,
+            'housingLyphs': housingLyphs,
+            'housingLayers': housingLayers,
+            'levels': levels,
+         }
+        chains.append(chain)
+
+    return chains
+
+
+def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconcile=False, viz=False, chains=False):
+    # if (local := True, anatomical_entities := True, anatent_simple := False, do_reconcile := False, viz := False, chains := False):
 
     config = Config('random-merge')
     g = OntGraph()  # load and query graph
@@ -402,6 +657,13 @@ def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconc
         synviz(neurons)
         OntTerm.query._services = _old_query_services
         [gviz(n) for n in neurons]
+
+    if chains:
+        chains = npo_to_apinat(neurons)
+        ok = [c for c in chains['chains'] if c['ok']]
+        wl = [c for c in chains['chains'] if [_ for _ in c['levels'] if _]]
+        wr = [c for c in chains['chains'] if c['root']]
+        wlr = [c for c in chains['chains'] if c['root'] and [_ for _ in c['levels'] if _]]
 
 
 if __name__ == '__main__':
