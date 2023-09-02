@@ -216,7 +216,12 @@ def lgen(u):
     if isinstance(l, tuple):
         log.warning(f'sigh {u} {l}')
         l = l[0]
-    return textwrap.wrap(l, 30)
+    if l is None:
+        c = OntId(u).curie
+        log.warning(f'no label for {c}')
+        return c,
+    else:
+        return textwrap.wrap(l, 30)
 
 
 def synviz(neurons):
@@ -341,23 +346,27 @@ def npo_to_apinat(neurons):
     blob = requests.get(wbrcm).json()
     lookup = apinat_ontology_to_internal(blob)
     all_segments = [seggen(n, blob, lookup) for n in neurons]
-    _ok_segs = [(i, segs) for i, segs in enumerate(all_segments) if segs and all([v[0] and v[1] for v in segs.values()])]
+    _ok_segs = [(i, segs) for i, segs in enumerate(all_segments) if segs and all([v[0] and v[1] for v_all in segs.values() for v in v_all])]
     globals().update(locals())
     ok = [i for i, s in _ok_segs]
     ok_segs = [s for i, s in _ok_segs]
     log.info(f'ok/all: {len(ok_segs)}/{len(all_segments)}')
     globals().update(locals())
-    all_chains = [c for i, n in enumerate(neurons) for c in chaingen(n, blob, lookup)]
-    ok_chains = [c for i, n in enumerate(neurons) if i in ok for c in chaingen(n, blob, lookup)]  # TODO group probably ...
+    all_chains = [c for i, n in enumerate(neurons) for c in chaingen(n, blob, lookup, i)]
+    ok_chains = [c for i, n in enumerate(neurons) if i in ok for c in chaingen(n, blob, lookup, i)]  # TODO group probably ...
     for c in all_chains:
         c['ok'] = c in ok_chains
 
+    localConventions = {  # TODO derive from somewhere more sensible
+        'too': 'https://apinatomy.org/uris/models/too-map/ids/',
+        'wbkg': 'https://apinatomy.org/uris/models/wbrcm/ids/',
+    }
     out = {
         'id': 'npo-neurons',
         'name': 'NPO neuron types as ApiNATOMY neuron populations',
         'imports': [wbrcm],
         'namespace': 'npo-apinat',
-        'localConventions': [],  # TODO populate list of {'prefix': '', 'namespace': ''}
+        'localConventions': [{'prefix': k, 'namespace': v} for k, v in localConventions.items()],
         'chains': all_chains,
      }
     return out
@@ -387,11 +396,12 @@ def seggen(n, blob, lookup):
 
 
 process_types = {
-    ilxtr.hasAxonLocatedIn: 'axon',
-    ilxtr.hasDendriteLocatedIn: 'dend',
-    ilxtr.hasSomaLocatedIn: 'soma',
-    ilxtr.hasAxonPresynapticElementIn: 'axon-term',
-    ilxtr.hasAxonSensorySubcellularElementIn: 'axon-sens',
+    ilxtr.hasAxonLocatedIn: 'wbkg:lt-axon-tube',
+    ilxtr.hasDendriteLocatedIn: 'wbkg:lt-dend-bag',
+    ilxtr.hasSomaLocatedIn: ('wbkg:lt-soma-of-neuron', 'wbkg:lt-axon-tube'),  # FIXME see what to do about inferred dendrites
+    # FIXME also issue with inferring dendrite bag because we don't know whether the might be an explicit dendrite
+    ilxtr.hasAxonPresynapticElementIn: 'wbkg:lt-axon-bag',
+    ilxtr.hasAxonSensorySubcellularElementIn: 'lt-axon-sens-bag',
 }
 
 
@@ -403,7 +413,6 @@ def _seggen(n, blob, lookup):
     except Exception as e:
         log.exception(e)
         return {}, None
-
 
     starts = [seq[0] for seq in dis]
     int_dis = [seq[-1] for seq in dis if len(seq) > 1 and seq[-1] in starts]
@@ -425,18 +434,20 @@ def _seggen(n, blob, lookup):
             node_id, rewrite = (tla, slb) if tla < slb else (slb, tla)
             to_rewrite = dd[rewrite]
             dd[rewrite] = None
-            for thing in to_rewrite:
-                for _d in (tar_linkers, src_linkers):
-                    if thing in _d:
-                        _d[thing] = node_id
+            for identifier in to_rewrite:
+                for _linkers in (tar_linkers, src_linkers):
+                    if identifier in _linkers and _linkers[identifier] == rewrite:
+                        # must also check that the identifier matches rewrite otherwise we overwrite
+                        # a regions target with its source or source with its target
+                        _linkers[identifier] = node_id
 
         elif a in tar_linkers:
             node_id = tar_linkers[a]
         elif b in src_linkers:
             node_id = src_linkers[b]
 
-        src_linkers[b] = node_id
         tar_linkers[a] = node_id
+        src_linkers[b] = node_id
         dd[node_id].update((a, b))
 
     lindex = dict(dd)
@@ -447,6 +458,7 @@ def _seggen(n, blob, lookup):
 
     segments = {}
     for vertex in po_rl:
+        all_segs = []
         seg = []
         for e in ((vertex.region, vertex.layer) if isinstance(vertex, orders.rl) else (vertex, None)):
             if e in lookup:
@@ -496,9 +508,26 @@ def _seggen(n, blob, lookup):
             log.error(msg)
             return {}, dis
 
-        seg.append(actual_type)
-        seg.append(layer_index)
-        segments[vertex] = seg
+        if isinstance(actual_type, tuple):
+            # soma implied axon case
+            if len(actual_type) < 2:
+                raise ValueError('need at least two')
+
+            at0, *atd, atn = actual_type
+            s0 = r_id, r_type, None, r_src, l_id, l_type, None, l_src, at0, layer_index
+            all_segs.append(s0)
+            for at in atd:
+                nseg = r_id, r_type, None, None, l_id, l_type, None, None, at, layer_index
+                all_segs.append(nseg)
+
+            sn = r_id, r_type, r_tar, None, l_id, l_type, l_tar, None, atn, layer_index
+            all_segs.append(sn)
+        else:
+            seg.append(actual_type)
+            seg.append(layer_index)
+            all_segs.append(seg)
+
+        segments[vertex] = all_segs  # FIXME needs to be a list because a single soma segment can expand into multiple chain segments
 
     #if int_dis or src_linkers or tar_linkers:
         #breakpoint()
@@ -506,7 +535,7 @@ def _seggen(n, blob, lookup):
     return segments, dis
 
 
-def chaingen(n, blob, lookup):
+def chaingen(n, blob, lookup, index=0):
     segments, dis = _seggen(n, blob, lookup)
     if not segments:
         return []
@@ -520,25 +549,54 @@ def chaingen(n, blob, lookup):
         root = None
         #leaf = None
         for j, vertex in enumerate(seq):  # XXX FIXME have to split chains by type because they can only have a single template :/
-            seg = segments[vertex]
-            r_id, r_type, r_tar, r_src, l_id, l_type, l_tar, l_src, actual_type, layer_index = seg
-            if j == 0 and r_src:
-                root = r_src
+            all_segs = segments[vertex]
+            for k, seg in enumerate(all_segs):
+                r_id, r_type, r_tar, r_src, l_id, l_type, l_tar, l_src, actual_type, layer_index = seg
 
-            lyphTemplates.append(actual_type)
-            housingLyphs.append(r_id)  # FIXME wbkg:
-            housingLayers.append(layer_index)  # XXX looking at housingLayers in pancreas it is clearly wrong
-            levels.append(r_tar)
+                lyphTemplates.append(actual_type)
+                housingLyphs.append(None if r_id is None else 'wbkg:' + r_id)
+                housingLayers.append(layer_index)  # XXX looking at housingLayers in pancreas it is clearly wrong
+
+                # either nil or empty object if we don't need any explicit information
+                link = {}
+
+                if j == 0 and r_src and k == 0:
+                    root = r_src  # FIXME there is no way there are 8 that share a root for mmset1/11
+                elif r_src:
+                    # XXX shouldn't need this even in multiply branched cases
+                    # because it should be matched correctly by apinatomy ???
+                    # but there could be a bug in the chaingen code for levels?
+                    #link['source'] = r_src
+                    #breakpoint()
+                    pass
+
+                if actual_type is not None:
+                    link['conveyingLyph'] = actual_type #'lyph-template-type',
+                if r_tar is not None:
+                    # FIXME mmset1-11 everything has the same target, the 0th node which is also the root ???
+                    link['target'] = r_tar
+
+                if link:
+                    # FIXME seems like there is a bug where if the link structure is missing and id
+                    # the expansion code will incorrectly match it with other identical link objects
+                    # resulting in links appearing to be shared between many neurons
+                    # adding the id here is a workaround
+                    link['id'] = f'link-for-chains-{index}-{i}-{j}-{k}'
+
+                levels.append(link)  # TODO vs None
 
         chain = {
             'id': f'chain-{OntId(n.id_).curie.replace(":", "-")}-{i}',
-            'root': root,
             #'leaf': '',
-            'lyphTemplates': lyphTemplates,
+            # 'lyphTemplates': lyphTemplates,  # not useful for branched structures
             'housingLyphs': housingLyphs,
             'housingLayers': housingLayers,
-            'levels': levels,
+            'levels': levels,  # these are links so have to provide {'id': 'link-id', 'source': }
          }
+
+        if root is not None:
+            chain['root'] = root
+
         chains.append(chain)
 
     return chains
@@ -659,11 +717,14 @@ def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconc
         [gviz(n) for n in neurons]
 
     if chains:
+        import json
         chains = npo_to_apinat(neurons)
         ok = [c for c in chains['chains'] if c['ok']]
         wl = [c for c in chains['chains'] if [_ for _ in c['levels'] if _]]
-        wr = [c for c in chains['chains'] if c['root']]
-        wlr = [c for c in chains['chains'] if c['root'] and [_ for _ in c['levels'] if _]]
+        wr = [c for c in chains['chains'] if 'root' in c and c['root']]
+        wlr = [c for c in chains['chains'] if 'root' in c and c['root'] and [_ for _ in c['levels'] if _]]
+        with open('/tmp/test-npo-apinat-chains.json', 'wt') as f:
+            json.dump(chains, f, indent=2)
 
 
 if __name__ == '__main__':
