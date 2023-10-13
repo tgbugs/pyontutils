@@ -505,7 +505,7 @@ triples = (
     _t(tech.anestheticAdministration, 'anesthetic adminstration technique',
        # TODO delivered to partOf primaryparticipant
        # parent partof primary participant deliver or something
-      (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:38867', label='anaesthetic')),),
+      (ilxtr.hasPrimaryParticipant, restN(hasRole, OntTerm('CHEBI:38867', label='anaesthetic'))),),
 
     _t(tech.sedation, 'sedation technique',
        # FIXME sedative administration? reading a boring book? physical cooling? bonking on the head?
