@@ -4,7 +4,7 @@ from urllib.parse import quote as url_quote
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
-from neurondm.core import Config, NeuronEBM, Phenotype, NegPhenotype, log, OntId, add_partial_orders
+from neurondm.core import Config, NeuronEBM, Phenotype, NegPhenotype, log, OntCuries, OntId, add_partial_orders
 from neurondm import orders
 
 
@@ -29,6 +29,10 @@ class NLPProst(Sheet):
     name = 'off-nlp-il-prostate'
 
 
+class NLPFemrep(Sheet):
+    name = 'off-nlp-il-femrep'
+
+
 def nlp_ns(name):
     return rdflib.Namespace(interlex_namespace(f'tgbugs/uris/readable/sparc-nlp/{name}/'))
 
@@ -39,6 +43,7 @@ snames = {
     'MM Set 4': (NLP2, nlp_ns('mmset4')),
     'Seminal Vesicles': (NLPSemVes, nlp_ns('semves')),
     'Prostate': (NLPProst, nlp_ns('prostate')),
+    'Female Reproductive-HUMAN': (NLPFemrep, nlp_ns('femrep')),
 }
 
 
@@ -82,7 +87,8 @@ def ind_to_adj(ind_uri):
     return edges
 
 
-def main():
+def main(debug=False):
+    OntCuries({'ISBN13': 'https://uilx.org/tgbugs/u/r/isbn-13/',})
     cs = [c() for c in sheet_classes]
     trips = [[cl] + [c.value for c in
                      (r.id(), r.relationship(), r.identifier())]
@@ -120,33 +126,45 @@ def main():
     for cl in cs:
         _, nlpns = snames[cl.sheet_name]
         for r in cl.rows():
-            if (r.row_index > 0 and
-                r.id().value and
-                r.proposed_action().value.lower() != "don't add"):
-                # extra trips
-                #print(repr(r.id()))
-                s = OntId(nlpns[r.id().value])
-                #print(s)
-                asdf(s, ilxtr.sentenceNumber, r.sentence_number)
-                if hasattr(r, 'different_from_existing'):
-                    asdf(s, ilxtr.curatorNote, r.different_from_existing)
-                asdf(s, ilxtr.curatorNote, r.curation_notes)
-                asdf(s, ilxtr.reviewNote, r.review_notes)
-                asdf(s, ilxtr.reference, r.reference_pubmed_id__doi_or_text)
-                asdf(s, ilxtr.literatureCitation, r.literature_citation, split=',', rdf_type=lcc)
-                asdf(s, rdfs.label, r.neuron_population_label_a_to_b_via_c)
-                if hasattr(r, 'alert_explanation'):
-                    asdf(s, ilxtr.alertNote, r.alert_explanation)
+            try:
+                if (r.row_index > 0 and
+                    r.id().value and
+                    r.proposed_action().value.lower() != "don't add"):
+                    # extra trips
+                    #print(repr(r.id()))
+                    s = OntId(nlpns[r.id().value])
+                    #print(s)
+                    asdf(s, ilxtr.sentenceNumber, r.sentence_number)
+                    if hasattr(r, 'different_from_existing'):
+                        asdf(s, ilxtr.curatorNote, r.different_from_existing)
+                    asdf(s, ilxtr.curatorNote, r.curation_notes)
+                    asdf(s, ilxtr.reviewNote, r.review_notes)
+                    asdf(s, ilxtr.reference, r.reference_pubmed_id__doi_or_text)
+                    asdf(s, ilxtr.literatureCitation, r.literature_citation, split=',', rdf_type=lcc)
+                    asdf(s, rdfs.label, r.neuron_population_label_a_to_b_via_c)
+                    if hasattr(r, 'alert_explanation'):
+                        asdf(s, ilxtr.alertNote, r.alert_explanation)
 
-                if hasattr(r, 'explicit_complement') and r.explicit_complement().value:
-                    p = map_predicates(r.relationship().value)
-                    o = OntId(r.explicit_complement().value)
-                    ec[(s, p)] = o
+                    if hasattr(r, 'explicit_complement') and r.explicit_complement().value:
+                        p = map_predicates(r.relationship().value)
+                        o = OntId(r.explicit_complement().value)
+                        ec[(s, p)] = o
 
-                if hasattr(r, 'axonal_course_poset') and r.axonal_course_poset().value:
-                    # s.u and OntId(...).u to avoid duplicate subjects/objects in the graph
-                    # due to type vs instance issues for rdflib.URIRef and OntId
-                    dd[s.u].append((int(r.axonal_course_poset().value), OntId(r.identifier().value).u))
+                    if hasattr(r, 'axonal_course_poset') and r.axonal_course_poset().value:
+                        # s.u and OntId(...).u to avoid duplicate subjects/objects in the graph
+                        # due to type vs instance issues for rdflib.URIRef and OntId
+                        _v = r.identifier().value
+                        if not debug and not _v:
+                            raise ValueError('row missing object')
+
+                        _obj = OntId(_v).u if _v else TEMP.BROKEN_EMPTY
+
+                        dd[s.u].append((int(r.axonal_course_poset().value), _obj))
+
+            except Exception as e:
+                msg = f'\nbad row: | {" | ".join(r.values)} |'
+                log.error(msg)
+                raise e
 
     sorders = {k:sorted(v) for k, v in dd.items()}
     sadj = {k:ind_to_adj(v) for k, v in sorders.items()}
@@ -168,7 +186,15 @@ def main():
             log.error(f'sigh {s}')
             raise e
 
-        if p == ilxtr.hasForwardConnectionPhenotype:
+        if not _o:  # handle empty cell case
+            msg = f'missing object? {s.curie} {OntId(p).curie} ???'
+            log.error(msg)
+            if not debug:
+                raise ValueError(msg)
+            else:
+                _o = TEMP.BROKEN_EMPTY
+
+        elif p == ilxtr.hasForwardConnectionPhenotype:
             _o = nlpns[_o]
 
         o = OntId(_o)
@@ -202,6 +228,7 @@ def main():
     Phenotype.in_graph.bind('mmset4', snames['MM Set 4'][-1])  # XXX FIXME UGH
     Phenotype.in_graph.bind('semves', snames['Seminal Vesicles'][-1])
     Phenotype.in_graph.bind('prostate', snames['Prostate'][-1])
+    Phenotype.in_graph.bind('femrep', snames['Female Reproductive-HUMAN'][-1])
     config.write()
     labels = (
         #ilxtr.genLabel,
