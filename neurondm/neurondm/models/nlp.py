@@ -170,6 +170,10 @@ def main(debug=False):
     sadj = {k:ind_to_adj(v) for k, v in sorders.items()}
     snst = {k:orders.adj_to_nst(v) for k, v in sadj.items()}
 
+    # XXX config must be called before creating any phenotypes
+    # otherwise in_graph will not match when we go to serialize
+    config = Config('sparc-nlp')
+
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
         _, nlpns = snames[c.sheet_name]
@@ -213,8 +217,6 @@ def main(debug=False):
             dd[s].append(NegPhenotype(ec[(s, p)], p))
 
 
-    config = Config('sparc-nlp')
-
     sigh = []
     nrns = []
     for id, phenos in dd.items():
@@ -225,10 +227,14 @@ def main(debug=False):
 
         nrns.append(n)
 
-    Phenotype.in_graph.bind('mmset4', snames['MM Set 4'][-1])  # XXX FIXME UGH
-    Phenotype.in_graph.bind('semves', snames['Seminal Vesicles'][-1])
-    Phenotype.in_graph.bind('prostate', snames['Prostate'][-1])
-    Phenotype.in_graph.bind('femrep', snames['Female Reproductive-HUMAN'][-1])
+    def sigh_bind(n, p):  # XXX FIXME UGH
+        Phenotype.in_graph.bind(n, p)
+
+    sigh_bind('mmset4', snames['MM Set 4'][-1])
+    sigh_bind('semves', snames['Seminal Vesicles'][-1])
+    sigh_bind('prostate', snames['Prostate'][-1])
+    sigh_bind('femrep', snames['Female Reproductive-HUMAN'][-1])
+
     config.write()
     labels = (
         #ilxtr.genLabel,

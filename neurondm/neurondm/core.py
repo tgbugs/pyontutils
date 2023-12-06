@@ -1238,6 +1238,13 @@ class graphBase:
             raise TypeError(f'You must have at least a core_graph: {self.core_graph!r}')
 
         if type(self.in_graph) == str:
+            # FIXME AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+            # this is assigned many may times for every instance
+            # which is usually probably what we want in cases where
+            # phenotypes are defined before a call to config
+            # XXX HOWEVER this means breakage can happen if Config
+            # is not called before first using ANY of the subclasses
+            # which is DUMB, specifically misaligned namespace_managers
             self.in_graph = self.core_graph
 
         if type(self.out_graph) == str:
