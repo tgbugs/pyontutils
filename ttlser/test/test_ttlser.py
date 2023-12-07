@@ -10,6 +10,7 @@ from random import shuffle
 from pathlib import Path
 from collections import defaultdict
 import rdflib
+from rdflib.plugins.serializers.turtle import TurtleSerializer
 
 from ttlser import CustomTurtleSerializer, SubClassOfTurtleSerializer
 from ttlser import CompactTurtleSerializer, UncompactTurtleSerializer
@@ -256,3 +257,31 @@ class TestMultiBNode(unittest.TestCase):
         g2.parse(data=ser)
         assert oops in list(g.objects())
         assert oops in list(g2.objects())
+
+
+class TestCycle(unittest.TestCase):
+
+    path = 'test/evil.ttl'
+    serializer = CustomTurtleSerializer
+
+    def test_cycle(self):
+        g = rdflib.Graph()
+        g.parse(self.path)
+        tser = TurtleSerializer(g)
+        nser = self.serializer(g)
+
+        stream = BytesIO()
+        tser.serialize(stream)
+        ttl = stream.getvalue().decode()
+
+        stream = BytesIO()
+        nser.serialize(stream)
+        nit = stream.getvalue().decode()
+
+        gn = rdflib.Graph().parse(data=nit)
+        gt = rdflib.Graph().parse(data=ttl)
+        print(ttl)
+        print(nit)
+        assert len(g) == len(gt), 'urg'
+        assert len(g) == len(gn), 'urg'
+        assert len(gt) == len(gn), 'urg'

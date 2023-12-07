@@ -16,3 +16,17 @@ ilxtr:b2 rdf:first ilxtr:z ;
 ilxtr:b3 rdf:first ilxtr:e ;
     rdf:rest
     ilxtr:b1 .
+
+_:blank a ilxtr:p .
+
+_:blank0 a ilxtr:q ;
+    rdf:rest _:blank0 .
+
+_:blank1 a ilxtr:r ;
+    rdf:rest _:blank2 .
+
+_:blank2 a ilxtr:s ;
+    rdf:rest _:blank3 .
+
+_:blank3 a ilxtr:t ;
+    rdf:rest _:blank1 .
