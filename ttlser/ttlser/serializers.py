@@ -27,6 +27,94 @@ def natsort(s, pat=re.compile(r'([0-9]+)')):
     return tuple(int(t) if t.isdigit() else t.lower() for t in pat.split(s))
 
 
+def toposort_find_cycle(adj):
+    # see also neurondm.orders.toposort
+    nexts = {}
+    for a, b in adj:
+        if a not in nexts:
+            nexts[a] = []
+
+        nexts[a].append(b)
+
+    _keys = set([a for a, b in adj])
+    _values = set([b for a, b in adj])
+    starts = list(_keys - _values)
+
+    unmarked = sorted((_keys | _values), key=lambda t: t)
+    temp = set()
+    out = []
+    def visit(n):
+        if n not in unmarked:
+            return
+        if n in temp:
+            import pprint
+            raise Exception(f'oops you have a cycle {n}\n{pprint.pformat(n)}')
+
+        temp.add(n)
+        if n in nexts:
+            for m in nexts[n]:
+                visit(m)
+
+        temp.remove(n)
+        unmarked.remove(n)
+        out.append(n)
+
+    try:
+        while unmarked:
+            n = unmarked[0]
+            visit(n)
+    except Exception as e:
+        return True, n
+
+    return False, out
+
+
+def find_recurse_cycles_starts(recursable, store):
+    # fortunately recursable is already ranked by global sort value and as a
+    # result we should get stable sorting behavior
+
+    # if a bnode has more than one ref it should usually be excluded however if
+    # it is part of a cycle we need to deterministically pick which member of
+    # the cycle should be at the top (eek) which means we have to come up with a
+    # way to rank all possible serializations of a cycle, which has REALLY bad
+    # worst case behavior, so maybe we can find a better way using some other
+    # measure, oh, actually it is super easy because the cyclical nature means
+    # that you can ignore all edges that participate in the cycle when computing
+    # the raking of each of the subjects in the cycle
+
+    wrefs = [(subject, refs) for (isbnode, refs, subject) in recursable
+                if isbnode and refs]
+    refs_done = {s:0 for s, r in wrefs}
+    adj = []
+    for s, srefs in list(wrefs):
+        for o, orefs in list(wrefs):  # go in order for longer cycles
+            if list(store.predicates(s, o)):
+                adj.append((s, o))
+                refs_done[o] += 1
+                if refs_done[o] == orefs:
+                    # already accounted for all incoming edges
+                    # helps reduce potentially nasty combinatorics
+                    wrefs.remove((o, orefs))
+
+    cycrefs = []
+    while True:
+        # I'm pretty sure that the sort ordering means that
+        # result is the thing in the global sort ordering with
+        # the lowest value which means it should be the top
+        cycle, result = toposort_find_cycle(adj)  # FIXME bad multiple repeated calls to toposort
+        if cycle:
+            cycrefs.append(result)
+            for a, b in adj:
+                if b == result:
+                    # remove the first incoming offending edge and try again
+                    adj.remove((a, b))
+                    break
+        else:
+            break
+
+    return cycrefs
+
+
 def make_litsort(sortkey=natsort):
     def litsort(l):
         v = l.value
@@ -177,7 +265,7 @@ class CustomTurtleSerializer(TurtleSerializer):
     roundtrip_prefixes = '',
     short_name = 'nifttl'
     _name = 'ttlser deterministic'
-    __version = 'v1.2.1'
+    __version = 'v1.2.2'
     _newline = True
     _nl = '\n'
     _space = ' '
@@ -518,7 +606,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         if isinstance(bnode, BNode) or isinstance(bnode, QuotedGraph):
             try:
                 return self.node_rank[bnode]
-            except KeyError:
+            except KeyError as e:
                 # This is what we have to contend with here :/
                 # ro:proper_part_of oboInOwl:hasDefinition [ oboInOwl:hasDbXref [ ] ] .
                 sys.stderr.write(('\nWARNING: some node {bnode} that is an object '
@@ -557,6 +645,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                         # if a member is referenced as an object then
                         # it not a top class and should not be pulled
                         # up since it will expose the raw bnode
+                        # UNLESS IT IS IN A CYCLE: which we handle below
                         continue
 
                 subjects.append(member)
@@ -566,7 +655,8 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         recursable = [
             (isinstance(subject, BNode),
-             self._references[subject], subject)
+             self._references[subject],
+             subject)
             for subject in self._subjects if subject not in seen]
 
         try:
@@ -578,6 +668,10 @@ class CustomTurtleSerializer(TurtleSerializer):
         noref = [subject for (isbnode, refs, subject) in recursable
                  if isbnode and not refs]
         sections[-1].extend(noref)
+
+        # include bnodes that are the start of cycles
+        cycrefs = find_recurse_cycles_starts(recursable, self.store)
+        sections[-1].extend(cycrefs)
 
         # annotation targets
         at = [subject for (isbnode, refs, subject) in recursable
