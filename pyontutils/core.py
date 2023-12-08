@@ -569,6 +569,7 @@ class OntMetaIri(OntMeta, OntIdIri):
 
         _gz = self.identifier.endswith('.gz')
         _zip = self.identifier.endswith('.zip')
+        self._is_zip = False
         if _zip or _gz:
             id_hash = IdentityBNode(self.identifier).identity.hex()
             cache_root = idlib.config.auth.get_path('cache-path') / 'streams'
@@ -585,6 +586,7 @@ class OntMetaIri(OntMeta, OntIdIri):
                 # but will need to use xattrs to store
                 raise NotImplementedError('TODO')
             elif _zip:
+                self._is_zip = True
                 zp = aug.ZipPath(file)
                 # TODO so many progenitors
                 id_path = PurePath(self.identifier)
@@ -621,6 +623,7 @@ class OntMetaIri(OntMeta, OntIdIri):
                 # the filelike instead of from the generator in cases where
                 # it really is a file like instead of the resp.iter_content
                 # case that we deal with here
+                # FIXME TODO if rdf+xml then seek to zero?
                 gen = filelike_to_generator(filelike)
                 self._progenitors['stream-generator'] = gen  # NOTE reproducible progenitors only
 
@@ -868,12 +871,17 @@ class OntResIri(OntIdIri, OntResOnt):
         format, *header_chunks, (resp, gen) = generator
         self.headers = resp.headers
         self.format = format
+
+        self._is_zip = self.metadata()._is_zip
         # TODO populate header graph? not sure this is actually possible
         # maybe need to double wrap so that the header chunks always get
         # consumbed by the header object ?
-        if self.format == 'application/rdf+xml':
-            resp.close()
-            return None
+
+        # don't bail on this just because rdflib doesn't use it correctly right now
+        # FIXME TODO figure out how to clean up the connection though
+        #if self.format == 'application/rdf+xml':
+            #resp.close()
+            #return None
 
         return chain(header_chunks, gen)
 
@@ -885,9 +893,12 @@ class OntResIri(OntIdIri, OntResOnt):
         # TODO populate header graph? not sure this is actually possible
         # maybe need to double wrap so that the header chunks always get
         # consumbed by the header object ?
-        if self.format == 'application/rdf+xml':
-            resp.close()
-            return None
+
+        # don't bail on this just because rdflib doesn't use it correctly right now
+        # FIXME TODO figure out how to clean up the connection though
+        #if self.format == 'application/rdf+xml':
+            #resp.close()
+            #return None
 
         return chain(header_chunks, gen)
 
@@ -899,7 +910,12 @@ class OntResIri(OntIdIri, OntResOnt):
         if self.format == 'application/rdf+xml':
             # rdflib xml parsing uses and incremental parser that
             # constructs its own file object and byte stream
-            graph.parse(self.identifier, format=self.format)
+            if self._is_zip:
+                f = self.progenitor(type='stream-file')
+                f.seek(0)
+                graph.parse(f, format=self.format)
+            else:
+                graph.parse(self.identifier, format=self.format)
 
         elif self.format == 'text/owl-functional':  # FIXME TODO
             self._import_funowl()
@@ -1905,6 +1921,16 @@ class OntGraph(rdflib.Graph):
                 nodes.append(node)
 
         return nodes, edges
+
+    def cycle_check(self):
+        """ check immediate cycles between bnodes """
+        # something is creeping in here somehow
+        cycle_participants = []
+        for s, p, o in self:
+            if isinstance(s, rdflib.BNode) and s == o:
+                cycle_participants.append(s)
+
+        return cycle_participants
 
     def asOboGraph(self, predicate=None, label_predicate=None, restriction=True):
         """ supply a predicate to restrict the exported graph """
