@@ -183,13 +183,18 @@ class IdentityBNode(rdflib.BNode):
     def recurse(self, triples_or_pairs_or_thing, bnodes_ok=False):
         """ Absolutely must memoize the results for this otherwise
         processing large ontologies might as well be mining bitcon """
-        if triples_or_pairs_or_thing not in self._reccache:
-            self._reccache[triples_or_pairs_or_thing] = list(
-                self._recurse(triples_or_pairs_or_thing, bnodes_ok=bnodes_ok))
-        else:
-            self._cache_hits += 1
 
-        yield from self._reccache[triples_or_pairs_or_thing]
+        if isinstance(triples_or_pairs_or_thing, list):
+            # FIXME TODO make sure we filter the right types here
+            yield from self._recurse(triples_or_pairs_or_thing, bnodes_ok=bnodes_ok)
+        else:
+            if triples_or_pairs_or_thing not in self._reccache:
+                self._reccache[triples_or_pairs_or_thing] = list(
+                    self._recurse(triples_or_pairs_or_thing, bnodes_ok=bnodes_ok))
+            else:
+                self._cache_hits += 1
+
+            yield from self._reccache[triples_or_pairs_or_thing]
 
     def _recurse(self, triples_or_pairs_or_thing, bnodes_ok=False):
         for thing in triples_or_pairs_or_thing:
