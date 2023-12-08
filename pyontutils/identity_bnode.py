@@ -178,7 +178,20 @@ class IdentityBNode(rdflib.BNode):
             if isinstance(s, rdflib.BNode):
                 subgraph_mapping[s] = os
 
+    _reccache = {}
+    _cache_hits = 0
     def recurse(self, triples_or_pairs_or_thing, bnodes_ok=False):
+        """ Absolutely must memoize the results for this otherwise
+        processing large ontologies might as well be mining bitcon """
+        if triples_or_pairs_or_thing not in self._reccache:
+            self._reccache[triples_or_pairs_or_thing] = list(
+                self._recurse(triples_or_pairs_or_thing, bnodes_ok=bnodes_ok))
+        else:
+            self._cache_hits += 1
+
+        yield from self._reccache[triples_or_pairs_or_thing]
+
+    def _recurse(self, triples_or_pairs_or_thing, bnodes_ok=False):
         for thing in triples_or_pairs_or_thing:
             if thing is None:
                 yield self.null_identity
@@ -319,10 +332,15 @@ class IdentityBNode(rdflib.BNode):
                         # in a sane world ...
                         # there is only single triple where a
                         # bnode is an object so it is safe to pop
-                        gone = self.bnode_identities.pop(o)
-                        if self.debug and o in self.connected_heads or o in self.unnamed_heads:
-                            self.blank_identities[o] = gone
-                        assert gone == object_ident, 'something weird is going on'
+                        if False:
+                            # XXX but apparently not in real ontologies
+                            # we keep the mapping around becuase there are clearly some cases where
+                            # the assumptions are violated
+                            gone = self.bnode_identities.pop(o)
+                            if self.debug and o in self.connected_heads or o in self.unnamed_heads:
+                                self.blank_identities[o] = gone
+                            assert gone == object_ident, 'something weird is going on'
+
                         triples.remove(t)
                 else:
                     done = False
@@ -340,6 +358,7 @@ class IdentityBNode(rdflib.BNode):
                     subject_done = process_awaiting_triples(subject, triples, subject_idents)
                     if subject_done:
                         self.awaiting_object_identity.pop(subject)
+
                 else:
                     subject_done = True
 
@@ -361,6 +380,9 @@ class IdentityBNode(rdflib.BNode):
                         self.unnamed_subgraph_identities[subject] = subject_identity
                     elif subject not in self.bnode_identities:  # we popped it off above
                         self.bnode_identities[subject] = subject_identity
+                    else:
+                        # the subject is already in bnode_identities somehow?
+                        pass
 
             # second complete any nodes that have are fully identified
             for subject, triples in list(self.awaiting_object_identity.items()):  # list to pop from dict
@@ -369,6 +391,13 @@ class IdentityBNode(rdflib.BNode):
                     # the subject does disambiguation for us in a way that is consistent
                     # with how we identify other named triples
                     self.awaiting_object_identity.pop(subject)
+
+            # XXX FIXME HACK to ensure that self.ordered_identity gets called on the last round
+            if last:
+                break
+
+            if not self.awaiting_object_identity:
+                last = True
 
     def identity_function(self, triples_or_pairs_or_thing):
         if isinstance(triples_or_pairs_or_thing, bytes):  # serialization
@@ -393,6 +422,8 @@ class IdentityBNode(rdflib.BNode):
             self.to_skip = set()
             self.to_lift = set()
             self.find_heads = {}
+
+            # TODO parallelize here maybe?
             self.named_identities = tuple(self.recurse(triples_or_pairs_or_thing))  # memory :/
 
             self.unnamed_heads = self.bsubjects - self.bobjects
