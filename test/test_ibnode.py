@@ -1,38 +1,12 @@
 import unittest
 from pathlib import Path
 import rdflib
-from pyontutils.core import yield_recursive
+from pyontutils.core import yield_recursive, OntGraph
 from pyontutils.identity_bnode import bnodes, IdentityBNode
-from .common import temp_path
+from .common import temp_path, ensure_temp_path
 
 
 class TestIBNode(unittest.TestCase):
-    def setUp(self):
-        self.graph1 = rdflib.Graph()
-        file = Path('ttlser/test/nasty.ttl')
-        with open(file.as_posix(), 'rb') as f:
-            self.ser1 = f.read()
-
-        self.graph1.parse(data=self.ser1, format='turtle')
-
-        g2format = 'nt'
-        # broken serialization :/ with full lenght prefixes
-        self.ser2 = self.graph1.serialize(format=g2format, encoding='utf-8')
-        with open('test_ser2.ttl', 'wb') as f:
-            f.write(self.ser2)
-
-        self.graph2 = rdflib.Graph()
-        self.graph2.parse(data=self.ser2, format=g2format)
-
-        # FIXME this doesn't account for changes in identity
-        # under normalization for example by ttlser
-        # IBNode should not do the normalization itself
-        # because we do want normalized forms to have a
-        # different identity, the question does arrise however
-        # about where symmetric predicates fit ... I think those
-        # are not a normalization of representation case I think
-        # they are clearly an ordering cases and thus in scope for
-        # IBNode, in the say way reordering lists is in scope
 
     def test_bytes(self):
         test = b'hello'
@@ -62,9 +36,6 @@ class TestIBNode(unittest.TestCase):
 
         h = m.digest()
         assert ident == h, ident
-
-    def test_ser(self):
-        assert IdentityBNode(self.ser1) != IdentityBNode(self.ser2), 'serialization matches!'
 
     def test_nodes(self):
         assert IdentityBNode('hello there') == IdentityBNode('hello there')
@@ -103,19 +74,68 @@ class TestIBNode(unittest.TestCase):
 
         assert IdentityBNode(uri1) != IdentityBNode(uri2)
 
+    def test_symmetric(self):
+        msp = 'my-sym-pred'
+        forward = 'a', msp, 'b'
+        backward = tuple(reversed(forward))
+        f = IdentityBNode([forward], symmetric_predicates=[msp])
+        b = IdentityBNode([backward], symmetric_predicates=[msp])
+        assert f == b
+
+    def test_dropout(self):
+        # TODO
+        # test dropout of all but one subgraphs that share an identity
+        pass
+
+
+class TestIBNodeGraph(unittest.TestCase):
+
+    path_to_test = Path('ttlser/test/nasty.ttl')
+
+    def setUp(self):
+        self.graph1 = OntGraph()  # rdflib.Graph()
+        file = self.path_to_test
+        with open(file.as_posix(), 'rb') as f:
+            self.ser1 = f.read()
+
+        self.graph1.parse(data=self.ser1, format='turtle')
+
+        g2format = 'nt'
+        # broken serialization :/ with full length prefixes
+        self.ser2 = self.graph1.serialize(format=g2format, encoding='utf-8')
+        with open('test_ser2.ttl', 'wb') as f:
+            f.write(self.ser2)
+
+        self.graph2 = OntGraph() # rdflib.Graph()
+        self.graph2.parse(data=self.ser2, format=g2format)
+
+        # FIXME this doesn't account for changes in identity
+        # under normalization for example by ttlser
+        # IBNode should not do the normalization itself
+        # because we do want normalized forms to have a
+        # different identity, the question does arrise however
+        # about where symmetric predicates fit ... I think those
+        # are not a normalization of representation case I think
+        # they are clearly an ordering cases and thus in scope for
+        # IBNode, in the say way reordering lists is in scope
+
+    def test_ser(self):
+        assert IdentityBNode(self.ser1) != IdentityBNode(self.ser2), 'serialization matches!'
+
     def test_bnodes(self):
         assert sorted(bnodes(self.graph1)) != sorted(bnodes(self.graph2)), 'bnodes match!'
 
     def test_nifttl(self):
         fmt = 'nifttl'
         s1 = self.graph1.serialize(format=fmt)
-        g2 = rdflib.Graph()
+        g2 = OntGraph()  # rdflib.Graph()
         [g2.add(t) for t in self.graph1]
         [g2.namespace_manager.bind(k, str(v)) for k, v in self.graph1.namespaces()]
         s2 = g2.serialize(format=fmt)
         try:
             assert s1 == s2
         except AssertionError as e:
+            ensure_temp_path()
             with open(temp_path / 'f1.ttl', 'wb') as f1, open(temp_path / 'f2.ttl', 'wb') as f2:
                 f1.write(s1)
                 f2.write(s2)
@@ -182,19 +202,12 @@ class TestIBNode(unittest.TestCase):
 
         assert id1.identity == id2.identity, 'identities do not match'
 
-    def test_symmetric(self):
-        msp = 'my-sym-pred'
-        forward = 'a', msp, 'b'
-        backward = tuple(reversed(forward))
-        f = IdentityBNode([forward], symmetric_predicates=[msp])
-        b = IdentityBNode([backward], symmetric_predicates=[msp])
-        assert f == b
 
     def test_check(self):
         id1 = IdentityBNode(self.graph1)
         assert id1.check(self.graph2), 'check failed!'
 
-    def test_dropout(self):
-        # TODO
-        # test dropout of all but one subgraphs that share an identity
-        pass
+
+class TestIBNodeGraphAlt(TestIBNodeGraph):
+
+    path_to_test = Path('ttlser/test/evil.ttl')
