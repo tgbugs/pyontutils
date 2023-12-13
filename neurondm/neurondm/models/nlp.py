@@ -38,19 +38,19 @@ def nlp_ns(name):
 
 
 snames = {
-    'MM Set 1': (NLP1, nlp_ns('mmset1')),
-    'MM Set 2 Cranial Nerves': (NLP1, nlp_ns('mmset2cn')),
-    'MM Set 4': (NLP2, nlp_ns('mmset4')),
-    'Seminal Vesicles': (NLPSemVes, nlp_ns('semves')),
-    'Prostate': (NLPProst, nlp_ns('prostate')),
-    'Female Reproductive-HUMAN': (NLPFemrep, nlp_ns('femrep')),
+    'MM Set 1': (NLP1, nlp_ns('mmset1'), None),
+    'MM Set 2 Cranial Nerves': (NLP1, nlp_ns('mmset2cn'), 'cranial nerves'),
+    'MM Set 4': (NLP2, nlp_ns('mmset4'), None),
+    'Seminal Vesicles': (NLPSemVes, nlp_ns('semves'), 'seminal vesicles'),
+    'Prostate': (NLPProst, nlp_ns('prostate'), 'prostate'),
+    'Female Reproductive-HUMAN': (NLPFemrep, nlp_ns('femrep'), 'female reproductive system'),
 }
 
 
 sheet_classes = [
     type(f'{base.__name__}{sname.replace(" ", "_")}',
          (base,), dict(sheet_name=sname))
-    for sname, (base, ns) in snames.items()]
+    for sname, (base, ns, working_set) in snames.items()]
 
 
 def map_predicates(sheet_pred):
@@ -124,7 +124,7 @@ def main(debug=False):
     dd = defaultdict(list)
     ec = {}
     for cl in cs:
-        _, nlpns = snames[cl.sheet_name]
+        _, nlpns, working_set = snames[cl.sheet_name]
         for r in cl.rows():
             try:
                 if (r.row_index > 0 and
@@ -161,6 +161,11 @@ def main(debug=False):
 
                         dd[s.u].append((int(r.axonal_course_poset().value), _obj))
 
+                    if working_set:
+                        class v:
+                            value = working_set
+                        asdf(s, ilxtr.inNLPWorkingSet, lambda x=v: x)
+
             except Exception as e:
                 msg = f'\nbad row: | {" | ".join(r.values)} |'
                 log.error(msg)
@@ -176,7 +181,7 @@ def main(debug=False):
 
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
-        _, nlpns = snames[c.sheet_name]
+        _, nlpns, working_set = snames[c.sheet_name]
         for x in (_s, _p, _o):
             if re.match(r'(^[\s]+[^\s].*|.*[^\s][\s]+$)', x):
                 msg = f'leading/trailing whitespace in {c} {_s!r} {_p!r} {_o!r}'
@@ -230,10 +235,10 @@ def main(debug=False):
     def sigh_bind(n, p):  # XXX FIXME UGH
         Phenotype.in_graph.bind(n, p)
 
-    sigh_bind('mmset4', snames['MM Set 4'][-1])
-    sigh_bind('semves', snames['Seminal Vesicles'][-1])
-    sigh_bind('prostate', snames['Prostate'][-1])
-    sigh_bind('femrep', snames['Female Reproductive-HUMAN'][-1])
+    sigh_bind('mmset4', snames['MM Set 4'][1])
+    sigh_bind('semves', snames['Seminal Vesicles'][1])
+    sigh_bind('prostate', snames['Prostate'][1])
+    sigh_bind('femrep', snames['Female Reproductive-HUMAN'][1])
 
     config.write()
     labels = (
