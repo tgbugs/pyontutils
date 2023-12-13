@@ -37,6 +37,74 @@ class TestIBNode(unittest.TestCase):
         h = m.digest()
         assert ident == h, ident
 
+    def test_commute(self):
+        # XXX can't use raw strings
+        a = rdflib.Literal("1")
+        b = rdflib.Literal("2")
+        c = rdflib.Literal("3")
+        ia = IdentityBNode(a, debug=True)
+        ib = IdentityBNode(b, debug=True)
+        ic = IdentityBNode(c, debug=True)
+
+        # XXX argh ... this might be part of the issue
+        # these are not different because we sort the ids after
+        iab = IdentityBNode((a, b), debug=True)
+        iba = IdentityBNode((b, a), debug=True)
+        assert iab == iba, 'not sure if want, is footgun'
+
+        # these are correctly different
+        itab = IdentityBNode(((a, b),), debug=True)
+        itba = IdentityBNode(((b, a),), debug=True)
+        assert itab != itba, 'do want'
+
+        itiaib = IdentityBNode(((ia.identity, ib.identity),), debug=True)
+        assert itab == itiaib, 'oops'
+
+
+        itbc = IdentityBNode(((b, c),), debug=True)
+
+        ia.recurse((a, b))
+
+        iiaib = IdentityBNode((ia.identity, ib.identity), debug=True)
+        iIaIb = IdentityBNode((ia, ib), debug=True)
+        oiab = ia.ordered_identity(ia.identity, ib.identity)
+        assert iIaIb.identity == oiab == iiaib.identity == iab.identity
+
+
+        # XXX this is where things break down it seems?
+        t1 = b, c
+        i1 = IdentityBNode((t1,), debug=True)
+        t2 = a, b, c
+        i2 = IdentityBNode(t2, debug=True)
+
+        t3 = a, i2.identity
+        i3 = IdentityBNode(t3, debug=True)
+
+        IdentityBNode((a, i2), debug=True)
+        IdentityBNode((ia, i2), debug=True)
+
+        t4 = IdentityBNode(a), i2.identity
+        i4 = IdentityBNode(t4, debug=True)
+
+        i5 = IdentityBNode((ia, ib, ic), debug=True)
+        oiabc = ia.ordered_identity(ia.identity, ib.identity, ic.identity)
+
+        assert i5 == i2
+
+        # XXX URG only things of len 3 do order preserving, if len 2 is given it will sort the ids before hash
+        sigh1 = IdentityBNode(((a, b, c),), debug=True)
+        sigh2 = IdentityBNode((a, b, c), debug=True)
+        #breakpoint()
+        IdentityBNode(((ia, itbc),), debug=True)
+        ti_abc = ia.triple_identity(a, b, c)
+        assert ti_abc == i2.identity
+
+        # in conclusion, you can't get the id of a whole triple
+        # to match the id of the id of the name and the id of the pair ;_;
+        # we would have to change the way we hashed graphs entirely to
+        # always hash the predicate/object pair first instead of treating
+        # a triple is an opaque/uniform object to be identified
+
     def test_nodes(self):
         assert IdentityBNode('hello there') == IdentityBNode('hello there')
         assert IdentityBNode(b'hello there') == IdentityBNode(b'hello there')
@@ -78,8 +146,8 @@ class TestIBNode(unittest.TestCase):
         msp = 'my-sym-pred'
         forward = 'a', msp, 'b'
         backward = tuple(reversed(forward))
-        f = IdentityBNode([forward], symmetric_predicates=[msp])
-        b = IdentityBNode([backward], symmetric_predicates=[msp])
+        f = IdentityBNode([forward], symmetric_predicates=[msp], debug=True)
+        b = IdentityBNode([backward], symmetric_predicates=[msp], debug=True)
         assert f == b
 
     def test_dropout(self):
@@ -158,6 +226,14 @@ class TestIBNodeGraph(unittest.TestCase):
         id1 = IdentityBNode(self.graph1, debug=True)
         id2 = IdentityBNode(self.graph2, debug=True)
 
+        idui1 = sorted(id1.unnamed_subgraph_identities.values())
+        idui2 = sorted(id2.unnamed_subgraph_identities.values())
+        assert idui1 == idui2, 'unnamed subgraph identities do not match'
+
+        idco1 = sorted(id1.connected_object_identities.keys())
+        idco2 = sorted(id2.connected_object_identities.keys())
+        assert idco1 == idco2, 'connected object identities do not match'
+
         idni1 = sorted(id1.named_identities) 
         idni2 = sorted(id2.named_identities) 
         assert idni1 == idni2, 'named identities do not match'
@@ -197,7 +273,7 @@ class TestIBNodeGraph(unittest.TestCase):
             assert len(set(idfi2)) == len(idfi2), 'HRM 2'
             print(len(idfi1), len(idfi2))  # wow... terrifying that these don't match
             print(e)
-            embed()
+            breakpoint()
             raise e
 
         assert id1.identity == id2.identity, 'identities do not match'
