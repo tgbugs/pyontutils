@@ -220,10 +220,22 @@ class IdentityBNode(rdflib.BNode):
             else:
                 lt = len(thing)
                 if lt == 3 or lt == 2:
-                    if not any(isinstance(e, rdflib.BNode) for e in thing):
+                    if not any(isinstance(e, rdflib.BNode) and not isinstance(e, self.__class__) for e in thing):  # TODO compare vs [e for e in thing if isinstance(e, rdflib.BNode)]
                         if lt == 3:
-                            yield self.triple_identity(*thing)
+                            s, p, o = thing
+                            yield self.triple_identity(s, p, o)  # old way
+
+                            # new way
+                            if p in self.symmetric_predicates:
+                                # have to do this a bit differently than in triple_identity due to tracking subject
+                                if o < s:  # for symmetric both should be urirefs but who knows
+                                    s, o = o, s
+
+                            pid = self.ordered_identity(*self.recurse((p, o)))
+                            self.subject_identities[s].append(pid)
+                            #log.debug((s, p, o, pid))
                         elif lt == 2:
+                            # don't sort, preserve the original ordering in this case
                             yield self.ordered_identity(*self.recurse(thing))
                         else:
                             raise NotImplementedError('shouldn\'t ever get here ...')
@@ -239,7 +251,8 @@ class IdentityBNode(rdflib.BNode):
                         if self.debug:
                             self.add_to_subgraphs(thing, self.subgraphs, self.subgraph_mappings)
 
-                        if isinstance(p, rdflib.BNode):
+                        if isinstance(p, rdflib.BNode) and not isinstance(p, self.__class__):
+                            # predicates cannot be blank, unless it is actually an identity being passed
                             raise TypeError(f'predicates cannot be blank {thing}')
                         elif p == rdflib.RDF.rest:
                             if o == rdflib.RDF.nil:
@@ -353,7 +366,9 @@ class IdentityBNode(rdflib.BNode):
             return done
 
         count = 0
-        while self.awaiting_object_identity:
+        last = False
+        while self.awaiting_object_identity or last or count == 0:
+            count += 1
             # first process all bnodes that already have identities
             for subject, subject_idents in list(self.bnode_identities.items()):  # list to pop from dict
                 # it is safe to pop here only if all objects attached to the bnode are not in awaiting
@@ -376,6 +391,12 @@ class IdentityBNode(rdflib.BNode):
                         subject_identity = self.ordered_identity(*sorted(subject_idents), separator=False)
                         gone = self.bnode_identities.pop(subject)
                         assert gone == subject_idents, 'something weird is going on'
+                        if subject in self.subject_identities and self.subject_identities[subject]:
+                            # pretty sure this happens when there are subjects
+                            # with both no bnode triples and bnode triples
+                            raise ValueError('wat')
+                        else:
+                            self.subject_identities[subject].append(subject_identity)
 
                     if subject in self.unnamed_heads:
                         # question: should we assign a single identity to each unnamed subgraph
@@ -419,6 +440,7 @@ class IdentityBNode(rdflib.BNode):
                 self.blank_identities = {}
 
             self.awaiting_object_identity = defaultdict(set)
+            self.subject_identities = defaultdict(list)
             self.bnode_identities = defaultdict(list)
             self.connected_heads = set()
             self.named_heads = set()
@@ -446,11 +468,35 @@ class IdentityBNode(rdflib.BNode):
             self.free_identities = free
             self.connected_identities = connected
 
-            self.all_idents = sorted(self.named_identities +
-                                     tuple(self.connected_identities) +
-                                     tuple(self.free_identities))
+            new = True
+            if new and self.subject_identities:
+                subject_graph_identities = {}
+                for k, v in self.subject_identities.items():
+                    id_values = self.ordered_identity(*sorted(v), separator=False)  # TODO can we actually leave out the separator here? probably?
+                    # use id_values for id_key if key is a bnode consistent with how we deal with
+                    # making bnode ids consistent in other contexts
+                    id_key = (id_values if isinstance(k, rdflib.BNode) else self.__class__(k).identity)
+                    oid = self.ordered_identity(id_key, id_values, separator=False)
+                    subject_graph_identities[k] = oid
 
-            return self.ordered_identity(*self.all_idents)
+                top_sgi = {
+                    k:v for k, v in subject_graph_identities.items()
+                    # FIXME if statement is overly restrictive
+                    if not isinstance(k, rdflib.BNode) or k in self.unnamed_heads}
+
+                self.all_idents_new = sorted(top_sgi.values())
+                #log.debug(self.all_idents_new)
+                if not self.all_idents_new:
+                    breakpoint()
+                return self.ordered_identity(*self.all_idents_new)
+            else:
+                # old way for all or if the top level thing is e.g. a single pair
+                self.all_idents_old = sorted(
+                    self.named_identities +  # no bnodes
+                    tuple(self.connected_identities) +  # bnodes in objects
+                    tuple(self.free_identities))  # bnodes at least in subjects and not connected
+
+                return self.ordered_identity(*self.all_idents_old)
 
     def __repr__(self):
         id = str(self)
