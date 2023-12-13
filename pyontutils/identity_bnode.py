@@ -43,9 +43,11 @@ class IdentityBNode(rdflib.BNode):
     cypher_field_separator = ' '
     encoding = sys.getdefaultencoding()
     sortlast = b'\xff' * 64
+    default_version = 2
 
-    def __new__(cls, triples_or_pairs_or_thing, symmetric_predicates=tuple(), debug=False):
+    def __new__(cls, triples_or_pairs_or_thing, symmetric_predicates=tuple(), version=None, debug=False):
         self = super().__new__(cls)  # first time without value
+        self.version = self.default_version if version is None else version
         self.debug = debug
         self.id_lookup = {}
         m = self.cypher()
@@ -61,6 +63,7 @@ class IdentityBNode(rdflib.BNode):
         if debug == True:
             return self
 
+        real_self.version = self.version
         real_self.debug = debug
         real_self.identity = self.identity
         real_self.null_identity = self.null_identity
@@ -211,6 +214,8 @@ class IdentityBNode(rdflib.BNode):
                 # need str(thing) breaks recursion on rdflib.Literal
                 yield self.ordered_identity(*self.recurse((str(thing), thing.datatype, thing.language)))
             elif isinstance(thing, IdLocalBNode) or isinstance(thing, IdentityBNode):
+                if thing.version != self.version:
+                    raise ValueError(f'versions do not match! {thing.version} != {self.version}')  # FIXME error type
                 yield thing.identity # TODO check that we aren't being lied to?
             elif isinstance(thing, rdflib.BNode):
                 if bnodes_ok:
@@ -223,7 +228,8 @@ class IdentityBNode(rdflib.BNode):
                     if not any(isinstance(e, rdflib.BNode) and not isinstance(e, self.__class__) for e in thing):  # TODO compare vs [e for e in thing if isinstance(e, rdflib.BNode)]
                         if lt == 3:
                             s, p, o = thing
-                            yield self.triple_identity(s, p, o)  # old way
+                            if self.version == 1:
+                                yield self.triple_identity(s, p, o)  # old way
 
                             # new way
                             if p in self.symmetric_predicates:
@@ -468,8 +474,7 @@ class IdentityBNode(rdflib.BNode):
             self.free_identities = free
             self.connected_identities = connected
 
-            new = True
-            if new and self.subject_identities:
+            if self.version == 2 and self.subject_identities:
                 subject_graph_identities = {}
                 for k, v in self.subject_identities.items():
                     id_values = self.ordered_identity(*sorted(v), separator=False)  # TODO can we actually leave out the separator here? probably?
