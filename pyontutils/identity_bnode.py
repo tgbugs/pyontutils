@@ -228,18 +228,21 @@ class IdentityBNode(rdflib.BNode):
                     if not any(isinstance(e, rdflib.BNode) and not isinstance(e, self.__class__) for e in thing):  # TODO compare vs [e for e in thing if isinstance(e, rdflib.BNode)]
                         if lt == 3:
                             s, p, o = thing
-                            if self.version == 1:
+                            if self.version == 2:
+                                # new way
+                                if p in self.symmetric_predicates:
+                                    # have to do this a bit differently than in triple_identity due to tracking subject
+                                    if o < s:  # for symmetric both should be urirefs but who knows
+                                        s, o = o, s
+
+                                pid = self.ordered_identity(*self.recurse((p, o)))
+                                self.subject_identities[s].append(pid)
+                                #log.debug((s, p, o, pid))
+                            elif self.version == 1:
                                 yield self.triple_identity(s, p, o)  # old way
+                            else:
+                                raise NotImplementedError(f'unknown version {self.version}')
 
-                            # new way
-                            if p in self.symmetric_predicates:
-                                # have to do this a bit differently than in triple_identity due to tracking subject
-                                if o < s:  # for symmetric both should be urirefs but who knows
-                                    s, o = o, s
-
-                            pid = self.ordered_identity(*self.recurse((p, o)))
-                            self.subject_identities[s].append(pid)
-                            #log.debug((s, p, o, pid))
                         elif lt == 2:
                             # don't sort, preserve the original ordering in this case
                             yield self.ordered_identity(*self.recurse(thing))
