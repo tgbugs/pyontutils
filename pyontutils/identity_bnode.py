@@ -477,26 +477,31 @@ class IdentityBNode(rdflib.BNode):
             self.free_identities = free
             self.connected_identities = connected
 
+            self.subject_graph_identities = {}
             if self.version == 2 and self.subject_identities:
-                subject_graph_identities = {}
                 for k, v in self.subject_identities.items():
                     id_values = self.ordered_identity(*sorted(v), separator=False)  # TODO can we actually leave out the separator here? probably?
                     # use id_values for id_key if key is a bnode consistent with how we deal with
                     # making bnode ids consistent in other contexts
                     id_key = (id_values if isinstance(k, rdflib.BNode) else self.__class__(k).identity)
                     oid = self.ordered_identity(id_key, id_values, separator=False)
-                    subject_graph_identities[k] = oid
+                    self.subject_graph_identities[k] = oid
 
                 top_sgi = {
-                    k:v for k, v in subject_graph_identities.items()
+                    k:v for k, v in self.subject_graph_identities.items()
                     # FIXME if statement is overly restrictive
                     if not isinstance(k, rdflib.BNode) or k in self.unnamed_heads}
 
                 self.all_idents_new = sorted(top_sgi.values())
                 #log.debug(self.all_idents_new)
                 if not self.all_idents_new:
+                    # one case that can land us here is if there is a bnode cycle
                     breakpoint()
-                return self.ordered_identity(*self.all_idents_new)
+
+                # use separator=False here to ensure that behavior matches that of internal call in recurse
+                # if we don't do that then we get a mismatch when we try to use IdentityBNode recursively
+                # e.g. when we test that the interal identity for a named subject matches OntGraph.subjectIdentity
+                return self.ordered_identity(*self.all_idents_new, separator=False)
             else:
                 # old way for all or if the top level thing is e.g. a single pair
                 self.all_idents_old = sorted(

@@ -2,35 +2,37 @@ import unittest
 from pathlib import Path
 import rdflib
 from pyontutils.core import yield_recursive, OntGraph
-from pyontutils.identity_bnode import bnodes, IdentityBNode
+from pyontutils.identity_bnode import bnodes, IdentityBNode as IdentityBNodeBase
 from .common import temp_path, ensure_temp_path
 
 
 class TestIBNode(unittest.TestCase):
 
+    IdentityBNode = IdentityBNodeBase
+
     def test_bytes(self):
         test = b'hello'
-        ident = IdentityBNode(test).identity
-        m = IdentityBNode.cypher()
+        ident = self.IdentityBNode(test).identity
+        m = self.IdentityBNode.cypher()
         m.update(test)
         h = m.digest()
         assert ident == h, ident
 
     def test_string(self):
         test = 'hello'
-        ident = IdentityBNode(test).identity
-        m = IdentityBNode.cypher()
-        m.update(test.encode(IdentityBNode.encoding))
+        ident = self.IdentityBNode(test).identity
+        m = self.IdentityBNode.cypher()
+        m.update(test.encode(self.IdentityBNode.encoding))
         h = m.digest()
         assert ident == h, ident
 
     def test_pair(self):
         test = 'hello', 'world'
-        ibn = IdentityBNode(test)
+        ibn = self.IdentityBNode(test)
         ident = ibn.identity
-        m = IdentityBNode.cypher()
+        m = self.IdentityBNode.cypher()
         for i, t in enumerate(test):
-            m.update(t.encode(IdentityBNode.encoding))
+            m.update(t.encode(self.IdentityBNode.encoding))
             if not i % 2:
                 m.update(ibn.cypher_field_separator_hash)
 
@@ -42,60 +44,60 @@ class TestIBNode(unittest.TestCase):
         a = rdflib.Literal("1")
         b = rdflib.Literal("2")
         c = rdflib.Literal("3")
-        ia = IdentityBNode(a, debug=True)
-        ib = IdentityBNode(b, debug=True)
-        ic = IdentityBNode(c, debug=True)
+        ia = self.IdentityBNode(a, debug=True)
+        ib = self.IdentityBNode(b, debug=True)
+        ic = self.IdentityBNode(c, debug=True)
 
         # XXX argh ... this might be part of the issue
         # these are not different because we sort the ids after
-        iab = IdentityBNode((a, b), debug=True)
-        iba = IdentityBNode((b, a), debug=True)
+        iab = self.IdentityBNode((a, b), debug=True)
+        iba = self.IdentityBNode((b, a), debug=True)
         assert iab == iba, 'not sure if want, is footgun'
 
         # these are correctly different
-        itab = IdentityBNode(((a, b),), debug=True)
-        itba = IdentityBNode(((b, a),), debug=True)
+        itab = self.IdentityBNode(((a, b),), debug=True)
+        itba = self.IdentityBNode(((b, a),), debug=True)
         assert itab != itba, 'do want'
 
-        itiaib = IdentityBNode(((ia.identity, ib.identity),), debug=True)
+        itiaib = self.IdentityBNode(((ia.identity, ib.identity),), debug=True)
         assert itab == itiaib, 'oops'
 
 
-        itbc = IdentityBNode(((b, c),), debug=True)
+        itbc = self.IdentityBNode(((b, c),), debug=True)
 
         ia.recurse((a, b))
 
-        iiaib = IdentityBNode((ia.identity, ib.identity), debug=True)
-        iIaIb = IdentityBNode((ia, ib), debug=True)
+        iiaib = self.IdentityBNode((ia.identity, ib.identity), debug=True)
+        iIaIb = self.IdentityBNode((ia, ib), debug=True)
         oiab = ia.ordered_identity(ia.identity, ib.identity)
         assert iIaIb.identity == oiab == iiaib.identity == iab.identity
 
 
         # XXX this is where things break down it seems?
         t1 = b, c
-        i1 = IdentityBNode((t1,), debug=True)
+        i1 = self.IdentityBNode((t1,), debug=True)
         t2 = a, b, c
-        i2 = IdentityBNode(t2, debug=True)
+        i2 = self.IdentityBNode(t2, debug=True)
 
         t3 = a, i2.identity
-        i3 = IdentityBNode(t3, debug=True)
+        i3 = self.IdentityBNode(t3, debug=True)
 
-        IdentityBNode((a, i2), debug=True)
-        IdentityBNode((ia, i2), debug=True)
+        self.IdentityBNode((a, i2), debug=True)
+        self.IdentityBNode((ia, i2), debug=True)
 
-        t4 = IdentityBNode(a), i2.identity
-        i4 = IdentityBNode(t4, debug=True)
+        t4 = self.IdentityBNode(a), i2.identity
+        i4 = self.IdentityBNode(t4, debug=True)
 
-        i5 = IdentityBNode((ia, ib, ic), debug=True)
+        i5 = self.IdentityBNode((ia, ib, ic), debug=True)
         oiabc = ia.ordered_identity(ia.identity, ib.identity, ic.identity)
 
         assert i5 == i2
 
         # XXX URG only things of len 3 do order preserving, if len 2 is given it will sort the ids before hash
-        sigh1 = IdentityBNode(((a, b, c),), debug=True)
-        sigh2 = IdentityBNode((a, b, c), debug=True)
+        sigh1 = self.IdentityBNode(((a, b, c),), debug=True)
+        sigh2 = self.IdentityBNode((a, b, c), debug=True)
         #breakpoint()
-        IdentityBNode(((ia, itbc),), debug=True)
+        self.IdentityBNode(((ia, itbc),), debug=True)
         ti_abc = ia.triple_identity(a, b, c)
         assert ti_abc == i2.identity
 
@@ -106,10 +108,10 @@ class TestIBNode(unittest.TestCase):
         # a triple is an opaque/uniform object to be identified
 
     def test_nodes(self):
-        assert IdentityBNode('hello there') == IdentityBNode('hello there')
-        assert IdentityBNode(b'hello there') == IdentityBNode(b'hello there')
+        assert self.IdentityBNode('hello there') == self.IdentityBNode('hello there')
+        assert self.IdentityBNode(b'hello there') == self.IdentityBNode(b'hello there')
         try:
-            assert IdentityBNode(rdflib.BNode()) != IdentityBNode(rdflib.BNode())
+            assert self.IdentityBNode(rdflib.BNode()) != self.IdentityBNode(rdflib.BNode())
             # TODO consider returning the bnode itself?
             raise AssertionError('identity bnode returned identity for bnode')
         except ValueError as e:
@@ -117,7 +119,7 @@ class TestIBNode(unittest.TestCase):
             
         try:
             bnode = rdflib.BNode()
-            assert IdentityBNode(bnode) == IdentityBNode(bnode)
+            assert self.IdentityBNode(bnode) == self.IdentityBNode(bnode)
             raise AssertionError('identity bnode returned identity for bnode')
         except ValueError as e:
             pass
@@ -126,28 +128,28 @@ class TestIBNode(unittest.TestCase):
         lit2 = rdflib.Literal('hello there', datatype=rdflib.XSD.string)
         lit3 = rdflib.Literal('hello there', lang='klingon')
         
-        assert IdentityBNode(lit1) == IdentityBNode(lit1)
-        assert IdentityBNode(lit2) == IdentityBNode(lit2)
-        assert IdentityBNode(lit3) == IdentityBNode(lit3)
+        assert self.IdentityBNode(lit1) == self.IdentityBNode(lit1)
+        assert self.IdentityBNode(lit2) == self.IdentityBNode(lit2)
+        assert self.IdentityBNode(lit3) == self.IdentityBNode(lit3)
 
-        assert IdentityBNode(lit1) != IdentityBNode(lit2)
-        assert IdentityBNode(lit1) != IdentityBNode(lit3)
-        assert IdentityBNode(lit2) != IdentityBNode(lit3)
+        assert self.IdentityBNode(lit1) != self.IdentityBNode(lit2)
+        assert self.IdentityBNode(lit1) != self.IdentityBNode(lit3)
+        assert self.IdentityBNode(lit2) != self.IdentityBNode(lit3)
 
         uri1 = rdflib.URIRef('http://example.org/1')
         uri2 = rdflib.URIRef('http://example.org/2')
 
-        assert IdentityBNode(uri1) == IdentityBNode(uri1)
-        assert IdentityBNode(uri2) == IdentityBNode(uri2)
+        assert self.IdentityBNode(uri1) == self.IdentityBNode(uri1)
+        assert self.IdentityBNode(uri2) == self.IdentityBNode(uri2)
 
-        assert IdentityBNode(uri1) != IdentityBNode(uri2)
+        assert self.IdentityBNode(uri1) != self.IdentityBNode(uri2)
 
     def test_symmetric(self):
         msp = 'my-sym-pred'
         forward = 'a', msp, 'b'
         backward = tuple(reversed(forward))
-        f = IdentityBNode([forward], symmetric_predicates=[msp], debug=True)
-        b = IdentityBNode([backward], symmetric_predicates=[msp], debug=True)
+        f = self.IdentityBNode([forward], symmetric_predicates=[msp], debug=True)
+        b = self.IdentityBNode([backward], symmetric_predicates=[msp], debug=True)
         assert f == b
 
     def test_dropout(self):
@@ -158,6 +160,7 @@ class TestIBNode(unittest.TestCase):
 
 class TestIBNodeGraph(unittest.TestCase):
 
+    IdentityBNode = IdentityBNodeBase
     path_to_test = Path('ttlser/test/nasty.ttl')
 
     def setUp(self):
@@ -188,7 +191,7 @@ class TestIBNodeGraph(unittest.TestCase):
         # IBNode, in the say way reordering lists is in scope
 
     def test_ser(self):
-        assert IdentityBNode(self.ser1) != IdentityBNode(self.ser2), 'serialization matches!'
+        assert self.IdentityBNode(self.ser1) != self.IdentityBNode(self.ser2), 'serialization matches!'
 
     def test_bnodes(self):
         assert sorted(bnodes(self.graph1)) != sorted(bnodes(self.graph2)), 'bnodes match!'
@@ -223,8 +226,8 @@ class TestIBNodeGraph(unittest.TestCase):
                         print(tuple(e[:5] if type(e) == bytes else e for e in t2))
                         print()
 
-        id1 = IdentityBNode(self.graph1, debug=True)
-        id2 = IdentityBNode(self.graph2, debug=True)
+        id1 = self.IdentityBNode(self.graph1, debug=True)
+        id2 = self.IdentityBNode(self.graph2, debug=True)
 
         idui1 = sorted(id1.unnamed_subgraph_identities.values())
         idui2 = sorted(id2.unnamed_subgraph_identities.values())
@@ -278,12 +281,75 @@ class TestIBNodeGraph(unittest.TestCase):
 
         assert id1.identity == id2.identity, 'identities do not match'
 
+    def test_subject_identities(self):
+        i = self.IdentityBNode(self.graph1, debug=True)
+        issues = False
+        for s, sid in i.subject_graph_identities.items():
+            ng = OntGraph().populate_from_triples(self.graph1.subjectGraph(s))
+            #ng.debug()
+            sidg = self.graph1.subjectIdentity(s)
+            # an additional call to IdentityBNode is required to match the fact
+            # that we are taking the identity of a collection with one element
+            # not just the element itself
+
+            # FIXME it seems there is another issue ... which is that sometimes sid contains multiple
+            # and so we probably want subject_graph_identities ??? not sure?
+            sidi = self.IdentityBNode(sid)
+            if set(i.subject_identities[s]) != set(sidg.subject_identities[s]):
+                print(f'broken: e.g. due to empty subjectGraph {s}')
+                ng.debug()
+                issues = True
+                continue
+
+            assert set(i.subject_identities[s]) == set(sidg.subject_identities[s]), 'dag nabbit'
+            assert i.subject_graph_identities[s] == sidg.subject_graph_identities[s]
+            if sidi != sidg:
+                # TODO HOORAY we found a test that breaks when there are cycles!
+                print(f'broken: e.g. due to cycle {s}')
+                ng.debug()
+                issues = True
+                continue
+
+            assert sidi == sidg, 'oops'  # XXX this can fail in cases where all_idents_new is empty, e.g. due to a cycle?
+
+        assert not issues, 'there were issues see print output'
 
     def test_check(self):
-        id1 = IdentityBNode(self.graph1)
+        id1 = self.IdentityBNode(self.graph1)
         assert id1.check(self.graph2), 'check failed!'
 
 
 class TestIBNodeGraphAlt(TestIBNodeGraph):
 
     path_to_test = Path('ttlser/test/evil.ttl')
+
+
+# test previous versions
+class IdentityBNodeBase1(IdentityBNodeBase):
+    default_version = 1
+
+
+class TestIBNode1(TestIBNode):
+    IdentityBNode = IdentityBNodeBase1
+
+
+class TestIBNodeGraphAlt1(TestIBNodeGraphAlt):
+    IdentityBNode = IdentityBNodeBase1
+
+
+class TestIBNodeGraph1(TestIBNodeGraph):
+    IdentityBNode = IdentityBNodeBase1
+
+
+# test cross version issues
+
+class TextXVersion(unittest.TestCase):
+
+    def test_xversion(self):
+        a = IdentityBNodeBase('a')
+        b = IdentityBNodeBase1('a')
+        try:
+            a.check(b)
+            assert False, 'should have failed with version mismatch'
+        except ValueError as e:  # FIXME change error type when changed interally as well
+            pass
