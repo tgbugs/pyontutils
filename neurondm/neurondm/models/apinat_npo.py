@@ -50,7 +50,7 @@ def map_predicates(sheet_pred):
     return p
 
 
-def main():
+def main(debug=False):
     cs = [c() for c in sheet_classes]
     trips = [[cl] + [c.value for c in
                      (r.neuron_id(), r.exact_location(), r.location_id())]
@@ -73,6 +73,15 @@ def main():
         except KeyError as e:
             log.error(f'sigh {s}')
             raise e
+
+        if not _o:
+            msg = f'object missing id for {OntId(s).curie} {OntId(p).curie}'
+            if debug:
+                log.warning(msg)
+                _o = TEMP.BROKEN_EMPTY
+            else:
+                raise ValueError(msg)
+
         o = OntId(_o)
 
         if p == owl.equivalentClass or p == ilxtr.hasOrganTarget:
