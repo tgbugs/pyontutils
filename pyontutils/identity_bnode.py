@@ -45,7 +45,8 @@ class IdentityBNode(rdflib.BNode):
     sortlast = b'\xff' * 64
     default_version = 2
 
-    def __new__(cls, triples_or_pairs_or_thing, symmetric_predicates=tuple(), version=None, debug=False):
+    def __new__(cls, triples_or_pairs_or_thing, *, version=None, debug=False,
+                symmetric_predicates=tuple(), no_reorder_list_predicates=tuple()):
         self = super().__new__(cls)  # first time without value
         self.version = self.default_version if version is None else version
         self.debug = debug
@@ -187,13 +188,32 @@ class IdentityBNode(rdflib.BNode):
         """ Absolutely must memoize the results for this otherwise
         processing large ontologies might as well be mining bitcon """
 
-        if isinstance(triples_or_pairs_or_thing, list):
+        no_cache = False  # for debug
+        if no_cache or [type for type in (list, rdflib.Graph) if isinstance(triples_or_pairs_or_thing, type)]:
             # FIXME TODO make sure we filter the right types here
             yield from self._recurse(triples_or_pairs_or_thing, bnodes_ok=bnodes_ok)
         else:
             if triples_or_pairs_or_thing not in self._reccache:
-                self._reccache[triples_or_pairs_or_thing] = list(
-                    self._recurse(triples_or_pairs_or_thing, bnodes_ok=bnodes_ok))
+                ids = list(self._recurse(triples_or_pairs_or_thing, bnodes_ok=bnodes_ok))
+                if ids:
+                    # in version 2 when triples_or_pairs_or_thing = self._thing there
+                    # will be no results because we don't yield for each triple
+                    # therefore we don't cache this to force ids to be computed again
+                    # all the sub-ids are cached so the repopulation should still be
+                    # fast, we can't cache the identity for top level mutable objects
+                    # such as rdflib.Graph anyway, so this is a reasonable approach
+                    # we handle lists and graphs above, but other types fall through here
+                    if len(ids) > 1:
+                        # if the thing we were iterating over contained multiple items
+                        # then there is a possibliity any triples with bnodes were not
+                        # processed correctly and we can't just take the ids without
+                        # running over everything again
+                        yield from ids
+                        return
+                    else:
+                        self._reccache[triples_or_pairs_or_thing] = ids
+                else:
+                    return
             else:
                 self._cache_hits += 1
 
@@ -293,7 +313,19 @@ class IdentityBNode(rdflib.BNode):
                         elif isinstance(s, rdflib.BNode):
                             self.bsubjects.add(s)
                             # leaves
-                            ident = self.triple_identity(None, p, o)
+                            if self.version == 1:
+                                ident = self.triple_identity(None, p, o)
+                            else:
+                                ident = self.ordered_identity(*self.recurse((p, o)), separator=False)
+                                # XXX we do NOT append to subject_identities here because it will trigger
+                                # the wat error when we resolve identities, but this may be why we are seeing
+                                # an inconsistency so we may actually need to append stuff here because that
+                                # is why we aren't getting the results we expect and are seeing conflation
+                                # or empty subject_identities lists, in fact no, if we append here then when
+                                # we go to resolve bnode identities then we wind up double hashing any identifiers
+                                # that are already present in the list, so we do not append to subject_identities here
+                                # self.subject_identities[s].append(ident)  # XXX DO NOT DO THIS
+
                             self.bnode_identities[s].append(ident)
                         elif isinstance(o, rdflib.BNode):
                             self.bobjects.add(o)
@@ -327,8 +359,12 @@ class IdentityBNode(rdflib.BNode):
             if isinstance(o, rdflib.BNode):
                 self.awaiting_object_identity[upstream].add((upstream, p, o))
             else:
-                ident = self.triple_identity(None, p, o)
-                self.bnode_identities[upstream].append(ident)
+                if self.version == 1:
+                    ident = self.triple_identity(None, p, o)
+                    self.bnode_identities[upstream].append(ident)
+                else:
+                    ident = self.ordered_identity(*self.recurse((p, o)), separator=False)
+                    self.bnode_identities[upstream].append(ident)
 
         # resolve dangling cases
         for o in self.dangling_objs:
@@ -345,16 +381,37 @@ class IdentityBNode(rdflib.BNode):
                         done = False  # dealt with in while loop
                     else:
                         if subject_idents is not None:  # leaf case
-                            ident = self.triple_identity(None, p, object_ident)
+                            if self.version == 1:
+                                ident = self.triple_identity(None, p, object_ident)
+                            else:
+                                # this was it, this was the problem, sometimes an entity would
+                                # be processed with separator=True or separator=False depending on
+                                # which order it came in, now that all 3 branches use separator=False
+                                # the problem is gone
+                                ident = self.ordered_identity(*self.recurse((p, object_ident)), separator=False)
+
                             subject_idents.append(ident)
                         elif isinstance(subject, rdflib.BNode):  # unnamed case
                             subject_idents = self.bnode_identities[s]
-                            ident = self.triple_identity(None, p, object_ident)
+                            if subject_idents and type(subject_idents) is not list:
+                                msg = f'problems incoming {subject_idents}'
+                                log.critical(msg)
+                                raise ValueError(msg)
+
+                            if self.version == 1:
+                                ident = self.triple_identity(None, p, object_ident)
+                            else:
+                                ident = self.ordered_identity(*self.recurse((p, object_ident)), separator=False)
+
                             subject_idents.append(ident)
                         else:  # named case
-                            ident = self.triple_identity(s, p, object_ident)
-                            self.named_subgraph_identities[s, p].append(ident)
-                            self.connected_object_identities[object_ident] = o
+                            if self.version == 1:
+                                ident = self.triple_identity(s, p, object_ident)
+                                self.named_subgraph_identities[s, p].append(ident)
+                                self.connected_object_identities[object_ident] = o
+                            else:
+                                ident = self.ordered_identity(*self.recurse((p, object_ident)), separator=False)
+                                self.subject_identities[s].append(ident)
 
                         # in a sane world ...
                         # there is only single triple where a
@@ -401,9 +458,15 @@ class IdentityBNode(rdflib.BNode):
                         gone = self.bnode_identities.pop(subject)
                         assert gone == subject_idents, 'something weird is going on'
                         if subject in self.subject_identities and self.subject_identities[subject]:
+                            _intersect = set(subject_idents) & set(self.subject_identities[subject])
+                            if _intersect:
+                                msg = f'you were about to double hash something {_intersect}'
+                                raise ValueError(msg)
+                                breakpoint()
+                            else:
+                                raise ValueError('wat')
                             # pretty sure this happens when there are subjects
                             # with both no bnode triples and bnode triples
-                            raise ValueError('wat')
                         else:
                             self.subject_identities[subject].append(subject_identity)
 
@@ -477,7 +540,7 @@ class IdentityBNode(rdflib.BNode):
             self.free_identities = free
             self.connected_identities = connected
 
-            self.subject_graph_identities = {}
+            self.subject_condensed_identities = {}  # FIXME there are often duplicate identities that do NOT have the same graph
             if self.version == 2 and self.subject_identities:
                 for k, v in self.subject_identities.items():
                     id_values = self.ordered_identity(*sorted(v), separator=False)  # TODO can we actually leave out the separator here? probably?
@@ -485,14 +548,14 @@ class IdentityBNode(rdflib.BNode):
                     # making bnode ids consistent in other contexts
                     id_key = (id_values if isinstance(k, rdflib.BNode) else self.__class__(k).identity)
                     oid = self.ordered_identity(id_key, id_values, separator=False)
-                    self.subject_graph_identities[k] = oid
+                    self.subject_condensed_identities[k] = oid
 
-                top_sgi = {
-                    k:v for k, v in self.subject_graph_identities.items()
+                top_sci = {
+                    k:v for k, v in self.subject_condensed_identities.items()
                     # FIXME if statement is overly restrictive
                     if not isinstance(k, rdflib.BNode) or k in self.unnamed_heads}
 
-                self.all_idents_new = sorted(top_sgi.values())
+                self.all_idents_new = sorted(top_sci.values())
                 #log.debug(self.all_idents_new)
                 if not self.all_idents_new:
                     # one case that can land us here is if there is a bnode cycle
