@@ -3,6 +3,7 @@ from pathlib import Path
 import rdflib
 from pyontutils.core import yield_recursive, OntGraph
 from pyontutils.identity_bnode import bnodes, IdentityBNode as IdentityBNodeBase
+from pyontutils.namespaces import rdf, ilxtr
 from .common import temp_path, ensure_temp_path
 
 
@@ -157,11 +158,29 @@ class TestIBNode(unittest.TestCase):
         # test dropout of all but one subgraphs that share an identity
         pass
 
+    def test_list(self):
+        g = OntGraph()
+        g.populate_from_triples((
+            (rdflib.BNode('0'), rdf.type, rdf.List),
+            (rdflib.BNode('0'), rdf.first, ilxtr.a),
+            (rdflib.BNode('0'), rdf.rest, rdf.nil),
+        ))
+        ident = self.IdentityBNode(g, debug=True)
+        wat = self.IdentityBNode(g, debug=True)
+        # somehow was is like we never iterate through the graph at all ???
+        # YEP cache hit on a whole graph winds up returning to named_identities DUH
+        # now fixed
+        err = self.IdentityBNode(list(g), debug=True)
+        assert ident == err, 'hrm'
+        assert wat != self.IdentityBNode([], debug=True), 'sigh'
+        assert wat == ident, 'AAAAAAAAAAAAAAA'
+
 
 class TestIBNodeGraph(unittest.TestCase):
 
     IdentityBNode = IdentityBNodeBase
     path_to_test = Path('ttlser/test/nasty.ttl')
+    format = 'turtle'
 
     def setUp(self):
         self.graph1 = OntGraph()  # rdflib.Graph()
@@ -169,7 +188,7 @@ class TestIBNodeGraph(unittest.TestCase):
         with open(file.as_posix(), 'rb') as f:
             self.ser1 = f.read()
 
-        self.graph1.parse(data=self.ser1, format='turtle')
+        self.graph1.parse(data=self.ser1, format=self.format)
 
         g2format = 'nt'
         # broken serialization :/ with full length prefixes
@@ -282,27 +301,32 @@ class TestIBNodeGraph(unittest.TestCase):
         assert id1.identity == id2.identity, 'identities do not match'
 
     def test_subject_identities(self):
+        # XXX I think this fails right now because there is an extra call to ordered_identity right now?
         i = self.IdentityBNode(self.graph1, debug=True)
         issues = False
-        for s, sid in i.subject_graph_identities.items():
+        for s, sid in i.subject_condensed_identities.items():
             ng = OntGraph().populate_from_triples(self.graph1.subjectGraph(s))
             #ng.debug()
-            sidg = self.graph1.subjectIdentity(s)
+            #sidg = self.graph1.subjectIdentity(s)
+            hrm = self.IdentityBNode(ng)
+            sidg = self.graph1.subjectGraphIdentity(s)
             # an additional call to IdentityBNode is required to match the fact
             # that we are taking the identity of a collection with one element
             # not just the element itself
 
             # FIXME it seems there is another issue ... which is that sometimes sid contains multiple
-            # and so we probably want subject_graph_identities ??? not sure?
-            sidi = self.IdentityBNode(sid)
+            # and so we probably want subject_condensed_identities ??? not sure?
+            sidi = self.IdentityBNode(sid, debug=True)
             if set(i.subject_identities[s]) != set(sidg.subject_identities[s]):
                 print(f'broken: e.g. due to empty subjectGraph {s}')
                 ng.debug()
                 issues = True
+                breakpoint()
+                raise ValueError('stop pls')
                 continue
 
             assert set(i.subject_identities[s]) == set(sidg.subject_identities[s]), 'dag nabbit'
-            assert i.subject_graph_identities[s] == sidg.subject_graph_identities[s]
+            assert i.subject_condensed_identities[s] == sidg.subject_condensed_identities[s]
             if sidi != sidg:
                 # TODO HOORAY we found a test that breaks when there are cycles!
                 print(f'broken: e.g. due to cycle {s}')
@@ -315,13 +339,107 @@ class TestIBNodeGraph(unittest.TestCase):
         assert not issues, 'there were issues see print output'
 
     def test_check(self):
-        id1 = self.IdentityBNode(self.graph1)
+        id1 = self.IdentityBNode(self.graph1, debug=True)
+        id2 = self.IdentityBNode(self.graph2, debug=True)
+
+        if id1.version > 1:
+            sid1 = set(id1.all_idents_new)
+            sid2 = set(id2.all_idents_new)
+            ni2 = sid1 - sid2
+            ni1 = sid2 - sid1
+            ib = sid1 & sid2
+
+            id1lu = {v:k for k, v in id1.subject_condensed_identities.items()}
+            id2lu = {v:k for k, v in id2.subject_condensed_identities.items()}
+
+            # issue is in the lists
+
+            id1_only = sorted([id1lu[i] for i in ni2])
+            id2_only = sorted([id2lu[i] for i in ni1])
+
+            sep = '================================================================'
+            # XXX lots of missing subject ids in here for list elements
+            #derp = set(e for t in id1.to_skip for e in t if isinstance(e, rdflib.BNode))
+            #hrm = set(self.graph1.subjects()) - set(id1.subject_identities)
+            #print(sep)
+            #_ = [OntGraph().populate_from_triples(self.graph1.subjectGraph(h)).debug() for h in hrm]
+            #hd = hrm - derp  # usually empty
+            #dh = derp - hrm  # what are these?
+            #print(sep)
+            #_ = [OntGraph().populate_from_triples(self.graph1.subjectGraph(h)).debug() for h in dh]
+
+            #print(id1_only)
+            #print(id2_only)
+            if id1_only:
+                print()
+                print(sep)
+                [OntGraph().populate_from_triples(self.graph1.subjectGraph(n)).debug() for n in id1_only]
+            if id2_only:
+                print(sep)
+                [OntGraph().populate_from_triples(self.graph2.subjectGraph(n)).debug() for n in id2_only]
+                print(sep)
+
+            # XXX what is truely wild is that the set that cause problems changes from run to run !?!?!?
+            sigh = set(id1_only) & set(id2_only)
+            #print('not looking so stable', sigh)
+            import pprint
+            for overlap in sigh:
+                print(overlap)
+                # when you look at the list that pops it it doesn't even look the same !??!?!
+                # XXX LO AN BEHOLD it is another problem with the cache and not traversing to populate
+                # the necessary bits ... and then there is some additional issue
+                assert (id1.id_lookup[id1.subject_condensed_identities[overlap]] ==  # XXX stochastic failures
+                        id2.id_lookup[id2.subject_condensed_identities[overlap]]), 'sigh'
+                print(pprint.pformat(id1.id_lookup[id1.subject_condensed_identities[overlap]]))
+                print(pprint.pformat(id2.id_lookup[id2.subject_condensed_identities[overlap]]))
+                print(sep)
+                ng1 = OntGraph().populate_from_triples(self.graph1.subjectGraph(overlap))
+                ng2 = OntGraph().populate_from_triples(self.graph2.subjectGraph(overlap))
+                ng1.debug()
+                print(sep)
+                ng2.debug()
+                print(sep)
+                ng1id = self.IdentityBNode(ng1, debug=True)
+                ng2id = self.IdentityBNode(ng2, debug=True)
+                if ng1id != ng2id:
+                    # ok, the two sublists have the same identity now, but the parent list does not
+                    ng1id.__dict__
+                    ng2id.__dict__
+                    ng1id.subject_identities
+                    ng2id.subject_identities
+                    # I think the reason id_lookup doens't work is because it does the full resoluiton
+                    # not the lifted version or something? sigh
+                    # this case should be eaiser to debug and it is stochastic
+                    breakpoint()
+                assert ng1id == ng2id, 'double sigh'  # XXX stochastic failures
+
+            def key(a):
+                return isinstance(a, tuple), isinstance(a, bytes), a
+            #id1_only = sorted([id1.id_lookup[i] for i in ni2], key=key)
+            #id2_only = sorted([id2.id_lookup[i] for i in ni1], key=key)
+
+            # XXX a separate not-actually-an-issue
+            #if id1.dangling_objs or id2.dangling_objs:
+                #for i in (id1, id2):
+                    #for o in i.dangling_objs:
+                        #print(list(i._thing[::o]))
+
+                #breakpoint()
+
+            #breakpoint()
+
+        # lol yes sometimes this can pass by sheer chance when all the
+        # possible misalignments manage to randomly align instead
         assert id1.check(self.graph2), 'check failed!'
 
 
 class TestIBNodeGraphAlt(TestIBNodeGraph):
-
     path_to_test = Path('ttlser/test/evil.ttl')
+
+
+class TestIBNodeGraphRo(TestIBNodeGraph):
+    path_to_test = Path('~/git/interlex/ro.owl').expanduser()
+    format = 'xml'
 
 
 # test previous versions
@@ -334,6 +452,10 @@ class TestIBNode1(TestIBNode):
 
 
 class TestIBNodeGraphAlt1(TestIBNodeGraphAlt):
+    IdentityBNode = IdentityBNodeBase1
+
+
+class TestIBNodeGraphRo1(TestIBNodeGraphRo):
     IdentityBNode = IdentityBNodeBase1
 
 
