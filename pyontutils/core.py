@@ -1560,14 +1560,38 @@ class OntGraph(rdflib.Graph):
         yield from self.transitiveClosure(f, (None, None, subject))
 
     def subjectIdentity(self, subject, *, debug=False):
+        # XXX NOTE subjectIdentity and subjectGraphIdentity are NOT the same thing!
+        # subjectIdentity is the id in a partcular graph of the closure for that
+        # subject, subjectGraphIdentity is the identity of the graph that contains only
+        # that subject and no other subjects, that is id(subject) vs id([subject])
+        # there is an additional call to the identity function for subjectGraphIdentity
+        source_ibn = self.subjectGraphIdentity(subject, debug=debug)
+        sci = source_ibn.subject_condensed_identities[subject]
+        # XXX MASSIVE HACK
+        ibn = IdentityBNode(sci, debug=True)
+        ibn.subject_identities = {}
+        ibn.subject_condensed_identities = {}
+        ibn.subject_identities[subject] = source_ibn.subject_identities[subject]
+        ibn.subject_condensed_identities[subject] = source_ibn.subject_condensed_identities[subject]
+        return ibn
+
+    def subjectGraphIdentity(self, subject, *, debug=False):
         """ calculate the identity of a subgraph for a particular subject
             useful for determining whether individual records have changed
             not quite
         """
+        # FIXME TODO compare to the internal value in ident.subject_identity for the whole graph
 
         triples = list(self.subjectGraph(subject))  # subjective
-        pairs_triples = [tuple(None if e == subject else e for e in t) for t in triples]  # objective
-        ibn = IdentityBNode(pairs_triples, debug=False)
+        #pairs_triples = [tuple(None if e == subject else e for e in t) for t in triples]  # objective  # XXX old
+        pairs_triples = triples
+        try:
+            ibn = IdentityBNode(pairs_triples, debug=True)
+        except AssertionError as e:
+            _g = self.__class__()
+            [_g.add(t) for t in triples]
+            _g.debug()
+            raise e
         if debug:
             triples = [(subject, *pos) if len(pos) == 2 else pos for pos in pairs_triples]
             g = self.__class__()
