@@ -568,9 +568,10 @@ class OntMetaIri(OntMeta, OntIdIri):
         self._progenitors = {}
 
         _gz = self.identifier.endswith('.gz')
+        _xz = self.identifier.endswith('.xz')
         _zip = self.identifier.endswith('.zip')
         self._is_zip = False
-        if _zip or _gz:
+        if _zip or _gz or _xz:
             id_hash = IdentityBNode(self.identifier).identity.hex()
             cache_root = idlib.config.auth.get_path('cache-path') / 'streams'
             cache_dir = cache_root / id_hash[:2]
@@ -584,6 +585,9 @@ class OntMetaIri(OntMeta, OntIdIri):
             if _gz:
                 # check also Etag and Last-Modified
                 # but will need to use xattrs to store
+                raise NotImplementedError('TODO')
+            elif _xz:
+                # particularly useful for loading from cache
                 raise NotImplementedError('TODO')
             elif _zip:
                 self._is_zip = True
@@ -873,6 +877,12 @@ class OntResIri(OntIdIri, OntResOnt):
         self.format = format
 
         self._is_zip = self.metadata()._is_zip
+        if self._is_zip:  # FIXME rename to use_fd or something
+            if not isinstance(self._progenitors, dict):
+                # XXX pretty sure this should be handled more centrally or something?
+                self._progenitors = {}
+            self._progenitors['stream-file'] = self.metadata()._progenitors['stream-file']
+
         # TODO populate header graph? not sure this is actually possible
         # maybe need to double wrap so that the header chunks always get
         # consumbed by the header object ?
@@ -949,8 +959,18 @@ class OntIdPath(OntRes):
 
     def _get(self, *args, **kwargs):  # some functions that go back the other way can't use more info
         resp = self._requests.Response()
-        with open(self.path, 'rb') as f:
-            resp.raw = io.BytesIO(f.read())  # FIXME streaming file read should be possible ...
+        self._is_zip = False
+        if self.path.suffix == '.xz':
+            self._is_zip = True  # FIXME should probably be renamed to "use file descriptor"
+            import lzma
+            with lzma.open(self.path, mode='rb') as f:
+                resp.raw = io.BytesIO(f.read())  # FIXME definitely need streaming for this so we can get the header
+
+            filelike = lzma.open(self.path, mode='rb')
+            self._progenitors['stream-file'] = filelike
+        else:
+            with open(self.path, 'rb') as f:
+                resp.raw = io.BytesIO(f.read())  # FIXME streaming file read should be possible ...
 
         # TODO set headers here
         #resp.headers = {'Content-Length': self.path.meta_no_checksum.size}
