@@ -74,11 +74,24 @@ def ncbigene_make():
         'id':None,
     }
     chunks = []
+    def retry(url, data, attempt=0, limit=10):
+        if attempt >= limit:
+            raise ValueError('too many retires')
+
+        resp = requests.post(url, data=data).json()
+        if 'result' in resp:
+            chunks.append(resp)
+        elif 'error' in resp:
+            log.error(resp)
+            retry(url, data, attempt + 1, limit=limit)
+        else:
+            log.error(resp)
+            raise NotImplementedError('help?')
+
     for i, idset in enumerate(chunk_list(ids, 100)):
         print(i, len(idset))
         data['id'] = ','.join(idset),
-        resp = requests.post(url, data=data).json()
-        chunks.append(resp)
+        retry(url, data)
 
     base = chunks[0]['result']
     uids = base['uids']
