@@ -33,6 +33,10 @@ class NLPFemrep(Sheet):
     name = 'off-nlp-il-femrep'
 
 
+class NLPFemreprat(NLPFemrep):
+    pass
+
+
 def nlp_ns(name):
     return rdflib.Namespace(interlex_namespace(f'tgbugs/uris/readable/sparc-nlp/{name}/'))
 
@@ -43,7 +47,8 @@ snames = {
     'MM Set 4': (NLP2, nlp_ns('mmset4'), None),
     'Seminal Vesicles': (NLPSemVes, nlp_ns('semves'), 'seminal vesicles'),
     'Prostate': (NLPProst, nlp_ns('prostate'), 'prostate'),
-    'Female Reproductive-HUMAN': (NLPFemrep, nlp_ns('femrep'), 'female reproductive system'),
+    '1. Female Reproductive-HUMAN': (NLPFemrep, nlp_ns('femrep'), 'female reproductive system human'),
+    '3. Female-RAT': (NLPFemreprat, nlp_ns('femrep'), 'female reproductive system rat'),  # separate sheet ids differ
 }
 
 
@@ -65,6 +70,7 @@ def map_predicates(sheet_pred):
         'hasPhenotype': ilxtr.hasPhenotype,
         'hasAnatomicalSystemPhenotype': ilxtr.hasAnatomicalSystemPhenotype,
         'hasBiologicalSex': ilxtr.hasBiologicalSex,
+        'hasCircuitRole': ilxtr.hasCircuitRolePhenotype,  # used in femrep
         'hasCircuitRolePhenotype': ilxtr.hasCircuitRolePhenotype,
         'hasForwardConnectionPhenotype': ilxtr.hasForwardConnectionPhenotype,  # FIXME this needs to be unionOf
     }[sheet_pred]
@@ -238,7 +244,7 @@ def main(debug=False):
     sigh_bind('mmset4', snames['MM Set 4'][1])
     sigh_bind('semves', snames['Seminal Vesicles'][1])
     sigh_bind('prostate', snames['Prostate'][1])
-    sigh_bind('femrep', snames['Female Reproductive-HUMAN'][1])
+    sigh_bind('femrep', snames['1. Female Reproductive-HUMAN'][1])
 
     config.write()
     labels = (
