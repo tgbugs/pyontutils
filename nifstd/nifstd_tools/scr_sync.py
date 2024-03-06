@@ -82,6 +82,7 @@ _column_to_predicate = {
     'rdf:type': rdf.type,
     'synonym':NIFRID.synonym,
     'type':'FIXME:type',  # bloody type vs superclass :/ ask james
+    'replaced_by': rdflib.URIRef('http://purl.obolibrary.org/obo/IAO_0100001'),
 }
 
 def fixesForResourcesAndColumns(resources, resource_columnes):
@@ -123,6 +124,8 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
 
     res_cols_l = list(res_cols_latest.values())
 
+    maybe_deprecated = {}
+    aid_mapping = {}
     output = {}
         #rc_query = conn.execute('SELECT rid, name, value FROM resource_columns as rc WHERE rc.name IN %s' % str(tuple([n for n in field_mapping if n != 'MULTI'])))
     #for rid, original_id, type_, value_name, value in join_results:
@@ -142,7 +145,7 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
             #output[scrid].append(('type', type_))  # this should come via the scigraph cats func
             if status == 'Rejected':
                 # do not include rejected resources
-                output.pop(scrid)
+                maybe_deprecated[scrid] = output[scrid]
                 #output[scrid].append(('deprecated', True))
                 return
 
@@ -151,10 +154,19 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
             values = [v for v in values if v != 'Inc' and v != 'Inc.']  # XXX temporary fix for a common misuse of commas
             name = field_mapping['MULTI'][value_name]
             for v in values:
-                if value_name == 'Abbreviation' and (('label', v) in output[scrid] or ('synonym', v) in output[scrid]):
+                if v == '':
+                    continue
+                elif value_name == 'Abbreviation' and (('label', v) in output[scrid] or ('synonym', v) in output[scrid]):
                     continue
                 elif name == 'synonym' and ('label', v) in output[scrid]:
                     continue
+                elif name == 'alt_id':
+                    if status != 'Rejected':
+                        if v in aid_mapping and aid_mapping[v] != scrid:
+                            msg = f'{v} was already mapped to {aid_mapping[v]} != {scrid}'
+                            log.warning(msg)
+                        aid_mapping[v] = scrid
+
                 output[scrid].append((name, v))  # TODO we may want functions here
         else:
             if field_mapping[value_name] == 'definition':
@@ -170,6 +182,14 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
         internal(rid, value_name, value)
     for rid, value_name, value in (_ for _ in res_cols_l if _[1] != 'Resource Name' and _[1] != 'Synonyms'):
         internal(rid, value_name, value)
+
+    dep_mapping = {k.replace('_', ':'):v for k, v in aid_mapping.items() if k.startswith('SCR_')}
+    for scrid in maybe_deprecated:
+        output.pop(scrid)
+        if scrid in dep_mapping:
+            output[scrid] = [
+                #('deprecated', True),  # don't include, reduce noise
+                ('replaced_by', dep_mapping[scrid])]
 
     return output
 
@@ -209,6 +229,7 @@ def get_records(user=defaults['--user'],
     #conn.execute('SELECT * from registry;')
     #if 1:  # this if for indentation purposes only
     with engine.connect() as conn:
+        # TODO bandrow suggest to work from scicrunch_registry_view_relations_update
         #conn = engine
         tables = ('resource_columns', 'resource_data', 'resource_fields', 'resources')
         data = {t:([c['name'] for c in insp.get_columns(t)], conn.execute(sql_text('SELECT * from %s limit 20;' % t)).fetchall()) for t in tables}
@@ -275,6 +296,7 @@ class Registry(Ont):
     comment = 'Turtle export of the SciCrunch Registry'
     sources = RegistrySource,
     prefixes = makePrefixes('definition',  # these aren't really from OBO files but they will be friendly known identifiers to people in the community
+                            'replacedBy',
                             'SCR',  # generate base from this directly?
                             #'obo':'http://purl.obolibrary.org/obo/',
                             #'FIXME':'http://fixme.org/',
