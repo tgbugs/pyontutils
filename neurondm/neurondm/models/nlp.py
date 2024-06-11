@@ -37,6 +37,10 @@ class NLPFemreprat(NLPFemrep):
     pass
 
 
+class NLPSenseMotor(Sheet):
+    name = 'sensory-motor'
+
+
 def nlp_ns(name):
     return rdflib.Namespace(interlex_namespace(f'tgbugs/uris/readable/sparc-nlp/{name}/'))
 
@@ -49,6 +53,7 @@ snames = {
     'Prostate': (NLPProst, nlp_ns('prostate'), 'prostate'),
     '1. Female Reproductive-HUMAN': (NLPFemrep, nlp_ns('femrep'), 'female reproductive system human'),
     '3. Female-RAT': (NLPFemreprat, nlp_ns('femrep'), 'female reproductive system rat'),  # separate sheet ids differ
+    'All SM connections': (NLPSenseMotor, nlp_ns('senmot'), 'sensory motor'),
 }
 
 
@@ -163,7 +168,14 @@ def main(debug=False):
                         if not debug and not _v:
                             raise ValueError('row missing object')
 
-                        _obj = OntId(_v).u if _v else TEMP.BROKEN_EMPTY
+                        try:
+                            _obj = OntId(_v).u if _v else TEMP.BROKEN_EMPTY
+                        except OntId.UnknownPrefixError as e:
+                            if debug:
+                                log.exception(e)
+                                _obj = TEMP.BROKEN_MALFORMED
+                            else:
+                                raise e
 
                         dd[s.u].append((int(r.axonal_course_poset().value), _obj))
 
@@ -212,7 +224,15 @@ def main(debug=False):
         elif p == ilxtr.hasForwardConnectionPhenotype:
             _o = nlpns[_o]
 
-        o = OntId(_o)
+        try:
+            o = OntId(_o)
+        except OntId.UnknownPrefixError as e:
+            if debug:
+                log.exception(e)
+                o = TEMP.BROKEN_MALFORMED_2
+            else:
+                raise e
+
 
         if p == owl.equivalentClass:
             to_add.append((s.u, p, o.u))
