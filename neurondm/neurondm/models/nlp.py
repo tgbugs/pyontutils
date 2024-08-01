@@ -41,6 +41,14 @@ class NLPSenseMotor(Sheet):
     name = 'sensory-motor'
 
 
+class NLPLiver(Sheet):
+    name = 'off-nlp-liv'
+
+
+class NLPKidney(Sheet):
+    name = 'off-nlp-kid'
+
+
 def nlp_ns(name):
     return rdflib.Namespace(interlex_namespace(f'tgbugs/uris/readable/sparc-nlp/{name}/'))
 
@@ -54,6 +62,8 @@ snames = {
     '1. Female Reproductive-HUMAN': (NLPFemrep, nlp_ns('femrep'), 'female reproductive system human'),
     '3. Female-RAT': (NLPFemreprat, nlp_ns('femrep'), 'female reproductive system rat'),  # separate sheet ids differ
     'All SM connections': (NLPSenseMotor, nlp_ns('senmot'), 'sensory motor'),
+    'Liver_Human_Rat_Mouse': (NLPLiver, nlp_ns('liver'), 'liver'),
+    'All KIDNEY connections': (NLPKidney, nlp_ns('kidney'), 'kidney'),
 }
 
 
@@ -99,10 +109,17 @@ def ind_to_adj(ind_uri):
 
 
 def main(debug=False):
+    def derp(v):
+        class sigh:
+            value = v
+        return sigh
+
     OntCuries({'ISBN13': 'https://uilx.org/tgbugs/u/r/isbn-13/',})
     cs = [c() for c in sheet_classes]
     trips = [[cl] + [c.value for c in
-                     (r.id(), r.relationship(), r.identifier())]
+                     (r.id(), r.relationship(),
+                      (r.identifier() if r.identifier().value.strip() else
+                       derp(TEMP['MISSING_' + r.structure().value.replace(' ', '-')])))]
              for cl in cs for r in cl.rows()
              if r.row_index > 0 and r.id().value
              #and (not hasattr(r, 'exclude') or not r.exclude().value)
@@ -145,7 +162,8 @@ def main(debug=False):
                     #print(repr(r.id()))
                     s = OntId(nlpns[r.id().value])
                     #print(s)
-                    asdf(s, ilxtr.sentenceNumber, r.sentence_number)
+                    if hasattr(r, 'sentence_number'):
+                        asdf(s, ilxtr.sentenceNumber, r.sentence_number)
                     if hasattr(r, 'different_from_existing'):
                         asdf(s, ilxtr.curatorNote, r.different_from_existing)
                     asdf(s, ilxtr.curatorNote, r.curation_notes)
@@ -165,11 +183,18 @@ def main(debug=False):
                         # s.u and OntId(...).u to avoid duplicate subjects/objects in the graph
                         # due to type vs instance issues for rdflib.URIRef and OntId
                         _v = r.identifier().value
+                        if not _v:
+                            _structure = r.structure().value
+                            _alt_v = TEMP['MISSING_' + _structure.replace(' ', '-')]
+                        else:
+                            _structure = r.structure().value
+                            _alt_v = TEMP.BROKEN_EMPTY
+
                         if not debug and not _v:
-                            raise ValueError('row missing object')
+                            raise ValueError(f'row missing object for {_structure}')
 
                         try:
-                            _obj = OntId(_v).u if _v else TEMP.BROKEN_EMPTY
+                            _obj = OntId(_v).u if _v else _alt_v
                         except OntId.UnknownPrefixError as e:
                             if debug:
                                 log.exception(e)
@@ -265,6 +290,9 @@ def main(debug=False):
     sigh_bind('semves', snames['Seminal Vesicles'][1])
     sigh_bind('prostate', snames['Prostate'][1])
     sigh_bind('femrep', snames['1. Female Reproductive-HUMAN'][1])
+    sigh_bind('senmot', snames['All SM connections'][1])
+    sigh_bind('kidney', snames['All KIDNEY connections'][1])
+    sigh_bind('liver', snames['Liver_Human_Rat_Mouse'][1])
 
     config.write()
     labels = (
