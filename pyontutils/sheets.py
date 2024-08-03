@@ -130,14 +130,17 @@ def _get_oauth_service(
 
     if not creds or service_account_file is None and not creds.valid:
         # the first time you run this you will need to use the --noauth_local_webserver args
-        if creds and creds.expired and creds.refresh_token:
-            from google.auth.transport.requests import Request
-            creds.refresh(Request())
-        else:
-            from google_auth_oauthlib.flow import InstalledAppFlow # XXX slow import
-            creds_file = auth.get_path('google-api-creds-file')
-            flow = InstalledAppFlow.from_client_secrets_file((creds_file).as_posix(), SCOPES)
-            creds = flow.run_console()
+        if creds and creds.expired and creds.refresh_token and not SCOPES:
+            SCOPES = creds.scopes
+            # looks like calling refresh doesn't work anymore?
+            #from google.auth.transport.requests import Request
+            #creds.refresh(Request())
+
+        from google_auth_oauthlib.flow import InstalledAppFlow # XXX slow import
+        creds_file = auth.get_path('google-api-creds-file')
+        flow = InstalledAppFlow.from_client_secrets_file((creds_file).as_posix(), SCOPES)
+        creds = flow.run_local_server()  # XXX apparently missing scopes parameter somehow?
+        # creds = flow.run_console()  # deprecated back in 2022 apparently ???
 
         with open(store_file, 'wb') as f:
             pickle.dump(creds, f)
