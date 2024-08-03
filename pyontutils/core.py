@@ -688,15 +688,15 @@ class OntMetaIri(OntMeta, OntIdIri):
         elif first.startswith(b'@prefix') or first.startswith(b'#lang rdf/turtle'):
             start = b' owl:Ontology'  # FIXME this is not standard
             # FIXME snchn.IndexGraph etc ... need a more extensible way to mark the header ...
-            stop = b'\ \.\n'  # FIXME can be fooled by strings
-            sentinel = b'^###\ '  # FIXME only works for ttlser
+            stop = b' \\.\n'  # FIXME can be fooled by strings
+            sentinel = b'^### '  # FIXME only works for ttlser
             #sentinel = b' a '  # FIXME if a |owl:Ontology has a chunk break on | this is incorrect
             # also needs to be a regex that ends in [^owl:Ontology]
             self.format = 'text/turtle'
 
         elif first.startswith(b'Prefix(:='):
             # FIXME regex will likely cause issues here
-            start = b'\nOntology\('
+            start = b'\nOntology\\('
             stop = b'\n[^OA]'  # XXX owl functional syntax actually has a proper header :/
             # so for now we use a hueristic matching the first line that doesn't start with Annotation?
             sentinel = b'\n#'
