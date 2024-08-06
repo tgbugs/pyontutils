@@ -286,6 +286,7 @@ def main(debug=False):
     def sigh_bind(n, p):  # XXX FIXME UGH
         Phenotype.in_graph.bind(n, p)
 
+    # FIXME these must also be in nifstd/scigraph/curie_map.yaml to show up on export
     sigh_bind('mmset4', snames['MM Set 4'][1])
     sigh_bind('semves', snames['Seminal Vesicles'][1])
     sigh_bind('prostate', snames['Prostate'][1])
