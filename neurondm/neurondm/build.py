@@ -48,6 +48,13 @@ try:
 except NameError:
     from IPython import embed as breakpoint
 
+# work around issue with hasPart not actually being an inverse of partOf :/
+# and being hardcoded in places >_<
+for s in OntTermOntologyOnly.query.services:
+    s.__class__.known_inverses = tuple()
+for s in OntTerm.query.services:
+    s.__class__.known_inverses = tuple()
+
 log = _log.getChild('build')
 
 resources = auth.get_path('resources')
@@ -1410,7 +1417,7 @@ def make_devel():
             if not terms:
                 raise BaseException('WHAT')
 
-            skip = 'TEMPIND', 'npokb', 'mmset'
+            skip = 'TEMPIND', 'npokb', 'mmset', 'liver', 'kidney', 'femrep', 'prostate', 'semves', 'senmot'
             while terms:
                 next_terms = []
                 for term in terms:
