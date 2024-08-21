@@ -591,6 +591,8 @@ class OntTerm(bOntTerm, OntId):
                 yield s, NIFRID.synonym, rdflib.Literal(syn)
 
         if self('rdfs:subClassOf', asTerm=True):
+            maybe_use = []
+            have_other = False
             for superclass in self.predicates['rdfs:subClassOf']:
                 if superclass.curie in skips:
                     continue
@@ -600,17 +602,22 @@ class OntTerm(bOntTerm, OntId):
                     if (superclass.prefix == 'BFO' or
                         self.prefix in bads or
                         'interlex' in self.iri):
-                        yield s, rdfs.subClassOf, superclass.URIRef
-                        break
+                        maybe_use.append((s, rdfs.subClassOf, superclass.URIRef))
+                        continue
                     else:
                         continue
                 if superclass.curie != 'owl:Thing':
+                    have_other = True
                     yield s, rdfs.subClassOf, superclass.URIRef
                     # ensure that all superclasses are closed for type and label
                     yield superclass.URIRef, rdf.type, owl.Class
                     if superclass.label:
                         _l = rdflib.Literal(superclass.label)
                         yield superclass.URIRef, rdfs.label, _l
+
+            if not have_other and maybe_use:
+                # we're not worrying about deduplication here
+                yield from maybe_use
 
         predicates = 'partOf:', 'RO:0002433', 'ilx.partOf:' #'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
         done = []
