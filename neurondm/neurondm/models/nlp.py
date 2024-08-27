@@ -49,6 +49,10 @@ class NLPKidney(Sheet):
     name = 'off-nlp-kid'
 
 
+class NLPSwglnd(Sheet):
+    name = 'off-nlp-swglnd'
+
+
 def nlp_ns(name):
     return rdflib.Namespace(interlex_namespace(f'tgbugs/uris/readable/sparc-nlp/{name}/'))
 
@@ -62,8 +66,9 @@ snames = {
     '1. Female Reproductive-HUMAN': (NLPFemrep, nlp_ns('femrep'), 'female reproductive system human'),
     '3. Female-RAT': (NLPFemreprat, nlp_ns('femrep'), 'female reproductive system rat'),  # separate sheet ids differ
     'All SM connections': (NLPSenseMotor, nlp_ns('senmot'), 'sensory motor'),
-    'Liver_Human_Rat_Mouse': (NLPLiver, nlp_ns('liver'), 'liver'),
+    'ALL Liver_Human_Rat_Mouse': (NLPLiver, nlp_ns('liver'), 'liver'),
     'All KIDNEY connections': (NLPKidney, nlp_ns('kidney'), 'kidney'),
+    'Sheet1': (NLPSwglnd, nlp_ns('swglnd'), 'swglnd'),
 }
 
 
@@ -293,7 +298,8 @@ def main(debug=False):
     sigh_bind('femrep', snames['1. Female Reproductive-HUMAN'][1])
     sigh_bind('senmot', snames['All SM connections'][1])
     sigh_bind('kidney', snames['All KIDNEY connections'][1])
-    sigh_bind('liver', snames['Liver_Human_Rat_Mouse'][1])
+    sigh_bind('liver', snames['ALL Liver_Human_Rat_Mouse'][1])
+    sigh_bind('swglnd', snames['Sheet1'][1])
 
     config.write()
     labels = (

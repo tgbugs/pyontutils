@@ -84,6 +84,7 @@ semves: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/semves/
 prostate: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/prostate/
 femrep: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/femrep/
 senmot: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/senmot/
+swglnd: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/swglnd/
 liver: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/liver/
 kidney: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/kidney/
 atom:   http://uri.interlex.org/tgbugs/uris/readable/atlas/
