@@ -73,6 +73,7 @@ from lxml import etree
 from git.repo import Repo
 from docopt import parse_defaults
 from ttlser import CustomTurtleSerializer
+from dateutil import parser as dateparser
 from pyontutils.core import OntGraph
 from pyontutils.utils import noneMembers, TODAY, setPS1, refile, TermColors as tc, log
 from pyontutils.utils import utcnowtz, isoformat
@@ -901,7 +902,8 @@ def run(args):
             g = prov_derive(path_in, path_out, type)
         else:
             build_id = args['--build-id']
-            nowish = args['--nowish']
+            _nowish = args['--nowish']
+            nowish = dateparser.parse(_nowish) if _nowish else None
             g = prov_new(path_out, build_id, nowish, type)
 
     elif graph:
