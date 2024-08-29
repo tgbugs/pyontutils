@@ -1,4 +1,5 @@
 from test.common import _TestNeuronsBase, pyel, tel
+from neurondm.core import UnionOf, IntersectionOf, IntersectionOfPartOf
 '''
 class TestNeurons(_TestNeuronsBase):
     # TODO make sure this runs after cli test? it should ...
@@ -119,27 +120,37 @@ class TestRoundtrip(_TestNeuronsBase):
     pyname = 'test-py'
     ttlname = 'test-ttl'
 
+    phn_py = 'TEMP:python-phenotype'
+    phn_py_loc = 'TEMP:python-location'
+    phn_ttl = 'TEMP:turtle-phenotype'
+    phn_ttl_loc = 'TEMP:turtle-location'
+
     def setUp(self):
         super().setUp()
         from neurondm import Config, Neuron, Phenotype, NegPhenotype
-        from neurondm import EntailedPhenotype
+        from neurondm import EntailedPhenotype, NegEntailedPhenotype
         self.Config = Config
         self.Neuron = Neuron
         self.Phenotype = Phenotype
         self.NegPhenotype = NegPhenotype
         self.EntailedPhenotype = EntailedPhenotype
+        self.NegEntailedPhenotype = NegEntailedPhenotype
 
     def tearDown(self):
         super().tearDown()
 
     def test_py_simple(self):
 
-        config = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)
-        n1 = self.Neuron(self.Phenotype('TEMP:python-phenotype'))
-        n2 = self.Neuron(self.NegPhenotype('TEMP:python-phenotype'))
+        config = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)#, import_no_net=True, import_as_local=True)
+        try:
+            n1 = self.Neuron(self.Phenotype(self.phn_py))
+        except Exception as e:
+            breakpoint()
+            pass
+        n2 = self.Neuron(self.NegPhenotype(self.phn_py))
         assert n1 != n2
-        self.Neuron(self.Phenotype('TEMP:python-location', 'ilxtr:hasLocationPhenotype'))
-        self.Neuron(self.NegPhenotype('TEMP:python-location', 'ilxtr:hasLocationPhenotype'))
+        self.Neuron(self.Phenotype(self.phn_py_loc, 'ilxtr:hasLocationPhenotype'))
+        self.Neuron(self.NegPhenotype(self.phn_py_loc, 'ilxtr:hasLocationPhenotype'))
         config.write_python()
 
         config2 = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)
@@ -165,10 +176,10 @@ class TestRoundtrip(_TestNeuronsBase):
         #     test_neurons and test_ttl_simple'
 
         config = self.Config(self.ttlname, ttl_export_dir=tel, py_export_dir=pyel)
-        self.Neuron(self.Phenotype('TEMP:turtle-phenotype'))
-        self.Neuron(self.NegPhenotype('TEMP:turtle-phenotype'))
-        self.Neuron(self.Phenotype('TEMP:turtle-location', 'ilxtr:hasLocationPhenotype'))
-        self.Neuron(self.NegPhenotype('TEMP:turtle-location', 'ilxtr:hasLocationPhenotype'))
+        self.Neuron(self.Phenotype(self.phn_ttl))
+        self.Neuron(self.NegPhenotype(self.phn_ttl))
+        self.Neuron(self.Phenotype(self.phn_ttl_loc, 'ilxtr:hasLocationPhenotype'))
+        self.Neuron(self.NegPhenotype(self.phn_ttl_loc, 'ilxtr:hasLocationPhenotype'))
         config.write()
         a = config.neurons()
 
@@ -199,6 +210,23 @@ class TestRoundtrip(_TestNeuronsBase):
         n1 = self.Neuron(p1, p2)
         n1._graphify()
         # TODO assert to make sure the pattern is right
+
+
+class TestEntailedRoundtrip(TestRoundtrip):
+
+    def setUp(self):
+        super().setUp()
+        self.Phenotype = self.EntailedPhenotype
+        self.NegPhenotype = self.NegEntailedPhenotype
+
+
+class TestOwlObjectRoundtrip(TestRoundtrip):
+
+    op = UnionOf
+    phn_py = op('TEMP:python-phenotype-1', 'TEMP:python-phenotype-2')
+    phn_py_loc = op('TEMP:python-location-1', 'TEMP:python-location-2')
+    phn_ttl = op('TEMP:turtle-phenotype-1', 'TEMP:turtle-phenotype-2')
+    phn_ttl_loc = op('TEMP:turtle-location-1', 'TEMP:turtle-location-2')
 
 
 class TestRoundtripCUT(TestRoundtrip):

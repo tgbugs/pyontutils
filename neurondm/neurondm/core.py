@@ -1219,6 +1219,8 @@ class OwlObject:
     _osn = None
     _rank = '5'
     def __init__(self, *members):
+        # FIXME conversion iris really needs to happen at this step and not be deferred becaues
+        # the semantics can be changed as a result and also because unexpanded won't match
         self._sm = frozenset(members)
         self._members = tuple(sorted(self._sm))
         if len(self._members) != len(members):
@@ -1291,7 +1293,7 @@ class OwlObject:
                 v = _v
             pls.append(qname(p.p) if v is None else v)
 
-        print(pls)
+        #print(pls)
         derp = join.join(pls)
         asdf = f'{self._osn}{join}{derp}'
         if wrap:
@@ -1309,7 +1311,9 @@ class OwlObject:
 
         if members is None:
             # make it possible to modify members, e.g. by wrapping them inside a restriction
-            members = [m._graphify(parent=parent, graph=graph) if isinstance(m, OwlObject) else m
+            members = [m._graphify(parent=parent, graph=graph) if isinstance(m, OwlObject)
+                       # FIXME we really shouldn't be doing this here right ???
+                       else (parent.in_graph.namespace_manager.expand(m) if type(m) == str else m)
                        for m in self.members()]
 
         if graph is None:
@@ -1937,9 +1941,23 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             return
 
         if isinstance(self.p, rdflib.BNode):
-            raise TypeError(f'Phenotypes cannot be bnodes! {self.p}')
+            # TODO now they can! because OwlObjects
+            #breakpoint()
+            #list(self.in_graph.predicate_objects(self.p))
+            # asdf = OntGraph().populate_from_triples(self.in_graph.subjectGraph(self.p))
+            # asdf.debug()
+            hrm = infixowl.CastClass(self.p, graph=self.in_graph)
+            _type = next(hrm.type)
+            assert _type == owl.Class, f'oops not an owl:Class {_type}'
+            _op = hrm._operator
+            _oo = {owl.unionOf: UnionOf,
+                   owl.intersectionOf: IntersectionOf,}[_op]
+            _members = list(hrm._rdfList)  # FIXME nesting and partOf
+            self.p = _oo(*_members)
+            #raise TypeError(f'Phenotypes cannot be bnodes! {self.p}')
+        else:
+            self._pClass = infixowl.Class(self.p, graph=self.in_graph)
 
-        self._pClass = infixowl.Class(self.p, graph=self.in_graph)
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
 
@@ -2027,6 +2045,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if isinstance(phenotype, OwlObject):
             _op = phenotype
             return self.getObjectProperty(_op.members()[0])  # FIXME assumes homogenous type ...
+        elif type(phenotype) == str:
+            log.error('FIXME SIGH')
+            phenotype = self.in_graph.namespace_manager.expand(phenotype)
+            # XXX SHOULD ALREADY BE EXPANDED :/
 
         predicates = list(self.in_graph.objects(phenotype, self.expand('ilxtr:useObjectProperty')))  # useObjectProperty works for phenotypes we control
 
@@ -2287,8 +2309,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                                                                       #self.p))))
             if isinstance(self.p, OwlObject):
                 p = self.p._graphify(graph=graph, parent=self)
+                expand = self.in_graph.namespace_manager.expand
                 def recu(p):
-                    return [m for mm in p.members() for m in (recu(mm) if isinstance(mm, OwlObject) else (mm,)) ]
+                    return [expand(m) if type(m) == str else m  # FIXME should not be converting from string here
+                            for mm in p.members()
+                            for m in (recu(mm) if isinstance(mm, OwlObject) else (mm,)) ]
 
                 ps_for_parts = recu(self.p)
             else:
@@ -2349,7 +2374,6 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             else:
                 _pn = self.in_graph.namespace_manager.qname(self.p)
                 pn = repr(_pn)
-
 
         lab = self.pLabel
         return "%s('%s', '%s', label='%s')" % (self.__class__.__name__, pn, en, lab)
