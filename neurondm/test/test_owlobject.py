@@ -88,3 +88,38 @@ class TestOwlObject(unittest.TestCase):
         n = Neuron(Phenotype(IntersectionOfPartOf(ilxtr.region, ilxtr.layer)), LogicalPhenotype(OR, Phenotype(ilxtr.other), Phenotype(ilxtr.another)))
         self._do(n)
 
+
+class TestNestOwlObject(unittest.TestCase):
+    # so in theory (aka owl) it is possible to nest intersectionOf and unionOf arbitrariliy however
+    # the practical use cases where that ability is needed are currently not known all the use
+    # cases for OwlObject essentially end at a single leve I suppose there might be a case where we
+    # have (uo (io region-1 layer-1) (io region-2 layer-2)) so we could implement it, noting that
+    # other tools (like composer) currently only have support for the equivalent of (io region
+    # layer) and support for (uo soma-loc-1 soma-loc-2 ...)  only implicitly when using the
+    # hasSomaLocatedIn property
+
+    # we also generally want to discourage the use of OwlObjects because the whole point of bagging
+    # phenotypes is to keep the phenotypes as simple as possible
+
+    # we need (iopo region layer) to achieve parity with ApiNATOMY semantics and to reduce the need
+    # to mint identifiers for simple intersection cases, but union-of actually poses something of
+    # an interpretational challeng for partial orders, even though it does clarify the fact that
+    # there is only one soma location for any individual type, and is also technically necessary to
+    # work around the fact that having multiple soma locations makes the owl classes unsatisfiable
+    # for any individual real neuron because the top level restriction is an intersection of
+    # multiple discrete anatomical locations, we could use LogicalPhenotype for somal location, but
+    # OwlObject union of seems to make more sense? ... and thus the challenge
+
+    setUp = TestOwlObject.setUp
+    _do = TestOwlObject._do
+
+    def test_uo_io(self):
+        n = Neuron(Phenotype(UnionOf(IntersectionOf(ilxtr.a, ilxtr.b), IntersectionOf(ilxtr.c, ilxtr.d))))
+        self._do(n)
+
+    def test_uo_io_loc(self):
+        n = Neuron(Phenotype(UnionOf(IntersectionOf(ilxtr.a, ilxtr.b),
+                                     IntersectionOf(ilxtr.c, ilxtr.d)),
+                             ilxtr.hasAxonLocatedIn))
+        self._do(n)
+

@@ -1254,23 +1254,25 @@ class OwlObject:
             else:
                 fmt = parent.in_graph.namespace_manager.qname
 
-        members = [repr(fmt(m)) for m in self.members()]
+        members = [m.__str__(parent=parent) if isinstance(m, OwlObject) else repr(fmt(m)) for m in self.members()]
         fmem = ', '.join(members)
         return f'{self.__class__.__name__}({fmem})'
 
-    def _uri_frag(self, parent):
+    def _uri_frag(self, parent, nest=0):
         phenotype_class = parent.__class__
         if hasattr(phenotype_class.in_graph, 'namespace_manager'):
             qname = phenotype_class.in_graph.namespace_manager.qname
         else:
             qname = lambda x: x
 
-        ps = [phenotype_class(m) for m in self.members()]
+        ps = [m._uri_frag(parent, nest=nest + 1)
+              if isinstance(m, OwlObject) else phenotype_class(m)
+              for m in self.members()]
+
         def eff(p):
-            return qname(p.p).replace(':', '-')
+            return qname(p.p).replace(':', '-') if isinstance(p, phenotype_class) else p
 
-        return f'{self._rank}-{self._osn}-' + '-'.join([f'{self._rank}-{eff(p)}' for p in ps])
-
+        return f'{self._rank}-{nest}-{self._osn}-' + '-'.join([f'{self._rank}-{nest}-{eff(p)}' for p in ps])
 
     def _for_thing(self, parent, thing, call=False, join=' ', wrap=True):
         phenotype_class = parent.__class__
@@ -1279,7 +1281,7 @@ class OwlObject:
         else:
             qname = lambda x: x
 
-        ps = [phenotype_class(m) for m in self.members()]
+        ps = [phenotype_class(m, parent.e) for m in self.members()]
         pls = []
         for p in ps:
             _v = getattr(p, thing)
@@ -1307,7 +1309,8 @@ class OwlObject:
 
         if members is None:
             # make it possible to modify members, e.g. by wrapping them inside a restriction
-            members = self.members()
+            members = [m._graphify(parent=parent, graph=graph) if isinstance(m, OwlObject) else m
+                       for m in self.members()]
 
         if graph is None:
             graph = OntGraph()
@@ -2023,7 +2026,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
     def getObjectProperty(self, phenotype):
         if isinstance(phenotype, OwlObject):
             _op = phenotype
-            phenotype = _op.members()[0]  # FIXME assumes homogenous type ...
+            return self.getObjectProperty(_op.members()[0])  # FIXME assumes homogenous type ...
 
         predicates = list(self.in_graph.objects(phenotype, self.expand('ilxtr:useObjectProperty')))  # useObjectProperty works for phenotypes we control
 
@@ -2284,7 +2287,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                                                                       #self.p))))
             if isinstance(self.p, OwlObject):
                 p = self.p._graphify(graph=graph, parent=self)
-                ps_for_parts = self.p.members()
+                def recu(p):
+                    return [m for mm in p.members() for m in (recu(mm) if isinstance(mm, OwlObject) else (mm,)) ]
+
+                ps_for_parts = recu(self.p)
             else:
                 p = self.p
                 ps_for_parts = [p]
@@ -2296,7 +2302,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             #uo = infixowl.BooleanClass(operator=owl.unionOf, members=members, graph=graph)
             for pfp in ps_for_parts:
                 if pfp not in _done:
-                    _done.add(self.p)
+                    _done.add(pfp)
                     eff = infixowl.Restriction(onProperty=partOf,
                                                someValuesFrom=pfp,
                                                graph=self.part_of_graph)
