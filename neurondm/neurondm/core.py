@@ -55,6 +55,11 @@ __all__ = [
     'setLocalNames',
     'getLocalNames',
     'resetLocalNames',
+
+    'UnionOf',
+    'IntersectionOf',
+    'IntersectionOfPartOf',
+
     'Phenotype',
     'NegPhenotype',
     'EntailedPhenotype',
@@ -1206,6 +1211,156 @@ class AcceptAllKeys:
         log.warning(f'fake super! {key}')
         return tuple()
 
+# classes for complex owl objects
+
+
+class OwlObject:
+    operator = None
+    _osn = None
+    _rank = '5'
+    def __init__(self, *members):
+        self._sm = frozenset(members)
+        self._members = tuple(sorted(self._sm))
+        if len(self._members) != len(members):
+            raise ValueError(f'duplicates in members! {members}')
+
+    def __hash__(self):
+        return hash(self._sm)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and self._sm == other._sm
+
+    def __gt__(self, other):
+        return not self <= other
+
+    def __gte__(self, other):
+        return self == other or self > other
+
+    def __lt__(self, other):
+        # by doing the type check in __lt__ if the types do not match
+        # then OwlObject will be determined to be greater than the other value
+        # meaning that it will appear later in a sorted list
+        return type(self) == type(other) and self._members < other._members
+
+    def __lte__(self, other):
+        return self == other or self < other
+
+    def __str__(self, parent=None):
+        if parent is None:
+            fmt = lambda x: x
+        else:
+            if hasattr(parent, 'ng'):
+                fmt = parent.ng.qname
+            else:
+                fmt = parent.in_graph.namespace_manager.qname
+
+        members = [repr(fmt(m)) for m in self.members()]
+        fmem = ', '.join(members)
+        return f'{self.__class__.__name__}({fmem})'
+
+    def _uri_frag(self, parent):
+        phenotype_class = parent.__class__
+        if hasattr(phenotype_class.in_graph, 'namespace_manager'):
+            qname = phenotype_class.in_graph.namespace_manager.qname
+        else:
+            qname = lambda x: x
+
+        ps = [phenotype_class(m) for m in self.members()]
+        def eff(p):
+            return qname(p.p).replace(':', '-')
+
+        return f'{self._rank}-{self._osn}-' + '-'.join([f'{self._rank}-{eff(p)}' for p in ps])
+
+
+    def _for_thing(self, parent, thing, call=False, join=' ', wrap=True):
+        phenotype_class = parent.__class__
+        if hasattr(phenotype_class.in_graph, 'namespace_manager'):
+            qname = phenotype_class.in_graph.namespace_manager.qname
+        else:
+            qname = lambda x: x
+
+        ps = [phenotype_class(m) for m in self.members()]
+        pls = []
+        for p in ps:
+            _v = getattr(p, thing)
+            if call:
+                v = _v()
+            else:
+                v = _v
+            pls.append(qname(p.p) if v is None else v)
+
+        print(pls)
+        derp = join.join(pls)
+        asdf = f'{self._osn}{join}{derp}'
+        if wrap:
+            return f'({asdf})'
+        else:
+            return asdf
+
+    def members(self):
+        return self._members
+
+    def _graphify(self, parent=None, members=None, graph=None):
+        if self.operator is None:
+            msg = 'implement in subclass'
+            raise NotImplementedError(msg)
+
+        if members is None:
+            # make it possible to modify members, e.g. by wrapping them inside a restriction
+            members = self.members()
+
+        if graph is None:
+            graph = OntGraph()
+
+        return infixowl.BooleanClass(
+            operator=self.operator, members=members, graph=graph)
+
+
+class UnionOf(OwlObject):
+    operator = owl.unionOf
+    _osn = 'union-of'
+    _rank = '6'
+
+
+class IntersectionOf(OwlObject):
+    operator = owl.intersectionOf
+    _osn = 'intersection-of'
+    _rank = '7'
+    def _for_thing(self, parent, thing, call=False, **kwargs):
+        if parent.e in parent._location_predicates:
+            return IntersectionOfPartOf(*self.members())._for_thing(parent, thing, call=call, **kwargs)
+        else:
+            return super()._for_thing(parent, thing, call=call, **kwargs)
+
+    def _graphify(self, parent=None, graph=None):
+        if graph is None:
+            graph = OntGraph()
+
+        if parent.e in parent._location_predicates:
+            return IntersectionOfPartOf(*self.members())._graphify(
+                graph=graph,
+                parent=parent)
+        else:
+            return super()._graphify(graph=graph, parent=parent)
+
+
+class IntersectionOfPartOf(OwlObject):
+    operator = owl.intersectionOf
+    _osn = 'intersection-of-part-of'
+    _rank = '8'
+    def _graphify(self, graph=None, parent=None):
+        if graph is None:
+            graph = OntGraph()
+
+        members = []
+        for m in self.members():
+            res = infixowl.Restriction(onProperty=partOf,
+                                       someValuesFrom=m,
+                                       graph=graph)
+            members.append(res.identifier)
+
+        return super()._graphify(graph=graph, members=members, parent=parent)
+
 
 # the monstrosity
 
@@ -1775,6 +1930,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         else:
             self.e = self.checkObjectProperty(ObjectProperty)  # FIXME this doesn't seem to work
 
+        if isinstance(self.p, OwlObject):
+            return
+
         if isinstance(self.p, rdflib.BNode):
             raise TypeError(f'Phenotypes cannot be bnodes! {self.p}')
 
@@ -1816,6 +1974,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             # rather than you know, just testing for it >_<
             # massively breaking interoperatlibity >_<
             phenotype = phenotype.identifier
+        elif isinstance(phenotype, OwlObject):
+            return phenotype
 
         if phenotype in self.__cache:
             return self.__cache[phenotype]  # FIXME use a cross-instance caching decorator?
@@ -1861,6 +2021,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return subject
 
     def getObjectProperty(self, phenotype):
+        if isinstance(phenotype, OwlObject):
+            _op = phenotype
+            phenotype = _op.members()[0]  # FIXME assumes homogenous type ...
+
         predicates = list(self.in_graph.objects(phenotype, self.expand('ilxtr:useObjectProperty')))  # useObjectProperty works for phenotypes we control
 
         if predicates:
@@ -1909,6 +2073,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
     @property
     def pLabel(self):
+        if isinstance(self.p, OwlObject):
+            return self.p._for_thing(self, 'pLabel')
+
         l = tuple(self._pClass.label)
         if not l:  # we don't want to load the whole ontology
             try:
@@ -1954,6 +2121,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
             if self in inj:
                 return inj[self]
+
+        if isinstance(self.p, OwlObject):
+            return self.p._for_thing(self, 'pShortName')
 
         pn = self.in_graph.namespace_manager.qname(self.p)
         try:
@@ -2086,14 +2256,21 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 + '-' +
                 OntId(self.e).curie.replace(':', '-')
                 + '-' +
-                OntId(self.p).curie.replace(':','-'))
+                (self.p._uri_frag(self)
+                 if isinstance(self.p, OwlObject) else
+                 OntId(self.p).curie.replace(':','-')))
         #yield from (self._rank + '/{}/' + self.ng.qname(_) for _ in self.objects)
 
     def _graphify(self, graph=None, **kwargs):
         if graph is None:
             graph = self.out_graph
 
-        return infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=graph)
+        if isinstance(self.p, OwlObject):
+            p = self.p._graphify(graph=graph, parent=self)
+        else:
+            p = self.p
+
+        return infixowl.Restriction(onProperty=self.e, someValuesFrom=p, graph=graph)
 
     def _graphify_expand_location(self, graph=None, **kwargs):
         if graph is None:
@@ -2105,17 +2282,25 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                                          #cmb.unionOf(self.p,
                                                      #cmb.restrictionN(partOf,
                                                                       #self.p))))
+            if isinstance(self.p, OwlObject):
+                p = self.p._graphify(graph=graph, parent=self)
+                ps_for_parts = self.p.members()
+            else:
+                p = self.p
+                ps_for_parts = [p]
+
             por = infixowl.Restriction(onProperty=partOf,
-                                       someValuesFrom=self.p,
+                                       someValuesFrom=p,
                                        graph=graph)
-            members = self.p, por
+            members = p, por
             #uo = infixowl.BooleanClass(operator=owl.unionOf, members=members, graph=graph)
-            if self.p not in _done:
-                _done.add(self.p)
-                eff = infixowl.Restriction(onProperty=partOf,
-                                           someValuesFrom=self.p,
-                                           graph=self.part_of_graph)
-                self.part_of_graph.add((self.p, rdfs.subClassOf, eff.identifier))
+            for pfp in ps_for_parts:
+                if pfp not in _done:
+                    _done.add(self.p)
+                    eff = infixowl.Restriction(onProperty=partOf,
+                                               someValuesFrom=pfp,
+                                               graph=self.part_of_graph)
+                    self.part_of_graph.add((pfp, rdfs.subClassOf, eff.identifier))
 
             return infixowl.Restriction(onProperty=self.e, someValuesFrom=por, graph=graph)
 
@@ -2145,11 +2330,21 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
     def __expanded__(self):
         if hasattr(self, 'ng'):
-            pn = self.ng.qname(self.p)
             en = self.ng.qname(self.e)
+            if isinstance(self.p, OwlObject):
+                pn = self.p.__str__(parent=self)  # FIXME __expanded__ ?
+            else:
+                _pn = self.ng.qname(self.p)
+                pn = repr(_pn)
         else:
-            pn = self.in_graph.namespace_manager.qname(self.p)
             en = self.in_graph.namespace_manager.qname(self.e)
+            if isinstance(self.p, OwlObject):
+                pn = self.p.__str__(parent=self)
+            else:
+                _pn = self.in_graph.namespace_manager.qname(self.p)
+                pn = repr(_pn)
+
+
         lab = self.pLabel
         return "%s('%s', '%s', label='%s')" % (self.__class__.__name__, pn, en, lab)
 
@@ -2170,14 +2365,24 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
     def __str__(self):
         if hasattr(self, 'ng'):
-            pn = self.ng.qname(self.p)
             en = self.ng.qname(self.e)
+            if isinstance(self.p, OwlObject):
+                pn = self.p.__str__(parent=self)
+                #pn = self.p._for_thing(self, '__str__', call=True)
+            else:
+                _pn = self.ng.qname(self.p)
+                pn = repr(_pn)
         else:
-            pn = self.in_graph.namespace_manager.qname(self.p)
             en = self.in_graph.namespace_manager.qname(self.e)
+            if isinstance(self.p, OwlObject):
+                pn = self.p.__str__(parent=self)
+            else:
+                _pn = self.in_graph.namespace_manager.qname(self.p)
+                pn = repr(_pn)
+
         lab = str(self.pLabel)
         t = ' ' * (len(self.__class__.__name__) + 1)
-        return f"{self.__class__.__name__}({pn!r},\n{t}{en!r},\n{t}label={lab!r})"
+        return f"{self.__class__.__name__}({pn},\n{t}{en!r},\n{t}label={lab!r})"
         #return "%s('%s',\n%s'%s',\n%slabel='%s')" % (self.__class__.__name__, pn, t, en, t, lab)
 
 
