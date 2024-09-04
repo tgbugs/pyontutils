@@ -6,7 +6,7 @@ import inspect
 import tempfile
 from pprint import pformat
 from pathlib import Path, PurePath as PPath
-from importlib import import_module
+from importlib import import_module, reload
 from collections import defaultdict
 from urllib.error import HTTPError
 import git
@@ -42,6 +42,8 @@ RDFL = oq.plugin.get('rdflib')
 _SGR = oq.plugin.get('SciGraph')
 _done = set()
 _partial_order_linker = ilxtr.neuronPartialOrder
+offline = False  # FIXME TODO detect and/or set from config
+
 
 __all__ = [
     'AND',
@@ -647,6 +649,11 @@ class OntTerm(bOntTerm, OntId):
                         done.append((predicate, superpart))
 
 
+if offline:
+    bOntTerm.query._services = [  # offline testing
+        s for s in bOntTerm.query.services if not
+        isinstance(s, oq.plugins.services.interlex.InterLexRemote)]
+
 OntTerm.query_init(*bOntTerm.query.services)
 # initializing this way leads to a race condition on calling
 # service.setup since the first OntTerm to call setup on a shared
@@ -662,7 +669,10 @@ class OntTermInterLexOnly(OntTerm):
 
 IXR = oq.plugin.get('InterLex')
 OntTermOntologyOnly.query_init(*(s for s in OntTerm.query.services if not isinstance(s, IXR)))
-OntTermInterLexOnly.query_init(*(s for s in OntTerm.query.services if isinstance(s, IXR)))
+if offline:
+    OntTermInterLexOnly.query_init()  # offline testing
+else:
+    OntTermInterLexOnly.query_init(*(s for s in OntTerm.query.services if isinstance(s, IXR)))
 
 
 class GraphOpsMixin:
@@ -783,7 +793,7 @@ class Config:
                  name =                 'test-neurons',
                  prefixes =             tuple(),  # dict or list
                  imports =              tuple(),  # iterable
-                 import_as_local =      False,  # also load from local?
+                 import_as_local =      offline,  # also load from local? XXX FIXME offline hack?
                  load_from_local =      True,
                  branch =               auth.get('neurons-branch'),  # FIXME rename to ref
                  sources =              tuple(),
@@ -795,7 +805,7 @@ class Config:
                  git_repo=              None,
                  file =                 None,
                  local_conventions =    False,
-                 import_no_net =        False,  # ugh
+                 import_no_net =        offline,  # ugh XXX FIXME very dumb offline hack
                 ):
 
         olr = auth.get_path('ontology-local-repo')  # we get this again because it might have changed
@@ -821,11 +831,12 @@ class Config:
 
         if git_repo is not None:
             git_repo = Path(git_repo).resolve()
-            if local_base is None:
+            import augpathlib as aug
+            if local_base is None:  # FIXME ttl vs python ... read vs write :/
                 local_base = git_repo
             if ttl_export_dir is None:
                 ttl_export_dir = git_repo
-            elif ttl_export_dir.relative_to(git_repo):
+            elif aug.AugmentedPath(ttl_export_dir).relative_path_to(git_repo):
                 pass  # just make sure that if export loc is not in the repo we fail
 
         import os  # FIXME probably should move some of this to neurons.py?
@@ -1130,13 +1141,14 @@ class Config:
         # bug is that I am not wiping graphBase.knownClasses and swapping it for each config
         # OR the bug is that self.load_graph is persisting, either way the call to type()
         # below seems to be the primary suspect for the issue
+
         if not graphBase.ignore_existing:
             ogp = Path(graphBase.ng.filename)  # FIXME ng.filename <-> out_graph_path property ...
             if ogp.exists() or load_graph is not None:
                 from itertools import chain
                 if load_graph is None:
-                    from rdflib import Graph  # FIXME
-                    self.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
+                    #from rdflib import Graph  # FIXME
+                    self.load_graph = OntConjunctiveGraph().parse(graphBase.ng.filename, format='turtle')
                 else:
                     self.load_graph = load_graph
 
@@ -1183,6 +1195,19 @@ class Config:
             full_path = graphBase.compiled_location / graphBase.filename_python()
             module_path = graphBase.compiled_location.name + '.' + full_path.stem
             module = import_module(module_path)  # this returns the submod
+            #log.debug('\n' + inspect.getsource(module) + '\n')
+
+            # module caching breaks tests for this because import_module
+            # assumes that nothing has changed :/ so we have to reload
+            if module_path in graphBase._force_reload:
+                # FIXME TODO SIGH yeah, if we hit something with the exact
+                # same name reload it, for now for testing, but in general
+                # because someone might modify a file by hand and want to
+                # reload in an existing session ...
+                module = reload(module)
+                #log.debug('\n' + inspect.getsource(module) + '\n')
+            else:
+                graphBase._force_reload[module_path] = True
 
             # for some reason out_graph and existing_pes do not stick to graphBase
             # correctly despite the fact that module.graphBase is graphBase -> True
@@ -1221,6 +1246,8 @@ class OwlObject:
     def __init__(self, *members):
         # FIXME conversion iris really needs to happen at this step and not be deferred becaues
         # the semantics can be changed as a result and also because unexpanded won't match
+        _members = members
+        members = [self.expand(m) for m in members]  # XXX MUST normalize here or all sanity is lost, local conventions thus must be known from the context and not be implicit, should probably passed to Config?
         self._sm = frozenset(members)
         self._members = tuple(sorted(self._sm))
         if len(self._members) != len(members):
@@ -1230,7 +1257,11 @@ class OwlObject:
         return hash(self._sm)
 
     def __eq__(self, other):
-        return type(self) == type(other) and self._sm == other._sm
+        out = type(self) == type(other) and self._sm == other._sm
+        #if not out:
+            # YEP it's str vs rdflib.URIRef issues
+            #print('AAAAAAAAAAAAA', out, self, other)
+        return out
 
     def __gt__(self, other):
         return not self <= other
@@ -1317,10 +1348,37 @@ class OwlObject:
                        for m in self.members()]
 
         if graph is None:
-            graph = OntGraph()
+            graph = OntConjunctiveGraph()
 
         return infixowl.BooleanClass(
             operator=self.operator, members=members, graph=graph)
+
+    @staticmethod  # FIXME FIXME FIXME EVIL EVIL EVIL TEMP WORKAROUND
+    def expand(putativeURI):
+        # FIXME FIXME
+        # this is exactly the same as graphBase except that it is static
+        # and fully stateful which is stupid and evil (and known to be such)
+        # implicit local conventions are stupid and need to be fixed
+        if isinstance(putativeURI, OwlObject):
+            return putativeURI  # already dealt with in init of that object
+        elif isinstance(putativeURI, OntId):
+            return putativeURI.u
+        elif isinstance(putativeURI, rdflib.URIRef):
+            return putativeURI
+
+        if type(putativeURI) == infixowl.Class:
+            return putativeURI.identifier
+        elif type(putativeURI) == str:
+            return OntId(putativeURI).u
+            try: prefix, suffix = putativeURI.split(':',1)
+            except ValueError:  # FIXME this is wrong...
+                return rdflib.URIRef(putativeURI)
+            if prefix in graphBase._namespaces:  # XXX EVIL HAPPENS HERE
+                return graphBase._namespaces[prefix][suffix]  # XXX EVIL HAPPENS HERE
+            else:
+                raise KeyError('Namespace prefix does not exist:', prefix)
+        else:  # FIXME need another check probably...
+            return putativeURI
 
 
 class UnionOf(OwlObject):
@@ -1341,7 +1399,7 @@ class IntersectionOf(OwlObject):
 
     def _graphify(self, parent=None, graph=None):
         if graph is None:
-            graph = OntGraph()
+            graph = OntConjunctiveGraph()
 
         if parent.e in parent._location_predicates:
             return IntersectionOfPartOf(*self.members())._graphify(
@@ -1357,13 +1415,20 @@ class IntersectionOfPartOf(OwlObject):
     _rank = '8'
     def _graphify(self, graph=None, parent=None):
         if graph is None:
-            graph = OntGraph()
+            graph = OntConjunctiveGraph()
 
         members = []
+        expand = parent.in_graph.namespace_manager.expand  # FIXME SIGH
         for m in self.members():
-            res = infixowl.Restriction(onProperty=partOf,
-                                       someValuesFrom=m,
-                                       graph=graph)
+            if type(m) == str:
+                m = expand(m)  # FIXME SIGH
+
+            if isinstance(m, OwlObject):
+                res = m._graphify(graph=graph, parent=parent)
+            else:
+                res = infixowl.Restriction(onProperty=partOf,
+                                           someValuesFrom=m,
+                                           graph=graph)
             members.append(res.identifier)
 
         return super()._graphify(graph=graph, members=members, parent=parent)
@@ -1390,6 +1455,8 @@ class graphBase:
     _location_predicates = tuple()  # XXX SIGH
     _location_predicate_supers = {}  # XXX SIGH
     local_conventions = False  # XXX SIGH
+
+    _force_reload = {}  # super sigh
 
     #_sgv = Vocabulary(cache=True)
 
@@ -1634,7 +1701,13 @@ class graphBase:
         # core graph setup
         if core_graph is None:
             core_graph = OntConjunctiveGraph()
-        for cg in use_core_paths:
+
+        if use_local_import_paths:
+            _use_core_paths = local_out_imports
+        else:
+            _use_core_paths = use_core_paths
+
+        for cg in _use_core_paths:
             try:
                 #core_graph.parse(cg, format='turtle')
                 if cg.startswith('file://'):
@@ -1942,18 +2015,41 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         if isinstance(self.p, rdflib.BNode):
             # TODO now they can! because OwlObjects
-            #breakpoint()
-            #list(self.in_graph.predicate_objects(self.p))
-            # asdf = OntGraph().populate_from_triples(self.in_graph.subjectGraph(self.p))
-            # asdf.debug()
-            hrm = infixowl.CastClass(self.p, graph=self.in_graph)
-            _type = next(hrm.type)
-            assert _type == owl.Class, f'oops not an owl:Class {_type}'
-            _op = hrm._operator
-            _oo = {owl.unionOf: UnionOf,
-                   owl.intersectionOf: IntersectionOf,}[_op]
-            _members = list(hrm._rdfList)  # FIXME nesting and partOf
-            self.p = _oo(*_members)
+            def bnentry(pred, _internal=False):
+                hrm = infixowl.CastClass(pred, graph=self.in_graph)
+                _type = next(hrm.type)
+                if _type == owl.Class:
+                    def procmems(mems):
+                        # FIXME not quite right
+                        return [o for m in mems
+                                for o in ((m,) if isinstance(m, rdflib.URIRef)
+                                          else bnentry(m, _internal=True))]
+                    _op = hrm._operator
+                    _oo = {owl.unionOf: UnionOf,
+                           owl.intersectionOf: IntersectionOf,}[_op]
+                    _members = list(hrm._rdfList)
+                    _mems = procmems(_members)
+                    logical = _oo(*_mems)
+                    if _internal:
+                        return logical,
+                    else:
+                        return logical
+                elif _type == owl.Restriction:
+                    if _internal:
+                        # onValues partOf some thing usually
+                        hrm.onProperty == partOf
+                        i = hrm.someValuesFrom.identifier
+                        # FIXME typecheck
+                        return i,
+                    else:
+                        msg = 'process this before getting here ie _members above'
+                        raise ValueError(msg)
+                        pass
+                else:
+                    msg = f'{_type} not an owl:Class or owl:Restriction'
+                    raise TypeError(msg)
+
+            self.p = bnentry(self.p)
             #raise TypeError(f'Phenotypes cannot be bnodes! {self.p}')
         else:
             self._pClass = infixowl.Class(self.p, graph=self.in_graph)
@@ -2376,7 +2472,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 pn = repr(_pn)
 
         lab = self.pLabel
-        return "%s('%s', '%s', label='%s')" % (self.__class__.__name__, pn, en, lab)
+        return "%s(%s, '%s', label='%s')" % (self.__class__.__name__, pn, en, lab)
 
     @property
     def __humanSortKey__(self):
@@ -2609,6 +2705,19 @@ class LogicalPhenotype(graphBase):
                 self.pes == other.pes)
 
     def __hash__(self):
+        # TODO there is a risk of sort order instability for
+        # phenotypes containing OwlObjects it has not currently
+        # manifest, but it could, using frozenset means we wouldn't
+        # actually have to require ordering rules for all classes that
+        # can appear as part of pes which would be preferable to the
+        # current situation where types have to have an order with
+        # other types which makes composition difficult/annoying, this
+        # was already recognized long ago when I started working on
+        # neurondm.simple but could be implemented here, probably in
+        # __init__, separating the deterministic serialization we want
+        # from the identity function used
+
+        #return hash((self.__class__.__name__, self.op, frozenset(self.pes)))
         return hash((self.__class__.__name__, self.op, *self.pes))
 
     @property
@@ -2962,7 +3071,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             for p, o in g[object]:
                 yield object, p, o
 
-        g = rdflib.Graph()
+        g = OntConjunctiveGraph()  #rdflib.Graph()  # FIXME
         _ = [g.add(t) for t in self.out_graph.transitiveClosure(f, (None, None, self.id_))]
         _ = [g.add(t) for t in self._existing]
 
@@ -3146,6 +3255,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         return asdf
 
     def __hash__(self):
+        #return hash((self.__class__.__name__, frozenset(self.pes)))
         return hash((self.__class__.__name__, *self.pes))  # FIXME bad hashing
 
     def __eq__(self, other):
@@ -3452,6 +3562,32 @@ class Neuron(NeuronBase):
                     if len(pes) > 1:
                         log.error(f'unexpected multiple phenotypes for: {self.id_}\n{pes}')
                     return pes[0]
+                elif type(pr) == infixowl.Class:  # restriction is sco class so use type
+                    # FIXME copied from above
+                    id_ = pr.identifier
+                    pes = []
+                    if id_ in self.knownClasses:
+                        pes.append(id_)
+                    elif id_ == self.owlClass:  # this can fail ...
+                        # in case we didn't catch it before
+                        pes.append(id_)
+                    elif isinstance(id_, rdflib.URIRef):  # FIXME this never runs?
+                        # FIXME this could error for CUTs at some point
+                        log.error(f'Wrong owl:Class, expected: {self.id_} got: {id_}')
+                        return
+                    else:
+                        if pr.complementOf:
+                            coc = infixowl.CastClass(pr.complementOf, graph=self.in_graph)  # FIXME in_graph vs load_graph
+                            if isinstance(coc, infixowl.Restriction):
+                                expand_restriction(coc, pes, ptype=NegEntailedPhenotype)
+                            else:
+                                log.critical(str(coc))
+                                raise BaseException('wat')
+                        else:
+                            log.critical(str(pr))
+                            raise BaseException('wat')
+                    return tuple(pes)
+
                 else:
                     log.critical(f'WHAT\n{list(c.graph.subjectGraph(c.identifier))!r}')  # FIXME something is wrong for negative phenotypes...
 

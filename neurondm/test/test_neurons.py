@@ -129,6 +129,7 @@ class TestRoundtrip(_TestNeuronsBase):
         super().setUp()
         from neurondm import Config, Neuron, Phenotype, NegPhenotype
         from neurondm import EntailedPhenotype, NegEntailedPhenotype
+        from neurondm import core
         self.Config = Config
         self.Neuron = Neuron
         self.Phenotype = Phenotype
@@ -136,12 +137,22 @@ class TestRoundtrip(_TestNeuronsBase):
         self.EntailedPhenotype = EntailedPhenotype
         self.NegEntailedPhenotype = NegEntailedPhenotype
 
+        if core.offline:
+            import augpathlib as aug
+            rptel = aug.RepoPath(tel)
+            rpsrc = aug.RepoPath('~/git/NIF-Ontology').expanduser().resolve()
+            self.ont_repo = rptel.clone_from(rpsrc)
+        else:
+            self.ont_repo = tel
+
     def tearDown(self):
         super().tearDown()
 
     def test_py_simple(self):
 
-        config = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)#, import_no_net=True, import_as_local=True)
+        # FIXME conflation of read location and write location for
+        # ontology, esp annoying when offline
+        config = self.Config(self.pyname, ttl_export_dir=self.ont_repo, py_export_dir=pyel)
         try:
             n1 = self.Neuron(self.Phenotype(self.phn_py))
         except Exception as e:
@@ -152,18 +163,34 @@ class TestRoundtrip(_TestNeuronsBase):
         self.Neuron(self.Phenotype(self.phn_py_loc, 'ilxtr:hasLocationPhenotype'))
         self.Neuron(self.NegPhenotype(self.phn_py_loc, 'ilxtr:hasLocationPhenotype'))
         config.write_python()
+        config.ttl()  # populate out_graph for later debug
+        py1 = config.python()
 
-        config2 = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)
-        config2.load_python()  # FIXME load existing python ...
+        config2 = self.Config(self.pyname, ttl_export_dir=self.ont_repo, py_export_dir=pyel)
+        try:
+            config2.load_python()  # FIXME load existing python ... FIXME nasty network issues
+        except Exception as e:
+            breakpoint()
+            raise e
+
+        py2 = config2.python()
+
+        assert config.existing_pes is not config2.existing_pes
+        assert config.neurons() == config2.neurons(), (config.out_graph.debug(), config2.out_graph.debug(),
+                                                       print('py1\n', py1), print('py2\n', py2),
+                                                       breakpoint())
+
         config2.write()
+        #config2.out_graph.debug()
 
-        config2.out_graph.debug()
-
-        config3 = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)
+        config3 = self.Config(self.pyname, ttl_export_dir=self.ont_repo, py_export_dir=pyel)
         config3.load_existing()
+        py3 = config3.python()
 
-        assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
-        assert config.neurons() == config2.neurons() == config3.neurons()
+        assert config2.existing_pes is not config3.existing_pes
+        assert config2.neurons() == config3.neurons(), (config2.out_graph.debug(), config3.out_graph.debug(),
+                                                        print('py2\n', py2), print('py3\n', py3),
+                                                        breakpoint())
 
     def test_ttl_simple(self):
         # madness spreads apparently, here is a minimal repro for the issue
@@ -175,7 +202,7 @@ class TestRoundtrip(_TestNeuronsBase):
         #     test_neurons and test_entailed_predicate or
         #     test_neurons and test_ttl_simple'
 
-        config = self.Config(self.ttlname, ttl_export_dir=tel, py_export_dir=pyel)
+        config = self.Config(self.ttlname, ttl_export_dir=self.ont_repo, py_export_dir=pyel)
         self.Neuron(self.Phenotype(self.phn_ttl))
         self.Neuron(self.NegPhenotype(self.phn_ttl))
         self.Neuron(self.Phenotype(self.phn_ttl_loc, 'ilxtr:hasLocationPhenotype'))
@@ -183,12 +210,12 @@ class TestRoundtrip(_TestNeuronsBase):
         config.write()
         a = config.neurons()
 
-        config2 = self.Config(self.ttlname, ttl_export_dir=tel, py_export_dir=pyel)
+        config2 = self.Config(self.ttlname, ttl_export_dir=self.ont_repo, py_export_dir=pyel)
         config2.load_existing()
         config2.write_python()
         b = config2.neurons()
 
-        config3 = self.Config(self.ttlname, ttl_export_dir=tel, py_export_dir=pyel)
+        config3 = self.Config(self.ttlname, ttl_export_dir=self.ont_repo, py_export_dir=pyel)
         config3.load_python()
         c = config3.neurons()
 
@@ -214,7 +241,13 @@ class TestRoundtrip(_TestNeuronsBase):
 
 class TestEntailedRoundtrip(TestRoundtrip):
 
+    phn_py = 'TEMP:python-phenotype-ent'
+    phn_py_loc = 'TEMP:python-location-ent'
+    phn_ttl = 'TEMP:turtle-phenotype-ent'
+    phn_ttl_loc = 'TEMP:turtle-location-ent'
+
     def setUp(self):
+        # LOL PYTHON
         super().setUp()
         self.Phenotype = self.EntailedPhenotype
         self.NegPhenotype = self.NegEntailedPhenotype
@@ -227,6 +260,47 @@ class TestOwlObjectRoundtrip(TestRoundtrip):
     phn_py_loc = op('TEMP:python-location-1', 'TEMP:python-location-2')
     phn_ttl = op('TEMP:turtle-phenotype-1', 'TEMP:turtle-phenotype-2')
     phn_ttl_loc = op('TEMP:turtle-location-1', 'TEMP:turtle-location-2')
+
+
+class TestEntailedOwlObjectRoundtrip(TestRoundtrip):
+
+    op = UnionOf
+    phn_py = op('TEMP:python-phenotype-ent-1', 'TEMP:python-phenotype-ent-2')
+    phn_py_loc = op('TEMP:python-location-ent-1', 'TEMP:python-location-ent-2')
+    phn_ttl = op('TEMP:turtle-phenotype-ent-1', 'TEMP:turtle-phenotype-ent-2')
+    phn_ttl_loc = op('TEMP:turtle-location-ent-1', 'TEMP:turtle-location-ent-2')
+
+    def setUp(self):
+        # LOL PYTHON
+        super().setUp()
+        self.Phenotype = self.EntailedPhenotype
+        self.NegPhenotype = self.NegEntailedPhenotype
+
+
+class TestNestOwlObjectRoundtrip(TestRoundtrip):
+
+    op = UnionOf
+    opn = IntersectionOf
+    phn_py = op(opn('TEMP:python-phenotype-1', 'TEMP:python-phenotype-2'), opn('TEMP:python-phenotype-3', 'TEMP:python-phenotype-4'))
+    phn_py_loc = op(opn('TEMP:python-location-1', 'TEMP:python-location-2'),   opn('TEMP:python-location-3', 'TEMP:python-location-4'))
+    phn_ttl = op(opn('TEMP:turtle-phenotype-1', 'TEMP:turtle-phenotype-2'), opn('TEMP:turtle-phenotype-3', 'TEMP:turtle-phenotype-4'))
+    phn_ttl_loc = op(opn('TEMP:turtle-location-1', 'TEMP:turtle-location-2'),   opn('TEMP:turtle-location-3', 'TEMP:turtle-location-4'))
+
+
+class TestEntailedNestOwlObjectRoundtrip(TestRoundtrip):
+
+    op = UnionOf
+    opn = IntersectionOf
+    phn_py = op(opn('TEMP:python-phenotype-ent-1', 'TEMP:python-phenotype-ent-2'), opn('TEMP:python-phenotype-ent-3', 'TEMP:python-phenotype-ent-4'))
+    phn_py_loc = op(opn('TEMP:python-location-ent-1', 'TEMP:python-location-ent-2'),   opn('TEMP:python-location-ent-3', 'TEMP:python-location-ent-4'))
+    phn_ttl = op(opn('TEMP:turtle-phenotype-ent-1', 'TEMP:turtle-phenotype-ent-2'), opn('TEMP:turtle-phenotype-ent-3', 'TEMP:turtle-phenotype-ent-4'))
+    phn_ttl_loc = op(opn('TEMP:turtle-location-ent-1', 'TEMP:turtle-location-ent-2'),   opn('TEMP:turtle-location-ent-3', 'TEMP:turtle-location-ent-4'))
+
+    def setUp(self):
+        # LOL PYTHON
+        super().setUp()
+        self.Phenotype = self.EntailedPhenotype
+        self.NegPhenotype = self.NegEntailedPhenotype
 
 
 class TestRoundtripCUT(TestRoundtrip):
