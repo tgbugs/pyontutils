@@ -1,3 +1,4 @@
+import pytest
 from test.common import _TestNeuronsBase, pyel, tel
 from neurondm.core import UnionOf, IntersectionOf, IntersectionOfPartOf
 '''
@@ -148,6 +149,16 @@ class TestRoundtrip(_TestNeuronsBase):
     def tearDown(self):
         super().tearDown()
 
+    def test_neurdf(self):
+        config = self.Config(self.pyname, ttl_export_dir=self.ont_repo, py_export_dir=pyel)
+        n1 = self.Neuron(self.Phenotype(self.phn_py))
+        n2 = self.Neuron(self.NegPhenotype(self.phn_py))
+        assert n1 != n2
+        self.Neuron(self.Phenotype(self.phn_py_loc, 'ilxtr:hasLocationPhenotype'))
+        self.Neuron(self.NegPhenotype(self.phn_py_loc, 'ilxtr:hasLocationPhenotype'))
+        out = config.neurdf_ttl()
+        print(out)
+
     def test_py_simple(self):
 
         # FIXME conflation of read location and write location for
@@ -282,6 +293,10 @@ class TestNestOwlObjectRoundtrip(TestRoundtrip):
     phn_ttl = op(opn('TEMP:turtle-phenotype-1', 'TEMP:turtle-phenotype-2'), opn('TEMP:turtle-phenotype-3', 'TEMP:turtle-phenotype-4'))
     phn_ttl_loc = op(opn('TEMP:turtle-location-1', 'TEMP:turtle-location-2'),   opn('TEMP:turtle-location-3', 'TEMP:turtle-location-4'))
 
+    @pytest.mark.xfail
+    def test_neurdf(self):
+        super().test_neurdf()
+
 
 class TestEntailedNestOwlObjectRoundtrip(TestRoundtrip):
 
@@ -297,6 +312,10 @@ class TestEntailedNestOwlObjectRoundtrip(TestRoundtrip):
         super().setUp()
         self.Phenotype = self.EntailedPhenotype
         self.NegPhenotype = self.NegEntailedPhenotype
+
+    @pytest.mark.xfail
+    def test_neurdf(self):
+        super().test_neurdf()
 
 
 class TestRoundtripCUT(TestRoundtrip):

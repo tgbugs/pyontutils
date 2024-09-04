@@ -1131,22 +1131,39 @@ def predicate_disambig(graph):
     uit('ilxtr:hasLayerLocation', 'UBERON:0005395')
 
 
-def make_models():
+def make_models(source='models'):
+    # source='compiled'
+    if source not in ('models', 'compiled'):
+        msg = f'source not in models or compiled: {source!r}'
+        raise ValueError(msg)
+
     from importlib import import_module
-    from neurondm.models import __all__
+
+    if source == 'models':
+        from neurondm.models import __all__
+    elif source == 'compiled':
+        from neurondm.compiled import __all__
+    else:
+        msg = 'how did we get here !?'
+        raise NotImplementedError(msg)
+
     # skip pcl for now since it is unlifted
     skip = 'allen_type_specimen_mapping', 'phenotype_direct', 'pcl',
     skip += 'basic_neurons', # 'allen_cell_types',
     __all__ = [a for a in __all__ if a not in skip]
+    configs = []
     for module in __all__:
         if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
             continue
-        m = import_module(f'neurondm.models.{module}')
-        #m = import_module(f'neurondm.compiled.{module}')  # XXX
+        m = import_module(f'neurondm.{source}.{module}')
         if not hasattr(m, 'config') and hasattr(m, 'main'):
             config, *_ = m.main()  # FIXME cuts and allen ct hack
         else:
             config = m.config
+
+        configs.append(config)
+
+    return configs
 
 
 def make_bridge():

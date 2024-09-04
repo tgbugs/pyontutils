@@ -44,6 +44,33 @@ _done = set()
 _partial_order_linker = ilxtr.neuronPartialOrder
 offline = False  # FIXME TODO detect and/or set from config
 
+uPREFIXES['neurdf'] = 'http://uri.interlex.org/tgbugs/uris/readable/neurdf/'
+uPREFIXES['neurdf.pred'] = 'http://uri.interlex.org/tgbugs/uris/readable/neurdf/pred/'
+
+# iterate over axes to populate prefixes
+for prefix_ee, namespace_ee in (
+        ('eqv', 'eqv'),
+        ('ent', 'ent'),
+        ('negeqv', 'neg/eqv'),
+        ('negent', 'neg/ent'),):
+    for prefix_oo, namespace_oo in (
+            (None, None),
+            ('uo', 'union'),
+            ('io', 'intsec'),
+            ('iopo', 'intsecpartof'),):
+
+        if prefix_oo is None:
+            prefix = 'neurdf.' + prefix_ee
+            namespace = uPREFIXES['neurdf.pred'] + namespace_ee + '/'
+        else:
+            prefix = 'neurdf.' + prefix_ee + '.' + prefix_oo
+            namespace = uPREFIXES['neurdf.pred'] + namespace_ee + '/' + namespace_oo + '/'
+
+        uPREFIXES[prefix] = namespace
+
+
+neurdf = rdflib.Namespace(uPREFIXES['neurdf'])
+
 
 __all__ = [
     'AND',
@@ -1057,6 +1084,21 @@ class Config:
         # FIXME do this correctly
         return graphBase.ttl()
 
+    def neurdf_graph(self, graph=None):
+        if graph is None:
+            graph = OntConjunctiveGraph()
+            graph.namespace_manager.populate_from(uPREFIXES)
+
+        for n in self.neurons():
+            graph.populate_from_triples(n._instance_neurdf())
+
+        return graph
+
+    def neurdf_ttl(self):
+        g = self.neurdf_graph()
+        neurdf_ttl = g.serialize(format='nifttl').decode()
+        return neurdf_ttl
+
     def python(self):
         # FIXME do this correctly
         return graphBase.python()
@@ -1252,6 +1294,26 @@ class OwlObject:
         self._members = tuple(sorted(self._sm))
         if len(self._members) != len(members):
             raise ValueError(f'duplicates in members! {members}')
+
+    def _instance_neurdf(self, subject):
+        # mapping of the operator to predicate is handled in the calling scope
+        yield subject, rdf.type, rdf.List
+        members = self.members()
+        lmmo = len(members) - 1
+        for i, m in enumerate(members):
+            if isinstance(m, OwlObject):
+                msg = f'cannot serialize nested OwlObjects to neurdf right now {m}'
+                raise NotImplementedError(msg)
+
+            yield subject, rdf.first, m
+            if i == lmmo:
+                # we're done here terminate the list
+                new_subject = rdf.nil
+            else:
+                new_subject = rdflib.BNode()
+
+            yield subject, rdf.rest, new_subject
+            subject = new_subject
 
     def __hash__(self):
         return hash(self._sm)
@@ -1990,6 +2052,7 @@ class graphBase:
 
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
     _rank = '0'
+    _neurdf_prefix_type = 'eqv'
     local_names = {}
     __cache = {}
     __pcache = {}
@@ -2434,6 +2497,73 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         else:
             return self._graphify(graph)
 
+    _replace_prefix_cache = {}
+    def _instance_neurdf(self, subject):
+        if isinstance(self, LogicalPhenotype):
+            # TODO turns out we have a BUNCH of these we might be able
+            # to convert them to use UnionOf objects instead since in
+            # nearly all cases all combined restrictions share the
+            # same object property (probably not surprising) but we
+            # need to confirm that the two representations are in face
+            # equivalent under the owl reasoner(s)
+            msg = f'neurdf not implemented for logical phenotypes {self.__class__}'
+            raise NotImplementedError(msg)
+
+        qname = self.in_graph.namespace_manager.qname
+        def replace_prefix(pred, prefix):
+            if (pred, prefix) in self._replace_prefix_cache:
+                return self._replace_prefix_cache[(pred, prefix)]
+
+            c = qname(pred)
+            old_prefix, suffix = c.split(':', 1)
+            new = self.expand(prefix + ':' + suffix)
+            self._replace_prefix_cache[(pred, prefix)] = new
+            return new
+
+        def pred_to_neurdf(pred, phen, ee):
+            if isinstance(phen, OwlObject):
+                nonstr = [m for m in phen.members() if not isinstance(m, str)]
+                if nonstr:
+                    # FIXME maybe test isinstance(m, OwlObject) directly?
+                    # or even flag nesting at creation time
+                    msg = f'nesting detected {nonstr}'
+                    raise TypeError(msg)
+
+                # TODO intersectionOf and unionOf
+                # TODO raise if there is nesting
+                # io uo prefix on the predicate and then each set/pair is its own rdf list
+                # io:hasLocationPhenotype (ilxtr:region ilxtr:layer), (ilxtr:other-region ilxtr:other-layer)
+                # uo:hasSomaLocatedIn (ilxtr:soma-loc-1 ilxtr:soma-loc-2 ilxtr:soma-loc-3)
+
+                # FIXME hardcoding of prefixes here bad
+                if type(phen) == UnionOf:
+                    return replace_prefix(pred, f'neurdf.{ee}.uo')
+                elif type(phen) == IntersectionOf:
+                    return replace_prefix(pred, f'neurdf.{ee}.io')
+                elif type(phen) == IntersectionOfPartOf:
+                    return replace_prefix(pred, f'neurdf.{ee}.iopo')
+                else:
+                    msg = f'unknown OwlObject type {type(phen)}'
+                    raise TypeError(msg)
+
+            return replace_prefix(pred, f'neurdf.{ee}')
+
+        def phen_to_neurdf(phen):
+            if isinstance(phen, OwlObject):
+                list_subject = rdflib.BNode()
+                extra = phen._instance_neurdf(list_subject)
+                return list_subject, extra
+            else:
+                return phen, False
+
+        predicate = pred_to_neurdf(self.e, self.p, self._neurdf_prefix_type)
+        object, extra = phen_to_neurdf(self.p)
+
+        t = subject, predicate, object
+        yield t
+        if extra:
+            yield from extra
+
     def __lt__(self, other):
         if type(other) == type(self):
             return sorted((self.p, other.p))[0] == self.p  # FIXME bad...
@@ -2515,15 +2645,18 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 class NegPhenotype(Phenotype):
     _rank = '1'
     """ Class for Negative Phenotypes to simplfy things """
+    _neurdf_prefix_type = 'negeqv'
 
 
 class EntailedPhenotype(Phenotype):
     """ render as subClassOf rather than equivalentClass """
     _rank = '8'
+    _neurdf_prefix_type = 'ent'
 
 
 class NegEntailedPhenotype(NegPhenotype, EntailedPhenotype):
     _rank = '8.5'
+    _neurdf_prefix_type = 'negent'
 
 
 class UnionPhenotype(graphBase):  # not ready
@@ -3087,6 +3220,15 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
     def _instance_python(self):
         return '\n'.join(('# ' + self.label, str(self)))
         #return self.python_header() + str(self)
+
+    def _instance_neurdf(self):
+        # TODO partial orders come out on the owl portion but need to
+        # determine where we want these triples to be serialized to
+        id = self.id_
+        yield id, rdf.type, neurdf.Neuron
+        yield id, rdfs.subClassOf, self.owlClass  # FIXME this is where the neuron level intersection and union come in sort of
+        for pe in self.pes:
+            yield from pe._instance_neurdf(id)
 
     @staticmethod
     def setContext(*neuron_or_phenotypeEdges):
