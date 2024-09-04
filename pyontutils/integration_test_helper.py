@@ -359,8 +359,8 @@ class _TestScriptsBase(unittest.TestCase):
             def _rec(mod):
                 for mi in pkgutil.iter_modules(mod):
                     if mi.ispkg:
-                        sfl = mi.module_finder.find_module(mi.name)
-                        m = sfl.load_module()
+                        sfl = mi.module_finder.find_spec(mi.name)
+                        m = sfl.loader.load_module()
                         _rec(m.__path__)
                         # TODO __main__.py detection
                     else:
