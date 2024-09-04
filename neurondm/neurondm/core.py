@@ -51,8 +51,8 @@ uPREFIXES['neurdf.pred'] = 'http://uri.interlex.org/tgbugs/uris/readable/neurdf/
 for prefix_ee, namespace_ee in (
         ('eqv', 'eqv'),
         ('ent', 'ent'),
-        ('negeqv', 'neg/eqv'),
-        ('negent', 'neg/ent'),):
+        ('eqv.neg', 'eqv/neg'),
+        ('ent.neg', 'ent/neg'),):
     for prefix_oo, namespace_oo in (
             (None, None),
             ('uo', 'union'),
@@ -1090,7 +1090,14 @@ class Config:
             graph.namespace_manager.populate_from(uPREFIXES)
 
         for n in self.neurons():
-            graph.populate_from_triples(n._instance_neurdf())
+            for t in n._instance_neurdf():
+                try:
+                    graph.add(t)
+                except Exception as e:
+                    msg = f'problem with instance neurdf for\n{neuron}\n{t}'
+                    log.error(msg)
+                    #log.exception(e)
+                    raise e
 
         return graph
 
@@ -1295,7 +1302,7 @@ class OwlObject:
         if len(self._members) != len(members):
             raise ValueError(f'duplicates in members! {members}')
 
-    def _instance_neurdf(self, subject):
+    def _instance_neurdf(self, subject, neuron=None):
         # mapping of the operator to predicate is handled in the calling scope
         yield subject, rdf.type, rdf.List
         members = self.members()
@@ -2498,17 +2505,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             return self._graphify(graph)
 
     _replace_prefix_cache = {}
-    def _instance_neurdf(self, subject):
-        if isinstance(self, LogicalPhenotype):
-            # TODO turns out we have a BUNCH of these we might be able
-            # to convert them to use UnionOf objects instead since in
-            # nearly all cases all combined restrictions share the
-            # same object property (probably not surprising) but we
-            # need to confirm that the two representations are in face
-            # equivalent under the owl reasoner(s)
-            msg = f'neurdf not implemented for logical phenotypes {self.__class__}'
-            raise NotImplementedError(msg)
-
+    def _instance_neurdf(self, subject, parent_logical=False, neuron=None):
         qname = self.in_graph.namespace_manager.qname
         def replace_prefix(pred, prefix):
             if (pred, prefix) in self._replace_prefix_cache:
@@ -2555,6 +2552,74 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 return list_subject, extra
             else:
                 return phen, False
+
+        if isinstance(self, LogicalPhenotype):
+            if parent_logical and (parent_logical != AND or self.op != AND):
+                msg = 'neurdf not implemented for nested logical phenotypes'
+                raise NotImplementedError(msg)
+            # TODO turns out we have a BUNCH of these we might be able
+            # to convert them to use UnionOf objects instead since in
+            # nearly all cases all combined restrictions share the
+            # same object property (probably not surprising) but we
+            # need to confirm that the two representations are in face
+            # equivalent under the owl reasoner(s)
+
+            # XXX answer: fact++ can do it, elk cannot and part of
+            # self axioms don't help in this case even if they are
+            # made between the anonymous unionOf classes
+            # what this means is that we can handle the unnested cases
+            # and we should go ahead and warn that the AND case is
+            # redundant at the top level and that the OR case should
+            # be converted to use UnionOf since roundtripping through
+            # neurdf will cause the grouping via AND to be dropped and
+            # UnionOf will parse back to UnionOf not LogicalPhenotype(OR, ...)
+            if self.op == AND:
+                # this is safe becase we don't support nesting and AND is thus redundant
+                for phenotype in self.pes:
+                    yield from phenotype._instance_neurdf(subject, parent_logical=self.op, neuron=neuron)
+
+                msg = ('LogicalPhenotype(AND, ...) flattened! '
+                       f'roundtrip through neurdf will fail!\n{self}')
+                #log.warning(msg)  # XXX TOO VERBOSE and doesn't flag the neuron
+                return
+
+            elif self.op == OR:
+                if len(self._pesDict) > 1:
+                    msg = f'cannot serializes non-homogenous logical phenotypes {list(self._pesDict)}'
+                    raise NotImplementedError(msg)
+                else:
+                    ntypes = set([type(phenotype) for phenotype in self.pes])
+                    if len(ntypes) > 1:
+                        msg = f'union over different phenotypes not implemented {ntypes}'
+                        raise NotImplementedError(msg)
+                    else:
+                        e = list(self._pesDict)[0]
+                        npt = next(iter(ntypes))._neurdf_prefix_type
+                        hrm = UnionOf(*[pe.p for pe in self.pes])
+                        predicate = pred_to_neurdf(e, hrm, npt)
+                        object, _extra = phen_to_neurdf(hrm)
+                        yield subject, predicate, object
+                        extra = list(_extra)
+                        if extra:
+                            # FIXME somehow duplicating the list?
+                            # this isn't the problem, the problem is the double yield
+                            # of the primary subject and predicate ?
+                            # XXX ah no, it is probably that multiple files define the same neuron
+                            #log.debug(neuron.id_)
+                            #print(pformat(extra))
+                            yield from extra
+
+                        msg = ('LogicalPhenotype(OR, ...) converted to UnionOf! '
+                               f'roundtrip through neurdf will fail!\n{self}')
+                        #log.warning(msg)  # XXX TOO VERBOSE and doesn't flag the neuron
+
+                    return
+            else:
+                raise ValueError(f'wat {self.op}')
+
+            msg = f'neurdf not implemented for logical phenotypes {self.__class__}'
+            raise NotImplementedError(msg)
+
 
         predicate = pred_to_neurdf(self.e, self.p, self._neurdf_prefix_type)
         object, extra = phen_to_neurdf(self.p)
@@ -2645,7 +2710,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 class NegPhenotype(Phenotype):
     _rank = '1'
     """ Class for Negative Phenotypes to simplfy things """
-    _neurdf_prefix_type = 'negeqv'
+    _neurdf_prefix_type = 'eqv.neg'
 
 
 class EntailedPhenotype(Phenotype):
@@ -2656,7 +2721,7 @@ class EntailedPhenotype(Phenotype):
 
 class NegEntailedPhenotype(NegPhenotype, EntailedPhenotype):
     _rank = '8.5'
-    _neurdf_prefix_type = 'negent'
+    _neurdf_prefix_type = 'ent.neg'
 
 
 class UnionPhenotype(graphBase):  # not ready
@@ -2687,6 +2752,9 @@ class LogicalPhenotype(graphBase):
         AND:'AND',
         OR:'OR',
     }
+
+    _replace_prefix_cache = Phenotype._replace_prefix_cache
+
     def __init__(self, op, *edges):
         super().__init__()
         self.op = op  # TODO more with op
@@ -2822,6 +2890,8 @@ class LogicalPhenotype(graphBase):
         return infixowl.BooleanClass(operator=self.expand(self.op), members=members, graph=graph)
 
     _graphify_expand_location = _graphify
+
+    _instance_neurdf = Phenotype._instance_neurdf
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -3226,9 +3296,10 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         # determine where we want these triples to be serialized to
         id = self.id_
         yield id, rdf.type, neurdf.Neuron
-        yield id, rdfs.subClassOf, self.owlClass  # FIXME this is where the neuron level intersection and union come in sort of
+        object = OntId(self.owlClass).u  # FIXME vs self.expand etc.
+        yield id, rdfs.subClassOf, object  # FIXME this is where the neuron level intersection and union come in sort of
         for pe in self.pes:
-            yield from pe._instance_neurdf(id)
+            yield from pe._instance_neurdf(id, neuron=self)
 
     @staticmethod
     def setContext(*neuron_or_phenotypeEdges):
@@ -3645,7 +3716,6 @@ class Neuron(NeuronBase):
 
             else:
                 pes.append(restriction_to_phenotype(r, ptype=ptype))
-
 
         if c.identifier == self.id_ or c.identifier == self.owlClass:
             return

@@ -18,6 +18,7 @@ lasts = tuple()
 neurons = (#'neurondm/example',
            #'neurondm/phenotype_namespaces',
            #'neurondm/models/allen_cell_types',
+           'neurondm/models/apinat-pops-more',  # somehow parent class not included
            'neurondm/models/phenotype_direct',  # needs NIF-Neuron-Defined.ttl
            'neurondm/models/basic_neurons',  # needs swanson.ttl
            #'neurondm/models/huang2017',
@@ -27,7 +28,10 @@ neurons = (#'neurondm/example',
            #'neurondm/sheets',
 )
 
-skip = tuple()
+skip = (
+    'phenotype_direct',  # unknown predicate
+)
+
 olr = auth.get_path('ontology-local-repo')
 if olr.exists():
     ont_repo = Repo(olr)
