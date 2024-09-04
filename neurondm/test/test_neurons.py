@@ -153,11 +153,7 @@ class TestRoundtrip(_TestNeuronsBase):
         # FIXME conflation of read location and write location for
         # ontology, esp annoying when offline
         config = self.Config(self.pyname, ttl_export_dir=self.ont_repo, py_export_dir=pyel)
-        try:
-            n1 = self.Neuron(self.Phenotype(self.phn_py))
-        except Exception as e:
-            breakpoint()
-            pass
+        n1 = self.Neuron(self.Phenotype(self.phn_py))
         n2 = self.Neuron(self.NegPhenotype(self.phn_py))
         assert n1 != n2
         self.Neuron(self.Phenotype(self.phn_py_loc, 'ilxtr:hasLocationPhenotype'))
