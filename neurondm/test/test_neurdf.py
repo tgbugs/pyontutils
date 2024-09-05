@@ -32,7 +32,8 @@ class TestNeurdf(_TestNeuronsBase):
                         log.exception(e)
 
             #ng.debug()
-            ng.write(testing_base / 'neurdf-test-debug.ttl', format='nifttl')
+            path_debug = testing_base / 'neurdf-test-debug.ttl'
+            ng.write(path_debug, format='nifttl')
             #breakpoint()
 
         # XXX BEWARE: rdf lists can appear twice in the serialization
@@ -43,5 +44,6 @@ class TestNeurdf(_TestNeuronsBase):
             c.neurdf_graph(graph=g)
 
         #g.debug()
-        g.write(testing_base / 'neurdf-test.ttl', format='nifttl')
+        path = testing_base / 'neurdf-test.ttl'
+        g.write(path, format='nifttl')
         #breakpoint()
