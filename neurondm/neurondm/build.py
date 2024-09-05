@@ -1149,7 +1149,7 @@ def make_models(source='models'):
 
     # skip pcl for now since it is unlifted
     skip = 'allen_type_specimen_mapping', 'phenotype_direct', 'pcl',
-    skip += 'basic_neurons', # 'allen_cell_types',
+    skip += 'basic_neurons', 'cut_development_raw', # 'allen_cell_types',
     __all__ = [a for a in __all__ if a not in skip]
     configs = []
     for module in __all__:
