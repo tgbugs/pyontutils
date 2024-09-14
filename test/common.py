@@ -3,6 +3,9 @@ from pathlib import Path
 from tempfile import gettempdir
 import shutil
 import pytest
+from pyontutils.core import log as _log
+
+log = _log.getChild('test')
 
 temp_path = Path(gettempdir(), f'.pyontutils-testing-base-{os.getpid()}')
 temp_path_ap = temp_path.as_posix()

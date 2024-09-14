@@ -1,6 +1,8 @@
+import pathlib
 import unittest
 import rdflib
 from pyontutils.core import OntGraph, ilxtr
+from pyontutils.identity_bnode import IdentityBNode
 
 
 class TestOntGraph(unittest.TestCase):
@@ -49,3 +51,236 @@ class TestOntGraphComplex(TestOntGraph):
         assert not a, d
         assert not r, d 
         assert not c, d
+
+
+class TestVersionHistory(unittest.TestCase):
+    """
+    the test cases here should cover all the possible atomic operations on a store
+    triple add
+    triple remove
+    triple ban
+
+    but then we have to condense history and
+    come up with ways to reconstruct the current
+    state from a series of diffs and also consider keyfames or similar
+
+    the approach we plan to implement perfers to pay a short term cost of
+    diffing two sets of triples in order to be able to store only the things
+    that have changed
+
+    sometimes we might be given only the adds or only the adds and removes
+
+    the tables we assume are as follows (simplified to avoid type heterogenaity)
+
+    triples
+    id s p o
+
+    current_graphs  # the checked out state
+    id_iri id_triple
+
+    triple_graphs
+    id=(iri version) id_history
+    # all graphs derive from the empty graph
+
+    local_convention_sets
+    id user name etc.
+
+    lcs_to_cons
+    id_lcs id_namespace_prefix
+
+    cons  # pairs
+    namespace prefix
+
+    # graphs with local conventions attached
+    # iirc there was one other thing we needed to?
+    # maybe the prov train id?
+    serialized_graphs
+    id_triple_graph id_local_convention_sets
+
+    add
+    remove
+    ban
+
+    triple_sets
+    id triple_id
+
+    # ok, this is closer to what could work, it will require pointer chasing
+    # but since we will maintain the current state it will only be needed for
+    # looking at old versions, everything else is just a triple set that
+    # can be referenced for any reason, when history is empty the tripleset
+    # we create is all add ... also need a way to allow multiple histories for an iri
+    # in the event that we need to rewrite history e.g. to enhance it with more granular info
+    # like going from obo release to commit level changes, the current impl was very strong on
+    # using the graph identity function, could also drop the is keyframe column and point
+    # back to the empty sets or something and detect another way, will see
+    # note also that we don't handle branches and worldlines with a worldline id i think or a perspective id
+    # it should go in the iri ? need to figure that out
+    history
+    id id_iri id_hist_prev id_delta_rem id_delta_add id_delta_ban is_keyframe timestamp
+
+    history_delta
+    id_hist id_delta
+
+    history-derp
+    graph-version-id
+    graph-version-id
+    graph-version-id
+
+    deltas
+    """
+
+    n = ilxtr
+    gn1 = tuple()
+    g0 = ((n.s0, n.p0, n.o0),)
+    g1 = ((n.s1, n.p0, n.o0),)
+    g2 = ((n.s0, n.p1, n.o0),)
+    g3 = ((n.s0, n.p0, n.o1),)
+
+    ga0 = tuple()
+    ga1 = (
+        (n.sa0, n.pa0, n.oa0),
+    )
+    ga2 = (
+        (n.sa0, n.pa0, n.oa0),
+        (n.sa0, n.pa1, n.oa1),
+    )
+    d_ga2_ga3 = {
+        'del': (
+            (n.sa0, n.pa1, n.oa1),
+        ),
+        'add': (
+            (n.sa0, n.pa2, n.oa2),
+        ),
+    }
+    ga3 = (
+        (n.sa0, n.pa0, n.oa0),
+        (n.sa0, n.pa2, n.oa2),
+    )
+
+    ga2_add = (
+        (n.sa0, n.pa6, n.oa6),
+        
+    )
+
+    ga2_rem = (
+        (n.sa0, n.pa1, n.oa1),
+    )
+
+    ga2_ban = (
+        (n.sa0, n.pa2, n.oa2),
+    )
+
+    _bnc0_0 = rdflib.BNode()
+    gc0 = (
+        (n.sc0, n.pc0, n.oc0),
+        (n.sc0, n.pc1, _bnc0_0),
+        (_bnc0_0, n.pc2, n.oc1),
+    )
+
+    _ga1 = (
+        (n.sa0, n.pa0, n.oa0),
+        (n.sa0, n.pa1, n.oa1),
+        (n.sa0, n.pa2, n.oa2),
+           )
+
+    _ga2 = (  # too big for easy testing
+        (n.sa0, n.pa0, n.oa0),
+        (n.sa0, n.pa1, n.oa1),
+        (n.sa0, n.pa2, n.oa2),
+
+        (n.sa0, n.pa3, n.oa3),
+        (n.sa0, n.pa4, n.oa4),
+        (n.sa0, n.pa5, n.oa5),
+    )
+
+
+    def test_linear_history(self):
+        # not worrying about embedded vs external right now
+
+        # XXX REMINDER in order for this to work we have to replace all the bnodes with identity bnodes
+        # OR we have to do this on named subject closures, or on serializesd bnodes
+
+        hg = OntGraph()
+
+        gn1 = OntGraph()
+
+        g0 = OntGraph()
+        g0.populate_from_triples(self.g0)
+        # diffFromGraph self is prior in time to other for adds
+        # so the prior graph should always be the one in question
+        add0, rem0, same0 = gn1.diffFromGraph(g0)
+
+        g1 = OntGraph()
+        g1.populate_from_triples(self.g1)
+        add1, rem1, same1 = g0.diffFromGraph(g1)
+
+        IdentityBNode(g0)
+        IdentityBNode(list(g0))
+        IdentityBNode(list(g0)[0])
+
+        gc0 = OntGraph()
+        gc0.populate_from_triples(self.gc0)
+        gc0d = gc0.asWithIdentifiedBNodes()
+        i = IdentityBNode(gc0d, debug=True)
+        bads = []
+        for k, v in i.bnode_identities.items():
+            bnvhex = rdflib.BNode(v.hex())
+            if k != bnvhex:
+                bads.append((k, nbvhex))
+
+        breakpoint()
+
+
+        self.g0
+        self.g1
+        self.g2
+        self.g3
+
+    def test_with_id_bnodes(self):
+        gc0 = OntGraph()
+        gc0.populate_from_triples(self.gc0)
+
+        gn = OntGraph().parse(pathlib.Path('ttlser/test/nasty.ttl'))
+        ge = OntGraph().parse(pathlib.Path('ttlser/test/evil.ttl'))
+
+        graphs = (
+            gc0,
+            ge,  # apparently not as evil as we thought
+            gn,  # woah ... this one breaks
+        )
+        badgraphs = []
+        for graph in graphs:
+            dgraph = graph.asWithIdentifiedBNodes()
+            i = IdentityBNode(dgraph, debug=True)
+            bads = []
+            for k, v in i.bnode_identities.items():
+                bnvhex = rdflib.BNode(v.hex())
+                if k != bnvhex:
+                    bads.append((k, nbvhex))
+
+            if bads:
+                badgraphs.append((graph, dgraph, bads))
+
+        if badgraphs:
+            breakpoint()
+
+        assert not badgraphs, badgraphs
+
+    def test_linear_ban_history(self):
+        pass
+
+    def test_refine_history(self):
+        pass
+
+    def test_fork_history(self):
+        pass
+
+    def test_hrm(self):
+        gt0
+        gt1
+
+        gt1.diff_from(gt0)
+        gt0.diff_to(gt1)
+
+        pass
+
