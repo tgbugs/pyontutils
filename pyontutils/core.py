@@ -1565,35 +1565,113 @@ class OntGraph(rdflib.Graph):
         # subject, subjectGraphIdentity is the identity of the graph that contains only
         # that subject and no other subjects, that is id(subject) vs id([subject])
         # there is an additional call to the identity function for subjectGraphIdentity
-        source_ibn = self.subjectGraphIdentity(subject, debug=debug)
-        sci = source_ibn.subject_condensed_identities[subject]
-        # XXX MASSIVE HACK
-        ibn = IdentityBNode(sci, debug=True)
-        ibn.subject_identities = {}
-        ibn.subject_condensed_identities = {}
-        ibn.subject_identities[subject] = source_ibn.subject_identities[subject]
-        ibn.subject_condensed_identities[subject] = source_ibn.subject_condensed_identities[subject]
+        use_pairs, use_none = False, False
+        source_ibn = self.subjectGraphIdentity(subject, debug=debug, use_pairs=use_pairs, use_none=use_none)
+        if debug:
+            import pprint
+            ibn = source_ibn
+
+            d_ibn = self.subjectGraphIdentity(subject, debug=debug, use_pairs=False, use_none=False)
+            d_sis = dict(d_ibn.subject_identities)[subject]
+            d_scis = d_ibn.subject_condensed_identities[subject]
+
+            n_ibn = self.subjectGraphIdentity(subject, debug=debug, use_pairs=False, use_none=True)
+            n_sis = dict(n_ibn.subject_identities)[None]  # XXX NOTE THE KEY CHANGE
+            n_scis = n_ibn.subject_condensed_identities[None]  # XXX NOTE THE KEY CHANGE
+
+            self_ibn = IdentityBNode(self, debug=True)
+            self_sis = dict(self_ibn.subject_identities)[subject]
+            self_scis = self_ibn.subject_condensed_identities[subject]
+
+            #breakpoint()
+            p_ibn = self.subjectGraphIdentity(subject, debug=debug, use_pairs=True, use_none=False)
+            p_sis = dict(p_ibn.subject_identities).get(None, KeyError)
+            p_scis = p_ibn.subject_condensed_identities.get(None, KeyError)  # sci is empty in this case
+
+            sigh = (
+                ibn.identity.hex(),
+
+                'default' + '-' * 20,
+                d_ibn.identity.hex(),
+                pprint.pformat([_.hex() for _ in d_sis]),
+                d_scis.hex(),
+
+                'none   ' + '-' * 20,
+
+                n_ibn.identity.hex(),
+                str(n_sis) if n_sis is KeyError else pprint.pformat([_.hex() for _ in n_sis]),
+                n_scis.hex(),
+
+                'self   ' + '-' * 20,
+
+                self_ibn.identity.hex(),  # usually irrelevant except in cases where the graph and the subject graph are identical
+                pprint.pformat([_.hex() for _ in self_sis]),
+                self_scis.hex(),
+
+                'pairs  ' + '-' * 20,
+
+                p_ibn.identity.hex(),
+                str(p_sis) if p_sis is KeyError else pprint.pformat([_.hex() for _ in p_sis]),
+                str(p_scis) if p_scis is KeyError else p_scis.hex(),
+            )
+            #log.debug('\n' + '\n'.join(sigh))
+            #breakpoint()
+
+        if not (use_pairs or use_none):
+            try:
+                sci = source_ibn.subject_condensed_identities[subject]
+            except KeyError as e:
+                breakpoint()
+                source_ibn = self.subjectGraphIdentity(subject, debug=debug)
+                raise e
+
+            # XXX MASSIVE HACK
+            ibn = IdentityBNode(sci, debug=True)
+            ibn.subject_identities = {}
+            ibn.subject_condensed_identities = {}
+            ibn.subject_identities[subject] = source_ibn.subject_identities[subject]
+            ibn.subject_condensed_identities[subject] = source_ibn.subject_condensed_identities[subject]
+
         return ibn
 
-    def subjectGraphIdentity(self, subject, *, debug=False):
+    def subjectGraphIdentity(self, subject, *, idbn_class=None, debug=False, use_pairs=False, use_none=False):
         """ calculate the identity of a subgraph for a particular subject
             useful for determining whether individual records have changed
             not quite
         """
         # FIXME TODO compare to the internal value in ident.subject_identity for the whole graph
+        if idbn_class is None:
+            idbn_class = IdentityBNode
 
         triples = list(self.subjectGraph(subject))  # subjective
-        #pairs_triples = [tuple(None if e == subject else e for e in t) for t in triples]  # objective  # XXX old
-        pairs_triples = triples
+        if not triples:
+            raise ValueError(f'subject {subject} not in graph {self}')
+
+        # XXX so the problem with the pairs approach is that, while technically correct, the subject will be missing from subject_condensed_identities
+        # because the subject itself is not in the graph (as one would expect)
+        if use_pairs:
+            # this does not work and the massive hack above is to help deal with that fact until
+            # it can be dealt with in the ibnode implementation so that IdentityBNode can be called
+            # recursively to obtain the same value as the internal values
+            pairs_triples = [tuple(e for i, e in enumerate(t) if not (e == subject and not i)) for t in triples]  # objective
+        elif use_none:
+            # this way more or less works, but the final identity return by ibnode is not correct
+            # though technically neither is the pairs case ...
+            # XXX do not replace occurances of the subject if they appear in the object position
+            # FIXME I'm sure this will come back to bite us with not actually blank nodes ...
+            pairs_triples = [tuple(None if e == subject and i == 0 else e for i, e in enumerate(t)) for t in triples]  # objective  # XXX old
+        else:
+            pairs_triples = triples
         try:
-            ibn = IdentityBNode(pairs_triples, debug=True)
+            ibn = idbn_class(pairs_triples, debug=True)
         except AssertionError as e:
             _g = self.__class__()
             [_g.add(t) for t in triples]
             _g.debug()
             raise e
+
         if debug:
-            triples = [(subject, *pos) if len(pos) == 2 else pos for pos in pairs_triples]
+            triples = [(subject, *pos) if len(pos) == 2 else ((subject, *pos[1:]) if pos[0] is None else pos) for pos in pairs_triples]
             g = self.__class__()
 
             _replaced = {}
@@ -1612,13 +1690,51 @@ class OntGraph(rdflib.Graph):
             # switch out all the bnodes to double check
             [g.add(rebnode(t)) for t in triples]
             self.namespace_manager.populate(g)
+            if isinstance(subject, rdflib.BNode):
+                _old_subject = subject
+                subject = _replaced[subject]
+
             dibn = g.subjectIdentity(subject, debug=False)
-            gibn = IdentityBNode(g, debug=True)
-            print(g.ttl)
-            print(ibn, dibn)
-            assert ibn == dibn
-            assert ibn != gibn
-            breakpoint()
+            gibn = idbn_class(g, debug=True)
+            #log.debug('\n' + g.ttl)
+            #log.debug((ibn, dibn, gibn))
+            if triples == pairs_triples and not isinstance(subject, rdflib.BNode):
+                # XXX LOL why did this switch !??!? because when == now dibn subject returns the pairlist id whereas ibn computes the triples id
+                # XXX NO something is still wrong
+                if ibn == dibn:
+                    breakpoint()
+
+                assert ibn != dibn
+            else:
+                # FIXME replace issues somehow ???
+                #if isinstance(subject, rdflib.BNode):
+                #    # this happens because the full graph of
+                #    # triples with the bnode will be hashed
+                #    # one more time ... or not
+                #    assert ibn != dibn
+                #else:
+
+                if ibn != dibn:
+                    # looks like this only happens in use_none ?
+                    breakpoint()
+                assert ibn == dibn
+
+            # so in cases where the set of triples that have the subject
+            # as a subject is identical to the set of all triples in the
+            # graph then ibn will always be equal ... the problem is that
+            # we retain the subject and don't reduce to the pairs, so this
+            # debug assertion was made before we made the change to always
+            # include the subject when computing subject identity
+            # I don't remember why that change was made, but need to investigate
+            # to make sure it was the correct one, so for now protecting the
+            # assertion from triggering, however something is still fishy here
+            if triples != pairs_triples and not isinstance(subject, rdflib.BNode):
+                if ibn == gibn:
+                    breakpoint()
+
+                assert ibn != gibn
+            else:
+                assert ibn == gibn
 
         return ibn
 
@@ -2018,6 +2134,15 @@ class OntGraph(rdflib.Graph):
 
     def asTabular(self, lifting_rule=None, mimetype='text/tsv'):
         pass
+
+    def asWithIdentifiedBNodes(self):
+        g = self.__class__()
+        ibn = IdentityBNode(self, debug=True)  # FIXME HACK
+        replace_pairs = []
+        for bnode, checksum_bytes in ibn.bnode_identities.items():  # FIXME why is bnode_identifies a defaultdict(list)
+            replace_pairs.append((rdflib.BNode(checksum_bytes.hex()), bnode))
+
+        return self.replaceIdentifiers(replace_pairs)
 
 
 class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):

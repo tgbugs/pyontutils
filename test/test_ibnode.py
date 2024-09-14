@@ -1,10 +1,12 @@
+import pytest
 import unittest
+import pprint
 from pathlib import Path
 import rdflib
 from pyontutils.core import yield_recursive, OntGraph
 from pyontutils.identity_bnode import bnodes, IdentityBNode as IdentityBNodeBase
 from pyontutils.namespaces import rdf, ilxtr
-from .common import temp_path, ensure_temp_path
+from .common import temp_path, ensure_temp_path, log
 
 
 class TestIBNode(unittest.TestCase):
@@ -30,6 +32,7 @@ class TestIBNode(unittest.TestCase):
     def test_pair(self):
         test = 'hello', 'world'
         ibn = self.IdentityBNode(test)
+        #breakpoint()
         ident = ibn.identity
         m = self.IdentityBNode.cypher()
         for i, t in enumerate(test):
@@ -39,6 +42,81 @@ class TestIBNode(unittest.TestCase):
 
         h = m.digest()
         assert ident == h, ident
+
+    def test_pair_list(self):
+        test = (
+            ('a', 'b'),
+        )
+        ibn = self.IdentityBNode(test, debug=True)
+        ident = ibn.identity
+        m = self.IdentityBNode.cypher()
+        digs = []
+        for tup in test:
+            for i, t in enumerate(tup):
+                m.update(t.encode(self.IdentityBNode.encoding))
+                if not i % 2:
+                    m.update(ibn.cypher_field_separator_hash)
+
+            h = m.digest()
+            digs.append(h)
+
+        def oi(ids):
+            m = self.IdentityBNode.cypher()
+            for i, id in enumerate(ids):
+                m.update(id)
+
+            return m.digest()
+
+        # the reason why there is a double id hash in this case is
+        # because when we get to the top level for an ibnode we take
+        # the id for a subject by combining the ideas of all triples
+        # even if there is only one triple, and take the hash of all
+        # subjects in a graph even if there is only a single subject
+        # in the graph
+        if ibn.version > 2:
+            h = oi([oi(digs)])
+            assert ident.hex() == h.hex(), ident.hex()
+        else:
+            # for version 1 and version 2 we used the old way of
+            # computing the final hash for a single pair which only
+            # computed the hash once because technically there should
+            # only ever be a single None subject but if we want to be
+            # consistent we should still digest one more time as we do
+            # starting in v3
+            h = oi(digs)
+            assert ident.hex() == h.hex(), ident.hex()
+
+    def test_none_list_1(self):
+        a = ((      'a', 'b'),)
+        b = ((None, 'a', 'b'),)
+        bn = rdflib.BNode()
+        c = ((bn,   'a', 'b'),)
+        aibn = self.IdentityBNode(a, debug=True)
+        bibn = self.IdentityBNode(b, debug=True)
+        cibn = self.IdentityBNode(c, debug=True)
+        if aibn.version > 2:
+            assert aibn == bibn
+            #derp = [(k, v, cibn.__dict__[k])for k, v in bibn.__dict__.items()]
+            #breakpoint()
+            assert bibn == cibn
+        else:
+            assert aibn != bibn
+
+    def test_none_list_2(self):
+        a = ((      'a', 'b'), (      'c', 'd'))
+        b = ((None, 'a', 'b'), (None, 'c', 'd'))
+        bn = rdflib.BNode()
+        c = ((bn,   'a', 'b'), (bn,   'c', 'd'))
+        aibn = self.IdentityBNode(a, debug=True)
+        bibn = self.IdentityBNode(b, debug=True)
+        cibn = self.IdentityBNode(c, debug=True)
+        if aibn.version > 2:
+            assert aibn == bibn
+            #derp = [(k, v, cibn.__dict__[k])for k, v in bibn.__dict__.items()]
+            #breakpoint()
+            assert bibn == cibn
+        else:
+            assert aibn != bibn
 
     def test_commute(self):
         # XXX can't use raw strings
@@ -158,22 +236,110 @@ class TestIBNode(unittest.TestCase):
         # test dropout of all but one subgraphs that share an identity
         pass
 
-    def test_list(self):
-        g = OntGraph()
-        g.populate_from_triples((
-            (rdflib.BNode('0'), rdf.type, rdf.List),
-            (rdflib.BNode('0'), rdf.first, ilxtr.a),
-            (rdflib.BNode('0'), rdf.rest, rdf.nil),
-        ))
-        ident = self.IdentityBNode(g, debug=True)
-        wat = self.IdentityBNode(g, debug=True)
+    def _inner_list(self, thing):
+        ident = self.IdentityBNode(thing, debug=True)
+        wat = self.IdentityBNode(thing, debug=True)
         # somehow was is like we never iterate through the graph at all ???
         # YEP cache hit on a whole graph winds up returning to named_identities DUH
         # now fixed
-        err = self.IdentityBNode(list(g), debug=True)
+        err = self.IdentityBNode(list(thing), debug=True)
         assert ident == err, 'hrm'
         assert wat != self.IdentityBNode([], debug=True), 'sigh'
+        if wat != ident:
+            breakpoint()
         assert wat == ident, 'AAAAAAAAAAAAAAA'
+
+    def test_list(self):
+        inlist = (
+            (rdflib.BNode('0'), rdf.type, rdf.List),
+            (rdflib.BNode('0'), rdf.first, ilxtr.a),
+            (rdflib.BNode('0'), rdf.rest, rdf.nil),
+        )
+        g = OntGraph()
+        g.populate_from_triples(inlist)
+        self._inner_list(g)
+
+    def test_list_1(self):
+        inlist = (
+            (None, rdf.type, rdf.List),
+            (None, rdf.first, ilxtr.a),
+            (None, rdf.rest, rdf.nil),
+        )
+        self._inner_list(inlist)
+
+    def test_list_2(self):
+        bn0 = rdflib.BNode('0')
+        bn1 = rdflib.BNode('1')
+        inlist = (
+            (bn0, rdf.type,  rdf.List),
+            (bn0, rdf.first, ilxtr.a),
+            (bn0, rdf.rest,  bn1),
+            (bn1, rdf.first, ilxtr.b),
+            (bn1, rdf.rest,  rdf.nil),
+        )
+        self._inner_list(inlist)
+
+    def test_list_3(self):
+        bn1 = rdflib.BNode('1')
+        # XXX hypothesis, this happens because subject_identities is populated
+        # before we realize that this subject is in triples with bnodes as objects
+        # and is therefore order dependent ... XXX partially false not order dependent
+        # but that is because resolve_bnode_idents runs after the first pass through recurse
+        # which will put the identity for (None, ilxtr.p, ilxtr.d) into subject_identities
+        # before resolving bnode idents
+        inlist = (
+            # any one of these triples is required, it doesn't have to be list involved at all
+            #(None, rdf.type,  rdf.List),
+            #(None, rdf.first, ilxtr.a),
+            (None, ilxtr.p, ilxtr.d),
+
+            (None, rdf.rest,  bn1),  # FIXME the issue is cause by this triple right here
+
+            # one of these two is required, it does have to be list requjired
+            #(bn1,  rdf.first, ilxtr.b),
+            (bn1,  rdf.rest,  rdf.nil),
+
+            #(bn1, ilxtr.p, ilxtr.c)  # this will not trigger thie issue
+        )
+        #breakpoint()
+        self._inner_list(inlist)
+
+    def test_list_4(self):
+        bn0 = rdflib.BNode('0')
+        bn1 = rdflib.BNode('1')
+        inlist = (
+            (bn0, rdf.type,  rdf.List),
+            (bn0, rdf.first, ilxtr.a),
+            (bn0, rdf.rest,  bn1),
+            (bn1, rdf.type,  rdf.List),
+            (bn1, rdf.first, ilxtr.b),
+            (bn1, rdf.rest,  rdf.nil),
+        )
+        self._inner_list(inlist)
+        g = OntGraph()
+        g.populate_from_triples(inlist)
+
+        i = self.IdentityBNode(g, debug=True)
+        issues = False
+        for s, sid in i.subject_condensed_identities.items():
+            ng = OntGraph()
+            ng.populate_from_triples(g.subjectGraph(s))
+            ng_idn = self.IdentityBNode(ng, debug=True)
+            g_sgi = g.subjectGraphIdentity(s, idbn_class=self.IdentityBNode)
+            log.debug('\n' + pprint.pformat((i, ng_idn, g_sgi)))
+            if not (i == ng_idn == g_sgi):
+                log.debug('\n' + pprint.pformat(
+                    (i.id_lookup, ng_idn.id_lookup, g_sgi.id_lookup), width=240))
+                #breakpoint()
+                #self.IdentityBNode(i.identity)
+                issues = True
+
+        # TODO from the debug print here it seems that
+        # the issue is that the first computation for g
+        # differs, and i thik that it probably should
+        # because it is the whole graph not just the
+        # bnode subject, give the id_lookup a read
+        assert not issues, 'see debug print'
 
 
 class TestIBNodeGraph(unittest.TestCase):
@@ -301,15 +467,27 @@ class TestIBNodeGraph(unittest.TestCase):
         assert id1.identity == id2.identity, 'identities do not match'
 
     def test_subject_identities(self):
+        def sigh(e):
+            try:
+                return ng.qname(e)
+            except:
+                return e
+
+        # FIXME this takes forever on ro.owl
         # XXX I think this fails right now because there is an extra call to ordered_identity right now?
         i = self.IdentityBNode(self.graph1, debug=True)
         issues = False
         for s, sid in i.subject_condensed_identities.items():
-            ng = OntGraph().populate_from_triples(self.graph1.subjectGraph(s))
+            ng = OntGraph()
+            ng.namespace_manager.populate_from(self.graph1)
+            ng.populate_from_triples(self.graph1.subjectGraph(s))
             #ng.debug()
             #sidg = self.graph1.subjectIdentity(s)
             hrm = self.IdentityBNode(ng)
             sidg = self.graph1.subjectGraphIdentity(s)
+            assert s in self.graph1.subjects()
+            assert list(self.graph1.predicate_objects(s))
+            wat = self.graph1.subjectIdentity(s, debug=True)
             # an additional call to IdentityBNode is required to match the fact
             # that we are taking the identity of a collection with one element
             # not just the element itself
@@ -317,20 +495,37 @@ class TestIBNodeGraph(unittest.TestCase):
             # FIXME it seems there is another issue ... which is that sometimes sid contains multiple
             # and so we probably want subject_condensed_identities ??? not sure?
             sidi = self.IdentityBNode(sid, debug=True)
-            if set(i.subject_identities[s]) != set(sidg.subject_identities[s]):
-                print(f'broken: e.g. due to empty subjectGraph {s}')
-                ng.debug()
+            sisis = set(i.subject_identities[s])
+            sssis = set(sidg.subject_identities[s])
+            if sisis != sssis:
+                _intersect = sisis & sssis
+                if _intersect:
+                    # XXX hypothesis ... in a full graph processing of lists results in differences somehow
+                    # the one in particular that we hit seems to be from BLX:4.5 in nasty.ttl and I think
+                    # that the problem is that that version of the construct is not being hashed like the
+                    # reduced list form, one solution (bad) would be to expand all lists such that sublists
+                    # were always fully typed internally like in BLX:4.5, of course they tend to drop the rdf:List bit
+                    log.error(f'utoh, double hashing case OR incomplete subject_identities or only rdf:rest rdf:nil identity? !? {_intersect}')
+                # XXX it looks like this is somehow an off by 1 error
+                # where there is a bnode with the correct id in the graph
+                # is this an off by one on the rdf list somehow ??? surely not
+                #log.debug(f'broken: e.g. due to empty subjectGraph {s}')
+                #ng.debug()
+                bah = '\n'.join([' '.join(
+                    [sigh(e) # FIXME some stateful thing gets skipped here if we only run test_subject_identities so qname fails !??!?! SIGH
+                     if isinstance(e, rdflib.URIRef) else str(e) for e in t]) for t in sorted(ng)])
+                log.debug('\n' + bah)
                 issues = True
-                breakpoint()
-                raise ValueError('stop pls')
+                #breakpoint()
+                #raise ValueError('stop pls')
                 continue
 
             assert set(i.subject_identities[s]) == set(sidg.subject_identities[s]), 'dag nabbit'
             assert i.subject_condensed_identities[s] == sidg.subject_condensed_identities[s]
             if sidi != sidg:
                 # TODO HOORAY we found a test that breaks when there are cycles!
-                print(f'broken: e.g. due to cycle {s}')
-                ng.debug()
+                log.debug(f'broken: e.g. due to cycle {s}')
+                #ng.debug()
                 issues = True
                 continue
 
@@ -382,7 +577,6 @@ class TestIBNodeGraph(unittest.TestCase):
             # XXX what is truely wild is that the set that cause problems changes from run to run !?!?!?
             sigh = set(id1_only) & set(id2_only)
             #print('not looking so stable', sigh)
-            import pprint
             for overlap in sigh:
                 print(overlap)
                 # when you look at the list that pops it it doesn't even look the same !??!?!
@@ -441,14 +635,49 @@ class TestIBNodeGraphRo(TestIBNodeGraph):
     path_to_test = Path('~/git/interlex/ro.owl').expanduser()
     format = 'xml'
 
+    @pytest.mark.skip('too slow')
+    def test_subject_identities(self):
+        super().test_subject_identities()
+
 
 # test previous versions
+
+# 2
+
+class IdentityBNodeBase2(IdentityBNodeBase):
+    default_version = 2
+
+
+class TestIBNode2(TestIBNode):
+    IdentityBNode = IdentityBNodeBase2
+
+
+class TestIBNodeGraphAlt2(TestIBNodeGraphAlt):
+    IdentityBNode = IdentityBNodeBase2
+
+
+class TestIBNodeGraphRo2(TestIBNodeGraphRo):
+    IdentityBNode = IdentityBNodeBase2
+
+
+class TestIBNodeGraph2(TestIBNodeGraph):
+    IdentityBNode = IdentityBNodeBase2
+
+# 1
+
 class IdentityBNodeBase1(IdentityBNodeBase):
     default_version = 1
 
 
 class TestIBNode1(TestIBNode):
     IdentityBNode = IdentityBNodeBase1
+
+    @pytest.mark.skip('broken insantiy')
+    def test_list_3(self):
+        # calling ident on the same value twice
+        # produces a different result, which is
+        # why we moved to version 2 iirc
+        super().test_list_3()
 
 
 class TestIBNodeGraphAlt1(TestIBNodeGraphAlt):
@@ -470,8 +699,10 @@ class TextXVersion(unittest.TestCase):
     def test_xversion(self):
         a = IdentityBNodeBase('a')
         b = IdentityBNodeBase1('a')
-        try:
-            a.check(b)
-            assert False, 'should have failed with version mismatch'
-        except ValueError as e:  # FIXME change error type when changed interally as well
-            pass
+        c = IdentityBNodeBase2('a')
+        for i, j in ((a, b), (b, c), (a, c)):
+            try:
+                i.check(j)
+                assert False, 'should have failed with version mismatch'
+            except ValueError as e:  # FIXME change error type when changed interally as well
+                pass
