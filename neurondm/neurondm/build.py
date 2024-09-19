@@ -1216,6 +1216,7 @@ def make_devel():
           #'bolser-lewis.ttl',
           'keast-2020.ttl',
           'apinatomy-neuron-populations.ttl',
+          'apinat-partial-orders.ttl',
           #'apinatomy-locations.ttl',
           #'nerves.ttl',
           'sparc-nlp.ttl',
@@ -1232,8 +1233,15 @@ def make_devel():
     bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT',
             'NIFRAW', 'NLXCELL', 'NLXNEURNT', 'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX',
             'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
+    _notypes = (rdf.type, rdf.first, rdf.rest, owl.onProperty, owl.someValuesFrom,
+                owl.unionOf, owl.intersectionOf, owl.complementOf)
+    partial_order_layers = set([
+        e for _, b in g[:rdf.first:] if isinstance(b, rdflib.BNode)
+        for p, o in g[b::] if p not in _notypes and isinstance(o, rdflib.URIRef) for e in (p, o)])
     ents = set(e for e in chain((o for _, o in g[:owl.someValuesFrom:]),
                                 (o for _, o in g[:rdfs.subClassOf:]),
+                                (o for _, o in g[:rdf.first:] if isinstance(o, rdflib.URIRef) and o not in _notypes),  # partial order regions
+                                partial_order_layers,
                                 g.predicates(),
                                 (s for s in g.subjects() if isinstance(s, rdflib.URIRef)
                                  and OntId(s).prefix not in bads))

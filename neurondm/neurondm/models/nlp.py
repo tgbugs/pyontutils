@@ -68,7 +68,7 @@ snames = {
     'All SM connections': (NLPSenseMotor, nlp_ns('senmot'), 'sensory motor'),
     'ALL Liver_Human_Rat_Mouse': (NLPLiver, nlp_ns('liver'), 'liver'),
     'All KIDNEY connections': (NLPKidney, nlp_ns('kidney'), 'kidney'),
-    'Sheet1': (NLPSwglnd, nlp_ns('swglnd'), 'swglnd'),
+    'Sheet1': (NLPSwglnd, nlp_ns('swglnd'), 'sweat glands'),
 }
 
 
@@ -93,6 +93,7 @@ def map_predicates(sheet_pred):
         'hasCircuitRole': ilxtr.hasCircuitRolePhenotype,  # used in femrep
         'hasCircuitRolePhenotype': ilxtr.hasCircuitRolePhenotype,
         'hasForwardConnectionPhenotype': ilxtr.hasForwardConnectionPhenotype,  # FIXME this needs to be unionOf
+        'Axon-Leading-To-Sensory-Terminal': ilxtr.hasAxonLeadingToSensorySubcellularElementIn,
     }[sheet_pred]
     return p
 
@@ -156,8 +157,17 @@ def main(debug=False):
 
     dd = defaultdict(list)
     ec = {}
+    def wrap(s):
+        class cl:
+            value = s
+        def inner(_=cl):
+            return _
+
+        return inner
+
     for cl in cs:
         _, nlpns, working_set = snames[cl.sheet_name]
+        log.debug(f'working on {working_set}')
         for r in cl.rows():
             try:
                 if (r.row_index > 0 and
@@ -165,7 +175,9 @@ def main(debug=False):
                     r.proposed_action().value.lower() != "don't add"):
                     # extra trips
                     #print(repr(r.id()))
-                    s = OntId(nlpns[r.id().value])
+                    _id = r.id().value
+                    _prefix = nlpns.split('/')[-2]
+                    s = OntId(nlpns[_id])
                     #print(s)
                     if hasattr(r, 'sentence_number'):
                         asdf(s, ilxtr.sentenceNumber, r.sentence_number)
@@ -175,7 +187,9 @@ def main(debug=False):
                     asdf(s, ilxtr.reviewNote, r.review_notes)
                     asdf(s, ilxtr.reference, r.reference_pubmed_id__doi_or_text)
                     asdf(s, ilxtr.literatureCitation, r.literature_citation, split=',', rdf_type=lcc)
-                    asdf(s, rdfs.label, r.neuron_population_label_a_to_b_via_c)
+                    asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)
+                    asdf(s, skos.prefLabel, r.neuron_population_label_a_to_b_via_c)
+                    asdf(s, rdfs.label, wrap(f'neuron type {_prefix} {_id}'))
                     if hasattr(r, 'alert_explanation'):
                         asdf(s, ilxtr.alertNote, r.alert_explanation)
 
