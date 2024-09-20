@@ -35,6 +35,7 @@ def map_predicates(sheet_pred):
         '': TEMP.BROKEN_EMPTY,
         'Soma-Location': ilxtr.hasSomaLocatedIn,
         'Axon-Terminal-Location': ilxtr.hasAxonPresynapticElementIn,
+        'Axon-Leading-To-Sensory-Terminal': ilxtr.hasAxonLeadingToSensorySubcellularElementIn,
         'Axon-Location': ilxtr.hasAxonLocatedIn,
         'Dendrite-Location': ilxtr.hasDendriteLocatedIn,
         #'Dendrite-Terminal-Location': ilxtr.hasDendriteSensorySubcellularElementIn,
