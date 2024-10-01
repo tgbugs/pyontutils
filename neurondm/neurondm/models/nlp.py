@@ -4,7 +4,7 @@ from urllib.parse import quote as url_quote
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
-from neurondm.core import Config, NeuronEBM, Phenotype, NegPhenotype, log, OntCuries, OntId, add_partial_orders
+from neurondm.core import Config, NeuronEBM, Phenotype, NegPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf
 from neurondm import orders
 
 
@@ -69,31 +69,42 @@ snames = {
     'ALL Liver_Human_Rat_Mouse': (NLPLiver, nlp_ns('liver'), 'liver'),
     'All KIDNEY connections': (NLPKidney, nlp_ns('kidney'), 'kidney'),
     'Sheet1': (NLPSwglnd, nlp_ns('swglnd'), 'sweat glands'),
+    'comprt': (type('ComposerRT', (object,), dict()), None, 'composer round trip'),
 }
 
 
 sheet_classes = [
     type(f'{base.__name__}{sname.replace(" ", "_")}',
          (base,), dict(sheet_name=sname))
-    for sname, (base, ns, working_set) in snames.items()]
+    for sname, (base, ns, working_set) in snames.items()
+    if ns is not None]
 
 
-def map_predicates(sheet_pred):
+def map_predicates(sheet_pred, prefix=ilxtr):
     p = {
         '': TEMP.BROKEN_EMPTY,
-        'Soma': ilxtr.hasSomaLocatedIn,
-        'Axon terminal': ilxtr.hasAxonPresynapticElementIn,
-        'Axon': ilxtr.hasAxonLocatedIn,
-        'Dendrite': ilxtr.hasDendriteLocatedIn,
-        'Axon sensory terminal': ilxtr.hasAxonSensorySubcellularElementIn,
-        'hasInstanceInTaxon': ilxtr.hasInstanceInTaxon,
-        'hasPhenotype': ilxtr.hasPhenotype,
-        'hasAnatomicalSystemPhenotype': ilxtr.hasAnatomicalSystemPhenotype,
-        'hasBiologicalSex': ilxtr.hasBiologicalSex,
-        'hasCircuitRole': ilxtr.hasCircuitRolePhenotype,  # used in femrep
-        'hasCircuitRolePhenotype': ilxtr.hasCircuitRolePhenotype,
-        'hasForwardConnectionPhenotype': ilxtr.hasForwardConnectionPhenotype,  # FIXME this needs to be unionOf
-        'Axon-Leading-To-Sensory-Terminal': ilxtr.hasAxonLeadingToSensorySubcellularElementIn,
+        'Soma': prefix.hasSomaLocatedIn,
+        'Axon terminal': prefix.hasAxonPresynapticElementIn,
+        'Axon': prefix.hasAxonLocatedIn,
+        'Dendrite': prefix.hasDendriteLocatedIn,
+        'Axon sensory terminal': prefix.hasAxonSensorySubcellularElementIn,
+        'hasInstanceInTaxon': prefix.hasInstanceInTaxon,
+        'hasPhenotype': prefix.hasPhenotype,
+        'hasAnatomicalSystemPhenotype': prefix.hasAnatomicalSystemPhenotype,
+        'hasBiologicalSex': prefix.hasBiologicalSex,
+        'hasCircuitRole': prefix.hasCircuitRolePhenotype,  # used in femrep
+        'hasCircuitRolePhenotype': prefix.hasCircuitRolePhenotype,
+        'hasForwardConnectionPhenotype': prefix.hasForwardConnectionPhenotype,  # FIXME this needs to be unionOf
+        'Axon-Leading-To-Sensory-Terminal': prefix.hasAxonLeadingToSensorySubcellularElementIn,
+
+        # from composer
+        'hasSomaLocatedIn': prefix.hasSomaLocatedIn,
+        'hasAxonLocatedIn': prefix.hasAxonLocatedIn,
+        'hasAxonPresynapticElementIn': prefix.hasAxonPresynapticElementIn,
+        'hasAxonSensorySubcellularElementIn': prefix.hasAxonSensorySubcellularElementIn,
+        'hasProjection': prefix.hasProjectionPhenotype,  # XXX check the semantics on this one
+        'hasProjectionLaterality': prefix.hasProjectionLaterality,  # XXX check the semantics on this one because it expects contra/ipsi not left/right
+        'hasSomaPhenotype': prefix.hasSomaPhenotype,  # XXX what is this being used for? I can't find any objects?
     }[sheet_pred]
     return p
 
@@ -114,20 +125,23 @@ def ind_to_adj(ind_uri):
     return edges
 
 
-def main(debug=False):
+def main(debug=False, cs=None, config=None, neuron_class=None):
     def derp(v):
         class sigh:
             value = v
         return sigh
 
     OntCuries({'ISBN13': 'https://uilx.org/tgbugs/u/r/isbn-13/',})
-    cs = [c() for c in sheet_classes]
-    trips = [[cl] + [c.value for c in
-                     (r.id(), r.relationship(),
+    if cs is None:
+        cs = [c() for c in sheet_classes]
+
+    trips = [[cl] + [c if isinstance(c, OntId) else c.value for c in
+                     ((r.id() if hasattr(r, 'id') else OntId(r.uri().value)),
+                      (r.predicate() if hasattr(r, 'predicate') else r.relationship()),
                       (r.identifier() if r.identifier().value.strip() else
                        derp(TEMP['MISSING_' + r.structure().value.replace(' ', '-')])))]
              for cl in cs for r in cl.rows()
-             if r.row_index > 0 and r.id().value
+             if r.row_index > 0 and (r.id().value if hasattr(r, 'id') else r.uri().value)
              #and (not hasattr(r, 'exclude') or not r.exclude().value)
              and r.proposed_action().value.lower() != "don't add"
              ]
@@ -171,13 +185,13 @@ def main(debug=False):
         for r in cl.rows():
             try:
                 if (r.row_index > 0 and
-                    r.id().value and
+                    (r.id if hasattr(r, 'id') else r.uri)().value and
                     r.proposed_action().value.lower() != "don't add"):
                     # extra trips
                     #print(repr(r.id()))
-                    _id = r.id().value
-                    _prefix = nlpns.split('/')[-2]
-                    s = OntId(nlpns[_id])
+                    _id = (r.id().value if hasattr(r, 'id') else OntId(r.uri().value))
+                    _prefix = nlpns.split('/')[-2] if hasattr(r, 'id') else 'comprt'
+                    s = _id if isinstance(_id, OntId) else OntId(nlpns[_id])
                     #print(s)
                     if hasattr(r, 'sentence_number'):
                         asdf(s, ilxtr.sentenceNumber, r.sentence_number)
@@ -186,7 +200,8 @@ def main(debug=False):
                     asdf(s, ilxtr.curatorNote, r.curation_notes)
                     asdf(s, ilxtr.reviewNote, r.review_notes)
                     asdf(s, ilxtr.reference, r.reference_pubmed_id__doi_or_text)
-                    asdf(s, ilxtr.literatureCitation, r.literature_citation, split=',', rdf_type=lcc)
+                    if hasattr(r, 'literature_citation'):
+                        asdf(s, ilxtr.literatureCitation, r.literature_citation, split=',', rdf_type=lcc)
                     asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)
                     asdf(s, skos.prefLabel, r.neuron_population_label_a_to_b_via_c)
                     asdf(s, rdfs.label, wrap(f'neuron type {_prefix} {_id}'))
@@ -212,14 +227,21 @@ def main(debug=False):
                         if not debug and not _v:
                             raise ValueError(f'row missing object for {_structure}')
 
-                        try:
-                            _obj = OntId(_v).u if _v else _alt_v
-                        except OntId.UnknownPrefixError as e:
-                            if debug:
-                                log.exception(e)
-                                _obj = TEMP.BROKEN_MALFORMED
-                            else:
-                                raise e
+                        if _v and ',' in _v:
+                            _r, _l = [_.strip() for _ in _v.split(',')]
+                            #_v = _r  # FIXME TODO handle rl pairs
+                            _obj = orders.rl(region=OntId(_r).u, layer=OntId(_l).u)
+                        else:
+                            try:
+                                _obj = OntId(_v).u if _v else _alt_v
+                            except OntId.UnknownPrefixError as e:
+                                if debug:
+                                    log.exception(e)
+                                    _obj = TEMP.BROKEN_MALFORMED
+                                else:
+                                    raise e
+
+                            _obj = orders.rl(region=_obj)
 
                         dd[s.u].append((int(r.axonal_course_poset().value), _obj))
 
@@ -239,7 +261,8 @@ def main(debug=False):
 
     # XXX config must be called before creating any phenotypes
     # otherwise in_graph will not match when we go to serialize
-    config = Config('sparc-nlp')
+    if config is None:
+        config = Config('sparc-nlp')
 
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
@@ -250,7 +273,7 @@ def main(debug=False):
                 log.error(msg)
                 raise ValueError(msg)
 
-        s = OntId(nlpns[_s])
+        s = _s if isinstance(_s, OntId) else OntId(nlpns[_s])
         try:
             p = map_predicates(_p)
         except KeyError as e:
@@ -265,18 +288,25 @@ def main(debug=False):
             else:
                 _o = TEMP.BROKEN_EMPTY
 
+        elif nlpns is None:
+            if ',' in _o:
+                _r, _l = [_.strip() for _ in _o.split(',')]
+                _o = IntersectionOf(OntId(_r).u, OntId(_l).u)
+                #_o = _r  # FIXME TODO handle region/layer
         elif p == ilxtr.hasForwardConnectionPhenotype:
             _o = nlpns[_o]
 
-        try:
-            o = OntId(_o)
-        except OntId.UnknownPrefixError as e:
-            if debug:
-                log.exception(e)
-                o = TEMP.BROKEN_MALFORMED_2
-            else:
-                raise e
-
+        if isinstance(_o, IntersectionOf):
+            o = _o
+        else:
+            try:
+                o = OntId(_o)
+            except OntId.UnknownPrefixError as e:
+                if debug:
+                    log.exception(e)
+                    o = TEMP.BROKEN_MALFORMED_2
+                else:
+                    raise e
 
         if p == owl.equivalentClass:
             to_add.append((s.u, p, o.u))
@@ -292,10 +322,12 @@ def main(debug=False):
             dd[s].append(NegPhenotype(ec[(s, p)], p))
 
 
+    if neuron_class is None:
+        neuron_class = NeuronSparcNlp
     sigh = []
     nrns = []
     for id, phenos in dd.items():
-        n = NeuronSparcNlp(*phenos, id_=id)
+        n = neuron_class(*phenos, id_=id)
         if False and eff(n):
             n._sigh()  # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX FIXME figure out why this is not getting called internally
             sigh.append(n)
