@@ -207,6 +207,8 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                     asdf(s, rdfs.label, wrap(f'neuron type {_prefix} {_id}'))
                     if hasattr(r, 'alert_explanation'):
                         asdf(s, ilxtr.alertNote, r.alert_explanation)
+                    if hasattr(r, 'alert_note'):
+                        asdf(s, ilxtr.alertNote, r.alert_note)
 
                     if hasattr(r, 'explicit_complement') and r.explicit_complement().value:
                         p = map_predicates(r.relationship().value)
