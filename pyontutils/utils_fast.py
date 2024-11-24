@@ -21,7 +21,7 @@ from colorlog import ColoredFormatter
 def logToFile(logger, path):
     lfh = logging.FileHandler(path.as_posix())
     lfh.setFormatter(logger.handlers[0].formatter)
-    logger.addHandler(logger)
+    logger.addHandler(lfh)
 
 
 def makeSimpleLogger(name, color=True):
