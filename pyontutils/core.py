@@ -2092,6 +2092,61 @@ class OntGraph(rdflib.Graph):
 
         return cycle_participants
 
+    def cycle_check_long(self):
+        """ return all distinct bnode cycles in the graph """
+        def hrm(subject):
+            seen = set()
+            paths = [[]]
+
+            def f(triple, graph):
+                s, predicate, object = triple
+                opath = path = paths[-1]
+                if object in seen:
+                    if triple not in path:
+                        path.append(triple)
+
+                    return
+                else:
+                    seen.add(object)
+                    # do not append to path here only append to path
+                    # after the yield below because that is the point
+                    # where we know that we are returning from a case
+                    # where the transitive closure ended in a cycle
+                    # rather than a stop iteration
+
+                for p, o in graph[object]:
+                    if isinstance(o, rdflib.BNode):
+                        yield object, p, o
+                        # and when control returns here ...
+                        if path:
+                            if s is not None and triple not in path:
+                                path.append(triple)
+                            # ensure that any future calls to f operate on a fresh path
+                            path = []
+                            paths.append(path)
+
+            # don't return _hrm because it merges separate cycles if they share a subject
+            _hrm = list(self.transitiveClosure(f, (None, None, subject)))
+            #paths = [sorted(p) for p in paths if p]
+            paths = [p for p in paths if p]
+            return paths
+
+        cycles = []
+        in_cycles = set()
+        for s in self.subjects(unique=True):
+            if s in in_cycles:
+                continue
+
+            if isinstance(s, rdflib.BNode):
+                # we only need to deal with bnodes at appear as
+                # subjects, if there are dangling bnodes they by
+                # defintion cannot be in cycles
+                for cycle in hrm(s):
+                    cycles.append(cycle)
+                    in_cycles.update(set(e for _s, _, _o in cycle for e in (_s, _o)))
+
+        return cycles
+
     def asOboGraph(self, predicate=None, label_predicate=None, restriction=True):
         """ supply a predicate to restrict the exported graph """
         if label_predicate is None:

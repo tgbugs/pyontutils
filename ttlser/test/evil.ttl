@@ -17,10 +17,13 @@ ilxtr:b3 rdf:first ilxtr:e ;
     rdf:rest
     ilxtr:b1 .
 
+
 _:blank a ilxtr:p .
+
 
 _:blank0 a ilxtr:q ;
     rdf:rest _:blank0 .
+
 
 _:blank1 a ilxtr:r ;
     rdf:rest _:blank2 .
@@ -30,3 +33,39 @@ _:blank2 a ilxtr:s ;
 
 _:blank3 a ilxtr:t ;
     rdf:rest _:blank1 .
+
+
+_:b1 a ilxtr:a ;
+    rdf:rest _:b2 .
+
+_:b2 a ilxtr:a ;
+    rdf:rest _:b3 .
+
+_:b3 a ilxtr:a ;
+    rdf:rest _:b1, _:b4 .
+
+_:b4 a ilxtr:a ;
+    rdf:rest _:b2 .
+
+_:x0 ilxtr:p _:x1 .
+_:x1 ilxtr:z _:x2 .
+_:x2 ilxtr:p _:x3 .
+_:x3 ilxtr:p _:x4 .
+_:x4 ilxtr:z _:x0 .
+
+_:y0 ilxtr:c _:y1 .
+_:y1 ilxtr:d _:y2 .
+_:y2 ilxtr:c _:y3 .
+_:y3 ilxtr:c _:y4 .
+_:y4 ilxtr:f _:y5 .
+
+_:a1 ilxtr:d _:a2 .
+_:a2 ilxtr:c _:a3, _:a4 .
+_:a3 ilxtr:c _:a4 .
+_:a4 ilxtr:f _:a5 .
+_:a5 ilxtr:f _:a6, _:a7 .
+_:a6 ilxtr:f _:a2 .
+_:a7 ilxtr:f _:a8 .
+_:a8 ilxtr:f _:a9 .
+_:a9 ilxtr:f _:a5, _:a3 .
+

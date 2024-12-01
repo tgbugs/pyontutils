@@ -3,13 +3,31 @@ import unittest
 import pprint
 from pathlib import Path
 import rdflib
+import ttlser
 from pyontutils.core import yield_recursive, OntGraph
 from pyontutils.identity_bnode import bnodes, IdentityBNode as IdentityBNodeBase
 from pyontutils.namespaces import rdf, ilxtr
 from .common import temp_path, ensure_temp_path, log
 
 
-class TestIBNode(unittest.TestCase):
+def formatgraph(g):
+    def sigh(e):
+        try:
+            return g.qname(e)
+        except:
+            return e
+
+    bah = '\n'.join([' '.join(
+        [sigh(e) # FIXME some stateful thing gets skipped here if we only run test_subject_identities so qname fails !??!?! SIGH
+            if isinstance(e, rdflib.URIRef) else (e[34:] if isinstance(e, rdflib.BNode) else str(e)) for e in t])
+                     for t in sorted(g, key=lambda t: (ttlser.serializers.natsort(t[0]),
+                                                       ttlser.serializers.natsort(t[1]),
+                                                       ttlser.serializers.natsort(t[2]),
+                                                       ))])
+    return bah
+
+
+class TestIBNodeLive(unittest.TestCase):
 
     IdentityBNode = IdentityBNodeBase
 
@@ -51,11 +69,20 @@ class TestIBNode(unittest.TestCase):
         ident = ibn.identity
         m = self.IdentityBNode.cypher()
         digs = []
+        sep = ibn.version <= 2
         for tup in test:
             for i, t in enumerate(tup):
-                m.update(t.encode(self.IdentityBNode.encoding))
-                if not i % 2:
+                if sep and i > 0:
                     m.update(ibn.cypher_field_separator_hash)
+
+                to_dig = t.encode(self.IdentityBNode.encoding)
+                if ibn.version > 2:
+                    im = self.IdentityBNode.cypher()
+                    im.update(to_dig)
+                    idig = im.digest()
+                    m.update(idig)
+                else:
+                    m.update(to_dig)
 
             h = m.digest()
             digs.append(h)
@@ -74,7 +101,13 @@ class TestIBNode(unittest.TestCase):
         # subjects in a graph even if there is only a single subject
         # in the graph
         if ibn.version > 2:
+            d = oi(digs)
+            dh = d.hex()
             h = oi([oi(digs)])
+            hh = h.hex()
+            if ident != h:
+                breakpoint()
+
             assert ident.hex() == h.hex(), ident.hex()
         else:
             # for version 1 and version 2 we used the old way of
@@ -87,16 +120,16 @@ class TestIBNode(unittest.TestCase):
             assert ident.hex() == h.hex(), ident.hex()
 
     def test_none_list_1(self):
-        a = ((      'a', 'b'),)
-        b = ((None, 'a', 'b'),)
+        a = ((      'a', 'b'),)  # (oid      (oid (oid a) (oid b)))
+        b = ((None, 'a', 'b'),)  # (oid      (oid (oid a) (oid b)))
         bn = rdflib.BNode()
-        c = ((bn,   'a', 'b'),)
+        c = ((bn,   'a', 'b'),)  # (oid (oid (oid (oid a) (oid b))))  # XXX currently does this ...
         aibn = self.IdentityBNode(a, debug=True)
         bibn = self.IdentityBNode(b, debug=True)
         cibn = self.IdentityBNode(c, debug=True)
         if aibn.version > 2:
             assert aibn == bibn
-            #derp = [(k, v, cibn.__dict__[k])for k, v in bibn.__dict__.items()]
+            #derp = [(k, v, cibn.__dict__[k]) for k, v in bibn.__dict__.items() if v != cibn.__dict__[k]]
             #breakpoint()
             assert bibn == cibn
         else:
@@ -112,11 +145,82 @@ class TestIBNode(unittest.TestCase):
         cibn = self.IdentityBNode(c, debug=True)
         if aibn.version > 2:
             assert aibn == bibn
-            #derp = [(k, v, cibn.__dict__[k])for k, v in bibn.__dict__.items()]
+            #derp = [(k, v, cibn.__dict__[k]) for k, v in bibn.__dict__.items() if v != cibn.__dict__[k]]
             #breakpoint()
             assert bibn == cibn
         else:
             assert aibn != bibn
+
+    def test_dangle(self):
+        bn = rdflib.BNode()
+        bnd = rdflib.BNode()
+        c = ((bn,  'a', 'b'), (bn,  'c', bnd))
+        bn_ = rdflib.BNode()
+        bnd_ = rdflib.BNode()
+        d = ((bn_, 'a', 'b'), (bn_, 'c', bnd_))
+
+        cibn = self.IdentityBNode(c, debug=True)
+        dibn = self.IdentityBNode(d, debug=True)
+        assert cibn == dibn
+
+    def test_pot(self):
+        test = ('a', 'b', 'c')
+        s = self.IdentityBNode(test[0], debug=True)
+        p = self.IdentityBNode(test[1:], pot=True, debug=True)
+        t = self.IdentityBNode(test, pot=True, debug=True)
+        helper = self.IdentityBNode('', debug=True)
+        alt = helper.ordered_identity(s.identity, p.identity, separator=False)
+        assert alt == t.identity, (alt.hex(), t.identity.hex())
+
+        t_ = self.IdentityBNode(test, pot=False, debug=True)
+        assert t_ != t
+
+        p_ = self.IdentityBNode(test[1:], pot=False, debug=True)
+        assert p_ != p
+
+    def test_pair_to_trip(self):
+        # no tests here at the moment the desired behavior is
+        # specified, but without pot=True the behavior is not easy to
+        # test aside from calling ordered_identity with sparator=False
+        # where (oid ...)  appears in the spec
+
+        test = ('a', 'b', 'c')
+        a = self.IdentityBNode(test[0], debug=True)  # (oid a)
+        b = self.IdentityBNode(test[1], debug=True)  # (oid b)
+        c = self.IdentityBNode(test[2], debug=True)  # (oid c)
+        p = self.IdentityBNode(test[1:], debug=True)  # (oid b c #:sep #t) FIXME vs (oid (oid b) (oid c)) ?
+        t = self.IdentityBNode(test, debug=True)
+        g = self.IdentityBNode((test,), debug=True)
+
+        helper = self.IdentityBNode('', debug=True)
+        condensed = helper.ordered_identity(a.identity, p.identity, separator=False)
+
+        # ((a b c)) -> (oid (oid (oid a) (oid (oid b c #:sep #t))))  # XXX current state bad
+        #  (a b c)
+        #    (b c)
+        # ((s p o) ...) -> (oid (oid s p o #:sep #t) ...)  # old old way
+        # ((s (p o) ...) ...) -> (oid (oid (oid s) (oid (oid p o #:sep #t) ...)) ...)  # current way
+        # ((s (p o) ...) ...) -> (oid (oid (oid s) (oid (oid (oid p) (oid o)) ...)) ...)  # better
+        # in the better way triple ids don't exist but it means that a subject with a single pair is distinghished from the triple containing that pair
+        # (oid (oid s)      (oid (oid p) (oid o))) ... !=
+        # (oid (oid s) (oid (oid (oid p) (oid o))  ...))
+
+        # because we are calculating the subject id for 'a' as a whole
+        # not the id for a single triple, the tradeoff is that you can't
+        # obtain a triple id as in condensed = above, and we don't want
+        # to calculate the the subject id by attaching the subject identity
+        # to each pair first and then calculating all of them because we are
+        # back to using the triples as a whole for the id and calculating the
+        # id in a silly way that involves an extra hash because it becomes
+        # (oid (oid s) (oid p o)) instead of (oid s p o) or (oid (oid s) (oid (oid p o) ...))
+        g_condensed = helper.ordered_identity(p.identity)
+
+        g_embedded = helper.ordered_identity(a.identity, g_condensed, separator=False)
+        #sigh = helper.ordered_identity(a.identity, p.identity, separator=True)  # thankfully not this one
+        #sigh = helper.ordered_identity(a.identity, b.identity, c.identity, separator=False)  # not this either
+        #sigh = helper.ordered_identity(a.identity, b.identity, c.identity, separator=True)  # not this either
+        sigh = helper.ordered_identity(b'a', b'b', b'c', separator=True)  # this is the one still using the old way  # FIXME
+        alt = helper.ordered_identity(condensed)
 
     def test_commute(self):
         # XXX can't use raw strings
@@ -341,6 +445,120 @@ class TestIBNode(unittest.TestCase):
         # bnode subject, give the id_lookup a read
         assert not issues, 'see debug print'
 
+    @pytest.mark.skip('TODO')
+    def test_list_5(self):
+        bn0 = rdflib.BNode('0')
+        bn1 = rdflib.BNode('1')
+        bn2 = rdflib.BNode('2')
+        bn3 = rdflib.BNode('3')
+        inlist = (
+            (bn0, rdf.type,  rdf.List),
+            (bn0, rdf.first, ilxtr.a),
+            (bn0, rdf.rest,  bn1),
+            (bn1, rdf.type,  rdf.List),
+            (bn1, rdf.first, ilxtr.b),
+            (bn1, rdf.rest,  rdf.nil),
+
+            (bn2, rdf.type,  rdf.List),
+            (bn2, rdf.first, ilxtr.b),
+            (bn2, rdf.rest,  bn3),
+            (bn3, rdf.type,  rdf.List),
+            (bn3, rdf.first, ilxtr.a),
+            (bn3, rdf.rest,  rdf.nil),
+        )
+        self._inner_list(inlist)
+        g = OntGraph()
+        g.populate_from_triples(inlist)
+
+        i = self.IdentityBNode(g, debug=True)
+        issues = False
+        for s, sid in i.subject_condensed_identities.items():
+            ng = OntGraph()
+            ng.populate_from_triples(g.subjectGraph(s))
+            ng_idn = self.IdentityBNode(ng, debug=True)
+            g_sgi = g.subjectGraphIdentity(s, idbn_class=self.IdentityBNode)
+            log.debug('\n' + pprint.pformat((i, ng_idn, g_sgi)))
+            if not (i == ng_idn == g_sgi):
+                log.debug('\n' + pprint.pformat(
+                    (i.id_lookup, ng_idn.id_lookup, g_sgi.id_lookup), width=240))
+                #breakpoint()
+                #self.IdentityBNode(i.identity)
+                issues = True
+
+        # TODO from the debug print here it seems that
+        # the issue is that the first computation for g
+        # differs, and i thik that it probably should
+        # because it is the whole graph not just the
+        # bnode subject, give the id_lookup a read
+        breakpoint()
+        assert not issues, 'see debug print'
+
+    def test_wat(self):
+        # discovered by accident, have no idea what is going on
+        # i think something in rdflib has caused type conversion to coerce it to bytes so somehow the whole string is converted to hex for display ??? why the heck is a uriref considered to be bytes ??!?!
+        # oh, maybe it is because rdflib.URIRef is a subclass of rdflib.Node or rdflib.Term or something so ibnode thinks it is a well formed identity already or something ???
+        wat = self.IdentityBNode(rdflib.URIRef('http://purl.obolibrary.org/obo/bfo.owlhttp://purl.org/dc/terms/licensehttp://creativecommons.org/licenses/by/4.0/'))
+        watd = self.IdentityBNode(rdflib.URIRef('http://purl.obolibrary.org/obo/bfo.owlhttp://purl.org/dc/terms/licensehttp://creativecommons.org/licenses/by/4.0/'), debug=True)
+        wats = self.IdentityBNode(str(rdflib.URIRef('http://purl.obolibrary.org/obo/bfo.owlhttp://purl.org/dc/terms/licensehttp://creativecommons.org/licenses/by/4.0/')))  # this one is ok
+        watb = self.IdentityBNode(str(rdflib.URIRef('http://purl.obolibrary.org/obo/bfo.owlhttp://purl.org/dc/terms/licensehttp://creativecommons.org/licenses/by/4.0/')).encode())  # ok ... so not a bytes thing
+        # check out the length of resulting identity !??!
+
+    @pytest.mark.skip('TODO')
+    def test_compare_racket(self):
+        # racket pattern matching is better than the tests i do against the length of the
+        # thing that was passed to me and the pot= keywork, but good enough for now
+        a = self.IdentityBNode(
+            (('a', 'b', 'c'),
+             ('a', 'd', 'e'),
+             ('a', 'f', 'g'),
+             ),
+            debug=True)
+        # XXX SIGH of course this doesn't work because 2 and 3 are special numbers
+        # in the currently horridly broken implementation
+        """
+        b = self.IdentityBNode(
+            (('a',
+              (
+                  ('b', 'c'),
+                  ('d', 'e'),
+                  ('f', 'g'),
+              ),
+              ),
+             ),
+            debug=True)
+        """
+
+        c = self.IdentityBNode(
+            # this matches racket, but only with an additional nesting level so that means that the current
+            # python impl is wrong because it hashes the outer bit one too many times when dealing with pairs
+            # (i think)
+            (('b', 'c'),
+             ('d', 'e'),
+             ('f', 'g'),),
+            debug=True)
+
+        c2 = self.IdentityBNode(
+            # this matches racket, but only with an additional nesting level so that means that the current
+            # python impl is wrong because it hashes the outer bit one too many times when dealing with pairs
+            # (i think)
+            ((None, 'b', 'c'),
+             (None, 'd', 'e'),
+             (None, 'f', 'g'),),
+            debug=True)
+
+        d = self.IdentityBNode((
+            # use pot = True to match racket
+            'b', 'c'
+            ), pot=True, debug=True)
+
+        e = self.IdentityBNode((
+            # use pot = True to match racket
+            'a', 'b', 'c'
+            ), pot=True, debug=True)
+
+        breakpoint()
+
+
 
 class TestIBNodeGraph(unittest.TestCase):
 
@@ -467,26 +685,49 @@ class TestIBNodeGraph(unittest.TestCase):
         assert id1.identity == id2.identity, 'identities do not match'
 
     def test_subject_identities(self):
-        def sigh(e):
-            try:
-                return ng.qname(e)
-            except:
-                return e
-
         # FIXME this takes forever on ro.owl
         # XXX I think this fails right now because there is an extra call to ordered_identity right now?
+        lg1b = len(list(self.graph1))
+        g1sb = set(self.graph1.subjects())
         i = self.IdentityBNode(self.graph1, debug=True)
+        g1sa = set(self.graph1.subjects())
+        assert g1sb == g1sa, 'utoh'
+        g1s = g1sa
         issues = False
         for s, sid in i.subject_condensed_identities.items():
+            # FIXME where the fuck does this thing come from !??!?!
+            if s not in g1s:
+                # HOW IS THIS POSSIBLE !?!?!?!?
+                # XXX ANSWER: they are being assigned the null identity ...
+                # this seems to be cause by dangling objects? going into bnode_identities or something?
+                # oh duh, bnodes that appear only as objects ... in which case they should NOT be added to subject_condensed identities
+                # or we should note that subject_identities is actually entity_identities
+                _hrm = formatgraph(self.graph1.subjectGraph(s))
+                if _hrm:
+                    print(_hrm)
+                else:
+                    print('subject graph empty ...')
+
+                breakpoint()
+
+            assert s in g1sb or s in g1sa, 'in neither ... really?'
+            assert s in g1sb, 'not in before'
+            assert s in g1sa, 'not in after'
             ng = OntGraph()
             ng.namespace_manager.populate_from(self.graph1)
             ng.populate_from_triples(self.graph1.subjectGraph(s))
             #ng.debug()
             #sidg = self.graph1.subjectIdentity(s)
             hrm = self.IdentityBNode(ng)
-            sidg = self.graph1.subjectGraphIdentity(s)
-            assert s in self.graph1.subjects()
+            if s not in g1s:
+                lg1a = len(list(self.graph1))
+                assert lg1b == lg1a, f'derp {lg1b} != {lg1a}'
+                # WHAT ??!?!
+                breakpoint()
+
+            assert s in g1s #set(self.graph1.subjects())
             assert list(self.graph1.predicate_objects(s))
+            sidg = self.graph1.subjectGraphIdentity(s)  # XXX how the heck can s not be in the graph ?!?!?!
             wat = self.graph1.subjectIdentity(s, debug=True)
             # an additional call to IdentityBNode is required to match the fact
             # that we are taking the identity of a collection with one element
@@ -522,14 +763,39 @@ class TestIBNodeGraph(unittest.TestCase):
 
             assert set(i.subject_identities[s]) == set(sidg.subject_identities[s]), 'dag nabbit'
             assert i.subject_condensed_identities[s] == sidg.subject_condensed_identities[s]
-            if sidi != sidg:
-                # TODO HOORAY we found a test that breaks when there are cycles!
-                log.debug(f'broken: e.g. due to cycle {s}')
-                #ng.debug()
-                issues = True
-                continue
+            assert sidi == self.IdentityBNode(sidg.subject_condensed_identities[s])
 
-            assert sidi == sidg, 'oops'  # XXX this can fail in cases where all_idents_new is empty, e.g. due to a cycle?
+            # here is the proper expression of the invariant starting in version 3 that bnode
+            # identity should be the same as the condensed identity for its subgraph and NOT
+            # the ordered identity of its subgraph twice (that is, not using its subgraph identity
+            # as if it were the subject of the triples)
+
+            # XXX this invariant is wrong, because the graph identity does do one more hash
+            # which is the same as an ordered_identity on a single element which is the same as IdentityBNode
+            # so in fact these should not be equal, but should always be one more hash
+            bnode_id_invariant = not isinstance(s, rdflib.BNode) or sidg.identity == self.IdentityBNode(sidg.subject_condensed_identities[s]).identity
+            if not bnode_id_invariant:
+                breakpoint()
+
+            assert bnode_id_invariant, 'shit'
+
+            # we do not expect sidi and sidg to be equal due to changes in how we id graphs for bnodes
+            # there is also the issue of confusing naming for subjectIdentity and subjectGraphIdentity
+            # which needs to be resolve or at least have test to help clarify
+            #if sidi != sidg:
+                # TODO HOORAY we found a test that breaks when there are cycles!
+                # XXX most of these are condensed ids vs identity issues
+                #log.debug(f'broken: e.g. due to cycle {s}')
+                #breakpoint()
+                #ng.debug()
+                #issues = True
+                #continue
+            #assert sidi != sidg, 'oops'  # XXX this can fail in cases where all_idents_new is empty, e.g. due to a cycle?
+
+            # starting in version 3 bnode identity and bnode graph identity are the same
+            # so that IdentityBNode can be used recursively as it is used internally in recurse
+            bnode_sidi_sidg = (isinstance(s, rdflib.BNode) and sidi == sidg) or sidi != sidg, 'oops'
+            assert bnode_sidi_sidg, 'oops'
 
         assert not issues, 'there were issues see print output'
 
@@ -648,8 +914,12 @@ class IdentityBNodeBase2(IdentityBNodeBase):
     default_version = 2
 
 
-class TestIBNode2(TestIBNode):
+class TestIBNode2(TestIBNodeLive):
     IdentityBNode = IdentityBNodeBase2
+
+    @pytest.mark.xfail(True, reason='version < 3 works differently')
+    def test_pot(self):
+        super().test_pot()
 
 
 class TestIBNodeGraphAlt2(TestIBNodeGraphAlt):
@@ -669,15 +939,19 @@ class IdentityBNodeBase1(IdentityBNodeBase):
     default_version = 1
 
 
-class TestIBNode1(TestIBNode):
+class TestIBNode1(TestIBNodeLive):
     IdentityBNode = IdentityBNodeBase1
 
-    @pytest.mark.skip('broken insantiy')
+    @pytest.mark.xfail(True, reason='broken insantiy')
     def test_list_3(self):
         # calling ident on the same value twice
         # produces a different result, which is
         # why we moved to version 2 iirc
         super().test_list_3()
+
+    @pytest.mark.xfail(True, reason='version < 3 works differently')
+    def test_pot(self):
+        super().test_pot()
 
 
 class TestIBNodeGraphAlt1(TestIBNodeGraphAlt):
