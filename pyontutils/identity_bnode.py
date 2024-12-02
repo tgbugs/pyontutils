@@ -84,6 +84,7 @@ class IdentityBNode(rdflib.BNode):
 
         real_self.version = self.version
         real_self.debug = debug
+        real_self._pot = self._pot
         real_self.identity = self.identity
         real_self.null_identity = self.null_identity
         real_self.symmetric_predicates = self.symmetric_predicates
@@ -275,7 +276,10 @@ class IdentityBNode(rdflib.BNode):
             elif isinstance(thing, rdflib.Literal):
                 # "http://asdf.asdf" != <http://asdf.asdf>
                 # need str(thing) breaks recursion on rdflib.Literal
-                yield self.ordered_identity(*self.recurse((str(thing), thing.datatype, thing.language)))
+
+                # FIXME this is really what induces the double hasing because everything else comes out of here unhashed
+                v, d, l = self.recurse((str(thing), thing.datatype, thing.language))
+                yield self.ordered_identity(v, d, l)
             elif isinstance(thing, IdLocalBNode) or isinstance(thing, IdentityBNode):
                 if thing.version != self.version:
                     raise ValueError(f'versions do not match! {thing.version} != {self.version}')  # FIXME error type
@@ -294,6 +298,10 @@ class IdentityBNode(rdflib.BNode):
                             if self.version > 1:
                                 # new way
                                 if p in self.symmetric_predicates:
+                                    # FIXME we don't want this, for symmetric either duplicate the predicate on both
+                                    # parents, or normalize in some other way, ibnode should not modify the graph
+                                    # it should just warn if lack of normalization is detected
+
                                     # have to do this a bit differently than in triple_identity due to tracking subject
                                     if o < s:  # for symmetric both should be urirefs but who knows
                                         s, o = o, s
@@ -307,10 +315,19 @@ class IdentityBNode(rdflib.BNode):
                                 if len(id_or_bytes) == 2:
                                     if self.version > 2:
                                         _p, _o = id_or_bytes
-                                        pid = self.ordered_identity(
-                                            self.ordered_identity(_p),
-                                            self.ordered_identity(_o),
-                                            separator=False)
+                                        if isinstance(o, rdflib.Literal):
+                                            # literals have already been hashed
+                                            # TODO FIXME yes we will get this
+                                            # cleaned up ... what a mess
+                                            pid = self.ordered_identity(
+                                                self.ordered_identity(_p),
+                                                _o,
+                                                separator=False)
+                                        else:
+                                            pid = self.ordered_identity(
+                                                self.ordered_identity(_p),
+                                                self.ordered_identity(_o),
+                                                separator=False)
                                     else:
                                         ## XXX oh no we were double digesting because of caching !?!??
                                         pid = self.ordered_identity(*id_or_bytes)
@@ -329,8 +346,6 @@ class IdentityBNode(rdflib.BNode):
                                 #if s not in self.subject_identities:
                                     #self.subject_identities[s].append(pid)
 
-
-
                                 #breakpoint()  # FIXME somehow we don't hit this ???
                                 #log.debug((s, p, o, pid))
                             elif self.version == 1:
@@ -342,11 +357,18 @@ class IdentityBNode(rdflib.BNode):
                             # don't sort, preserve the original ordering in this case
                             # FIXME still worried about cases where something is 2 long but not a pair
                             if self.version > 2:
-                                p, o = self.recurse(thing)
-                                pid = self.ordered_identity(
-                                    self.ordered_identity(p),
-                                    self.ordered_identity(o),
-                                    separator=False)
+                                p, o = thing
+                                _p, _o = self.recurse(thing)
+                                if isinstance(o, rdflib.Literal):
+                                    pid = self.ordered_identity(
+                                        self.ordered_identity(_p),
+                                        _o,
+                                        separator=False)
+                                else:
+                                    pid = self.ordered_identity(
+                                        self.ordered_identity(_p),
+                                        self.ordered_identity(_o),
+                                        separator=False)
                             else:
                                 pid = self.ordered_identity(*self.recurse(thing))
 
@@ -462,10 +484,18 @@ class IdentityBNode(rdflib.BNode):
                                 # pid = above, this avoids issues with b'a', b'b' being eqv to b'ab'
                                 if self.version > 2:
                                     _p, _o = self.recurse((p, o))  # XXX watch out for cached results issue ?
-                                    pid = self.ordered_identity(
-                                        self.ordered_identity(_p),
-                                        self.ordered_identity(_o),
-                                        separator=False)
+                                    if isinstance(o, rdflib.Literal):
+                                        # see note above, in the current implementation rdflib.Literal is already
+                                        # hashed by recurse :/
+                                        pid = self.ordered_identity(
+                                            self.ordered_identity(_p),
+                                            _o,
+                                            separator=False)
+                                    else:
+                                        pid = self.ordered_identity(
+                                            self.ordered_identity(_p),
+                                            self.ordered_identity(_o),
+                                            separator=False)
                                 else:
                                     pid = self.ordered_identity(*self.recurse((p, o)), separator=True)  # FIXME separator vs no separator issue
 
@@ -940,7 +970,21 @@ data free ???   | 3 f:p "freeeeee"
         elif isinstance(triples_or_pairs_or_thing, rdflib.term.Identifier):
             pot_test()
             # NOTE rdflib.term.Node includes graphs themselves, which is good to know
-            return next(self.recurse((triples_or_pairs_or_thing,)))
+            if self.version > 2 and (
+                    isinstance(triples_or_pairs_or_thing, rdflib.URIRef) or
+                    isinstance(triples_or_pairs_or_thing, rdflib.Literal)):
+                # consistent homogenous hashing all the way down for v3, literals
+                # were being hashed directly in recurse which was leading to double
+                # hashing, there is a hacked fix for that right now, urirefs are
+                # handled consistently now as well, ugh this thing needs a complete
+                # rewrite once the relevant tests are in place :/
+                if isinstance(triples_or_pairs_or_thing, rdflib.Literal):
+                    # FIXME SIGH literal already hashed in recurse etc. etc.
+                    return next(self.recurse((triples_or_pairs_or_thing,)))
+                else:
+                    return self.ordered_identity(next(self.recurse((triples_or_pairs_or_thing,))))
+            else:
+                return next(self.recurse((triples_or_pairs_or_thing,)))
         elif type(triples_or_pairs_or_thing) == str:  # FIXME isinstance? or is that dangerous? e.g. OntId
             pot_test()
             return self.ordered_identity(next(self.recurse((triples_or_pairs_or_thing,))))
@@ -1022,7 +1066,7 @@ data free ???   | 3 f:p "freeeeee"
                         s = self._thing[0]
                         sid = self.__class__(s).identity
                         pid = self.subject_identities[s][0]  # should always be 1 long
-                        log.debug((sid.hex(), pid.hex()))
+                        #log.debug((sid.hex(), pid.hex()))
                         _id = self.ordered_identity(sid, pid, separator=False)
                         self.subject_condensed_identities[s] = pid
                         self.subject_embedded_identities[s] = _id
