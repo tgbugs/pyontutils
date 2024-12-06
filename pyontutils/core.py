@@ -50,11 +50,12 @@ from pyontutils.namespaces import (makePrefixes,
                                    prov,
                                    oboInOwl,
                                    replacedBy,)
-from pyontutils.identity_bnode import IdentityBNode
+from pyontutils.identity_bnode import IdentityBNode, bnNone
 
 current_file = Path(__file__).absolute()
 oq.utils.log.removeHandler(oq.utils.log.handlers[0])
 oq.utils.log.addHandler(log.handlers[0])
+
 
 # common funcs
 
@@ -1326,7 +1327,7 @@ class OntGraph(rdflib.Graph):
 
     metadata_type_markers = [owl.Ontology]  # FIXME naming
 
-    def __init__(self, *args, path=None, existing=None, namespace_manager=None, **kwargs):
+    def __init__(self, *args, path=None, existing=None, namespace_manager=None, idbn_class=None, **kwargs):
         if existing:
             self.__dict__ == existing.__dict__
             if not hasattr(existing, '_namespace_manager'):
@@ -1344,6 +1345,10 @@ class OntGraph(rdflib.Graph):
 
         self.bind('owl', owl)
         self.path = path
+        if idbn_class is None:
+            self.IdentityBNode = IdentityBNode
+        else:
+            self.IdentityBNode = idbn_class
 
     @property
     def path(self):
@@ -1576,8 +1581,8 @@ class OntGraph(rdflib.Graph):
             d_scis = d_ibn.subject_condensed_identities[subject]
 
             n_ibn = self.subjectGraphIdentity(subject, debug=debug, use_pairs=False, use_none=True)
-            n_sis = dict(n_ibn.subject_identities)[None]  # XXX NOTE THE KEY CHANGE
-            n_scis = n_ibn.subject_condensed_identities[None]  # XXX NOTE THE KEY CHANGE
+            n_sis = dict(n_ibn.subject_identities)[bnNone]  # XXX NOTE THE KEY CHANGE
+            n_scis = n_ibn.subject_condensed_identities[bnNone]  # XXX NOTE THE KEY CHANGE
 
             self_ibn = IdentityBNode(self, debug=True)
             self_sis = dict(self_ibn.subject_identities)[subject]
@@ -1641,29 +1646,32 @@ class OntGraph(rdflib.Graph):
         """
         # FIXME TODO compare to the internal value in ident.subject_identity for the whole graph
         if idbn_class is None:
-            idbn_class = IdentityBNode
+            idbn_class = self.IdentityBNode
 
         triples = list(self.subjectGraph(subject))  # subjective
         if not triples:
+            breakpoint()
             raise ValueError(f'subject {subject} not in graph {self}')
 
+        as_type = None
         # XXX so the problem with the pairs approach is that, while technically correct, the subject will be missing from subject_condensed_identities
         # because the subject itself is not in the graph (as one would expect)
         if use_pairs:
             # this does not work and the massive hack above is to help deal with that fact until
             # it can be dealt with in the ibnode implementation so that IdentityBNode can be called
             # recursively to obtain the same value as the internal values
+            as_type = 'tripair-seq'
             pairs_triples = [tuple(e for i, e in enumerate(t) if not (e == subject and not i)) for t in triples]  # objective
         elif use_none:
             # this way more or less works, but the final identity return by ibnode is not correct
             # though technically neither is the pairs case ...
             # XXX do not replace occurances of the subject if they appear in the object position
-            # FIXME I'm sure this will come back to bite us with not actually blank nodes ...
-            pairs_triples = [tuple(None if e == subject and i == 0 else e for i, e in enumerate(t)) for t in triples]  # objective  # XXX old
+            # FIXME I'm sure this will come back to bite us with not actually blank nodes ... XXX AND IT DID LOOK AT THAT
+            pairs_triples = [tuple(bnNone if e == subject and i == 0 else e for i, e in enumerate(t)) for t in triples]  # objective  # XXX old
         else:
             pairs_triples = triples
         try:
-            ibn = idbn_class(pairs_triples, debug=True)
+            ibn = idbn_class(pairs_triples, debug=True, as_type=as_type)
         except AssertionError as e:
             _g = self.__class__()
             [_g.add(t) for t in triples]
@@ -1671,10 +1679,10 @@ class OntGraph(rdflib.Graph):
             raise e
 
         if debug:
-            triples = [(subject, *pos) if len(pos) == 2 else ((subject, *pos[1:]) if pos[0] is None else pos) for pos in pairs_triples]
+            triples = [(subject, *pos) if len(pos) == 2 else ((subject, *pos[1:]) if pos[0] is bnNone else pos) for pos in pairs_triples]
             g = self.__class__()
 
-            _replaced = {}
+            _replaced = {bnNone: bnNone}
             def replace(e):
                 if isinstance(e, rdflib.BNode):
                     if e not in _replaced:
@@ -1944,9 +1952,9 @@ class OntGraph(rdflib.Graph):
         [new_self.add(t) for t in same_graph]
         return new_self
 
-    def identity(self, cypher=None):
+    def identity(self, cypher=None, debug=False):
         # TODO cypher ?
-        return IdentityBNode(self)
+        return IdentityBNode(self, debug=debug)
 
     # variously named/connected subsets
 
@@ -2092,22 +2100,23 @@ class OntGraph(rdflib.Graph):
 
         return cycle_participants
 
-    def cycle_check_long(self):
+    def cycle_check_long(self, btc_node=None):
         """ return all distinct bnode cycles in the graph """
         def hrm(subject):
-            seen = set()
+            seen = {}
             paths = [[]]
 
             def f(triple, graph):
                 s, predicate, object = triple
                 opath = path = paths[-1]
                 if object in seen:
+                    seen[object] += 1
                     if triple not in path:
                         path.append(triple)
 
                     return
                 else:
-                    seen.add(object)
+                    seen[object] = 1
                     # do not append to path here only append to path
                     # after the yield below because that is the point
                     # where we know that we are returning from a case
@@ -2116,6 +2125,9 @@ class OntGraph(rdflib.Graph):
 
                 for p, o in graph[object]:
                     if isinstance(o, rdflib.BNode):
+                        if o == btc_node:
+                            continue
+
                         yield object, p, o
                         # and when control returns here ...
                         if path:
@@ -2128,7 +2140,50 @@ class OntGraph(rdflib.Graph):
             # don't return _hrm because it merges separate cycles if they share a subject
             _hrm = list(self.transitiveClosure(f, (None, None, subject)))
             #paths = [sorted(p) for p in paths if p]
-            paths = [p for p in paths if p]
+            _opaths = paths = [p for p in paths if p]
+            if paths and seen[subject] == 1:
+                # FIXME this only covers some of the cases ??? if a
+                # node is a subject and object in one cycle but only a
+                # subject in another we it will also cause problems
+
+                # the last triple added to the cycle will be the one
+                # with the starting subject, but if the starting subject
+                # is only see once then it is not in a cycle because it
+                # would have been reached before the object in some cycle
+                # it will also always appear in the subject position of
+                # the last triple, thus the use of p[-1][0]
+                pass
+
+            out_paths = []
+            for path in paths:
+                # clean up any dangling non-cyclical bits
+                # basic check is that the final subject
+                # should appear as an object
+                # FIXME this algo is dumb
+                pm1 = path
+                while len(pm1) > 1:
+                    pm1n = pm1[:-1]
+                    s = pm1[-1][0]
+                    for t in pm1n:
+                        if t[-1] == s:
+                            out_paths.append(pm1)
+                            break
+
+                    pm1 = pm1n
+
+                if len(pm1) == 1 and pm1[0][0] == pm1[0][-1]:
+                    out_paths.append(pm1)
+
+            paths = out_paths
+            # both s and o must participate in the cycle, and the way
+            # this function works o is gurantted if s is in the cycle
+            # however as observed here o in does not imply s in
+            #if subject.endswith('24'):
+                #breakpoint()
+
+            #if paths and [e for p in paths for t in p for e in t if e.endswith('24')]:
+                #breakpoint()
+
             return paths
 
         cycles = []
@@ -2138,10 +2193,11 @@ class OntGraph(rdflib.Graph):
                 continue
 
             if isinstance(s, rdflib.BNode):
-                # we only need to deal with bnodes at appear as
+                # we only need to deal with bnodes that appear as
                 # subjects, if there are dangling bnodes they by
                 # defintion cannot be in cycles
-                for cycle in hrm(s):
+                paths = hrm(s)
+                for cycle in paths:
                     cycles.append(cycle)
                     in_cycles.update(set(e for _s, _, _o in cycle for e in (_s, _o)))
 

@@ -69,3 +69,18 @@ _:a7 ilxtr:f _:a8 .
 _:a8 ilxtr:f _:a9 .
 _:a9 ilxtr:f _:a5, _:a3 .
 
+
+# a nasty double cyclical graph with multiple triples not in the cycles
+#    ______
+#   / /--v v
+# a>b>c<>d<-e
+#   ^ ^--/ /
+#    \____/
+
+_:_a ilxtr:1 _:_b .
+_:_b ilxtr:2 _:_c .
+_:_c ilxtr:3 _:_d .
+_:_d ilxtr:4 _:_c .
+_:_b ilxtr:5 _:_e .
+_:_e ilxtr:6 _:_b .
+_:_e ilxtr:7 _:_d .

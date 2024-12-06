@@ -96,41 +96,6 @@ def lin_to_adj(distinct_paths, linkers=tuple()):
     return tuple(adj)
 
 
-def toposort(adj):
-    _dd = defaultdict(list)
-    [_dd[a].append(b) for a, b in adj]
-    nexts = dict(_dd)
-
-    _keys = set([a for a, b in adj])
-    _values = set([b for a, b in adj])
-    starts = list(_keys - _values)
-
-    unmarked = sorted((_keys | _values), key=lambda t: (t if isinstance(t, rl) else rl(t, None)))
-    temp = set()
-    out = []
-    def visit(n):
-        if n not in unmarked:
-            return
-        if n in temp:
-            import pprint
-            raise Exception(f'oops you have a cycle {n}\n{pprint.pformat(n)}')
-
-        temp.add(n)
-        if n in nexts:
-            for m in nexts[n]:
-                visit(m)
-
-        temp.remove(n)
-        unmarked.remove(n)
-        out.append(n)
-
-    while unmarked:
-        n = unmarked[0]
-        visit(n)
-
-    return out
-
-
 def adj_to_lin(adj):
     # this is not deterministic when there are runs of equal length
     # this should return a list of linear paths from longest to
@@ -138,7 +103,7 @@ def adj_to_lin(adj):
     # the longest single path through the tree and then branches
 
     # yay dags have a linear time algo
-    tsorted = toposort(adj)
+    tsorted = idbn.toposort(adj, unmarked_key=(lambda t: (t if isinstance(t, rl) else rl(t, None))))
 
     _dd = defaultdict(list)
     [_dd[b].append(a) for a, b in adj]
