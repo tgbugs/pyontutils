@@ -103,7 +103,7 @@ class IdentityBNode(rdflib.BNode):
     default_version = 3
 
     def __new__(cls, triples_or_pairs_or_thing, *, version=None, debug=False, pot=False,
-                as_type=None, symmetric_predicates=tuple(), no_reorder_list_predicates=tuple()):
+                as_type=None, in_graph=None, symmetric_predicates=tuple(), no_reorder_list_predicates=tuple()):
         self = super().__new__(cls)  # first time without value
         self.version = self.default_version if version is None else version
         if self.version not in self._reccache_top:
@@ -144,7 +144,7 @@ class IdentityBNode(rdflib.BNode):
 
         if self.version > 2:
             treat_as_type = as_type if as_type else self.tat(triples_or_pairs_or_thing, self.version, pot)
-            self._alt_identity = self._identity_function(triples_or_pairs_or_thing, treat_as_type)
+            self._alt_identity = self._identity_function(triples_or_pairs_or_thing, treat_as_type, in_graph=in_graph)
             if self.version >= 3:
                 self.identity = self._alt_identity
                 #if debug:
@@ -1069,7 +1069,7 @@ class IdentityBNode(rdflib.BNode):
 
     _if_cache = {}  # FIXME version issue
     _if_debug_cache = {}
-    def _identity_function(self, thing, treat_as_type):
+    def _identity_function(self, thing, treat_as_type, *, in_graph=None):
         # FIXME TODO treat_as_type to something other than
         # strings for better performance maybe? probably much later
 
@@ -1082,7 +1082,9 @@ class IdentityBNode(rdflib.BNode):
 
         try:
             # we can't/dont't cache unhashable things (e.g. lists)
-            if (thing, treat_as_type) in self._if_cache:
+            if in_graph is not None and (in_graph, thing, treat_as_type) in self._if_cache:
+                return self._if_cache[(in_graph, thing, treat_as_type)]
+            elif (thing, treat_as_type) in self._if_cache:
                 return self._if_cache[thing, treat_as_type]
         except TypeError:
             pass
@@ -1118,7 +1120,7 @@ class IdentityBNode(rdflib.BNode):
         elif treat_as_type in ('triple', '(s (p o))'):
             s, p, o = thing
             ident = oid(self._identity_function(s, 'bytes'), self._identity_function((p, o), 'pair'), separator=False)
-        elif treat_as_type == 'trip-seq':
+        elif treat_as_type in ('trip-seq', '((s ((p o) ...)) ...)'):
             bnode_identities = defaultdict(list)
             subject_identities = defaultdict(list)
 
@@ -1127,6 +1129,7 @@ class IdentityBNode(rdflib.BNode):
             bsubjects = defaultdict(lambda: 0)  # turns out we need to count this too
             bobjects = defaultdict(lambda: 0)  # need to know how many times a node appears as an object in general because > 1 means free head
             unresolved_bnodes = defaultdict(list)
+            transitive_triples = defaultdict(list)
             for s, p, o in thing:
                 sn = isinstance(s, rdflib.BNode)
                 on = isinstance(o, rdflib.BNode)
@@ -1137,6 +1140,7 @@ class IdentityBNode(rdflib.BNode):
                     unresolved_pair = True
                     if sn:
                         bsubjects[s] += 1
+                        transitive_triples[s].append((s, p, o))
 
                     if on:
                         bobjects[o] += 1
@@ -1173,6 +1177,8 @@ class IdentityBNode(rdflib.BNode):
                 for o in dangling:
                     subject_condensed_identities[o] = self.null_identity
                     subject_embedded_identities[o] = self.null_identity
+                    self._if_cache[thing, o, '((p o) ...)'] = self.null_identity
+                    self._if_cache[thing, o, '(s ((p o) ...))'] = self.null_identity
 
                 # FIXME TODO move cycle check to its own file to avoid you got it, circular imports HAH
                 from pyontutils.core import OntGraph
@@ -1279,6 +1285,12 @@ class IdentityBNode(rdflib.BNode):
                             ident_s = sid(*[i for i, po in bnode_identities[s]], separator=False)
                             subject_condensed_identities[s] = ident_s
                             subject_embedded_identities[s] = ident_s
+                            if s in free_heads:
+                                assert s not in subject_identities, 'bah'
+                                subject_identities[s] = bnode_identities[s]
+                            else:
+                                self._if_cache[thing, s, '((p o) ...)'] = ident_s
+                                self._if_cache[thing, s, '(s ((p o) ...))'] = ident_s
                         elif s not in subject_embedded_identities:
                             raise ValueError(f'oops no {s}')
 
@@ -1298,13 +1310,12 @@ class IdentityBNode(rdflib.BNode):
 
                         idents_po.append((ident_po, (p, o)))
 
+                        if o in transitive_triples:
+                            transitive_triples[s].extend(transitive_triples[o])  # FIXME maybe pop
+
                     if isinstance(s, rdflib.BNode):
                         bnode_identities[s].extend(idents_po)  # bnode_identities[s] might already have identities
-                        try:
-                            ident_s = sid(*[i for i, po in bnode_identities[s]], separator=False)
-                        except Exception as e:
-                            breakpoint()
-                            raise e
+                        ident_s = sid(*[i for i, po in bnode_identities[s]], separator=False)
                         subject_condensed_identities[s] = ident_s
                         subject_embedded_identities[s] = ident_s
                         if s in free_heads:
@@ -1317,18 +1328,32 @@ class IdentityBNode(rdflib.BNode):
                             # do not go as top level, but they can be recovered
                             # and should be stable if we got the cycle break
                             # logic right
-                            self._if_cache[s, '((p o) ...)'] = ident_s
-                            self._if_cache[s, '(s ((p o) ...))'] = ident_s
+                            self._if_cache[thing, s, '((p o) ...)'] = ident_s
+                            self._if_cache[thing, s, '(s ((p o) ...))'] = ident_s
                     else:
                         # FIXME TODO watch out for that case where a
                         # uri subject has references to two identical
                         # connected subgraphs replicas, aka no set()
                         subject_identities[s].extend(idents_po)
 
+                # when we reach the end of processing and are sure that
+                # there aren't any remaining nodes to process then we can
+                # safely process any free heads that were totally identified
+                # as part of the first step that we have not already inserted
+                # into subject_identities
+                for s in free_heads:
+                    if s not in subject_identities:
+                        idents_po = bnode_identities[s]
+                        ident_s = sid(*[i for i, po in idents_po], separator=False)
+                        subject_condensed_identities[s] = ident_s
+                        subject_embedded_identities[s] = ident_s
+                        subject_identities[s] = bnode_identities[s]
+
             elif bnode_identities:
                 # all bnodes might be resolved because there were only bnodes
                 # at the heads of free subgraphs
                 for s, idents_po in bnode_identities.items():
+                    free_heads.add(s)
                     ident_s = sid(*[i for i, po in idents_po], separator=False)
                     subject_condensed_identities[s] = ident_s
                     subject_embedded_identities[s] = ident_s
@@ -1340,10 +1365,11 @@ class IdentityBNode(rdflib.BNode):
             for s, idpos in subject_identities.items():
                 if s in subject_embedded_identities:
                     # free subgraph case, so e and c are the same value
-                    self._if_cache[s, '((p o) ...)'] = subject_condensed_identities[s]
-                    _seid = self._if_cache[s, '(s ((p o) ...))'] = subject_embedded_identities[s]
+                    self._if_cache[thing, s, '((p o) ...)'] = subject_condensed_identities[s]
+                    _seid = self._if_cache[thing, s, '(s ((p o) ...))'] = subject_embedded_identities[s]
                     seids.append(_seid)
                     continue
+
                 ids, pos = zip(*idpos)
                 try:
                     condensed = sid(*ids, separator=False)  # TODO should this call identity function recursively?
@@ -1353,12 +1379,18 @@ class IdentityBNode(rdflib.BNode):
                 spos = tuple(sorted(pos))
                 self._if_cache[spos, 'pair-seq'] = condensed  # XXX probably not helpful  # TODO perf/mem check to see if needed
                 embedded = oid(self._identity_function(s, 'bytes'), condensed, separator=False)
-                self._if_cache[s, '((p o) ...)'] = condensed
-                self._if_cache[s, '(s ((p o) ...))'] = embedded
+                self._if_cache[thing, s, '((p o) ...)'] = condensed
+                self._if_cache[thing, s, '(s ((p o) ...))'] = embedded
                 self._if_cache[(s, spos), '(s ((p o) ...))'] = embedded  # TODO perf/mem check to see if needed
                 subject_condensed_identities[s] = condensed
                 subject_embedded_identities[s] = embedded
                 seids.append(embedded)
+
+            # XXX returning a list of identities as an identity is type
+            # insanity, but at least it is marked by having to pass as_type
+            self._if_cache[thing, '(s ((p o) ...)) ...'] = seids  # better version of all_idents_new
+
+            ident = sid(*seids, separator=False)
 
             if self.debug:
                 # these are for debug only because values will not repopulate
@@ -1366,23 +1398,20 @@ class IdentityBNode(rdflib.BNode):
                 # be able to just apply IdentityBNode to the raw object and
                 # get the cached result
                 self._alt_debug = dict(
+                    transitive_triples = transitive_triples,
                     debug_mkey = _debug_mkey,  # up top because it can get very long
                     subject_condensed_identities = subject_condensed_identities,
                     subject_embedded_identities = subject_embedded_identities,
                     seids = seids,
                     bnode_identities = bnode_identities,
                     subject_identities = subject_identities,
+                    connected_heads = connected_heads,
                     free_heads = free_heads,
                     replace_when_object = replace_when_object,
                     cycles_member_index = cycles_member_index,
                     cycles = cycles,
                 )
-
-            # XXX this id won't match the current v3 due to slight differences in cycle handling i think
-            # needs reivew
-            ident = sid(*seids, separator=False)
-
-            if self.debug:  # FIXME this only partially works because we also want it for all sub-identities too
+                # FIXME this only partially works because we also want it for all sub-identities too
                 self._if_debug_cache[ident] = self._alt_debug
 
         elif treat_as_type == 'pair-seq':

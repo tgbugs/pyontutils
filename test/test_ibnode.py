@@ -1091,9 +1091,9 @@ class TestIBNodeGraph(unittest.TestCase):
 
         if self.version >= 3:
             lg1b = len(list(self.graph1))
-            g1sb = set(self.graph1.subjects())
+            g1sb = set(self.graph1.subjects(unique=True))
             i = self.IdentityBNode(self.graph1, debug=True)
-            g1sa = set(self.graph1.subjects())
+            g1sa = set(self.graph1.subjects(unique=True))
             assert g1sb == g1sa, 'utoh'
             g1s = g1sa
 
@@ -1113,9 +1113,9 @@ class TestIBNodeGraph(unittest.TestCase):
         # FIXME this takes forever on ro.owl
         # XXX I think this fails right now because there is an extra call to ordered_identity right now?
         lg1b = len(list(self.graph1))
-        g1sb = set(self.graph1.subjects())
+        g1sb = set(self.graph1.subjects(unique=True))
         i = self.IdentityBNode(self.graph1, debug=True)
-        g1sa = set(self.graph1.subjects())
+        g1sa = set(self.graph1.subjects(unique=True))
         assert g1sb == g1sa, 'utoh'
         g1s = g1sa
         issues = False

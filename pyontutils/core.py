@@ -62,7 +62,7 @@ oq.utils.log.addHandler(log.handlers[0])
 
 def standard_checks(graph):
     def cardinality(predicate, card=1):
-        for subject in sorted(set(graph.subjects())):
+        for subject in sorted(set(graph.subjects(unique=True))):
             for i, object in enumerate(graph.objects(subject, predicate)):
                 if i == 0:
                     first_error = tc.red('ERROR:'), subject, 'has more than one label!', object
@@ -1815,7 +1815,7 @@ class OntGraph(rdflib.Graph):
         return ibn
 
     def named_subjects(self):
-        for s in self.subjects():
+        for s in self.subjects(unique=True):
             if isinstance(s, rdflib.URIRef):
                 yield s
 
@@ -2071,7 +2071,7 @@ class OntGraph(rdflib.Graph):
     def data_named(self):
         # FIXME process_graph is more efficient that this ...
         bis = tuple(self.boundIdentifiers)
-        for s in self.subjects():
+        for s in self.subjects(unique=True):
             if not isinstance(s, rdflib.BNode) and s not in bis:
                 yield from self.subject_triples(s)
 
@@ -2086,7 +2086,7 @@ class OntGraph(rdflib.Graph):
         #connected_bnodes = tuple(e for t in self.data_named for e in t
                                  #if isinstance(e, rdflib.BNode))
         object_bnodes = tuple(o for o in self.objects() if isinstance(o, rdflib.BNode))
-        for s in self.subjects():  # FIXME some non-bnode fellows seem to be sneeking in here
+        for s in self.subjects(unique=True):  # FIXME some non-bnode fellows seem to be sneeking in here
             if isinstance(s, rdflib.BNode) and s not in object_bnodes:
                 yield from self.subject_triples(s)
 
