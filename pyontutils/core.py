@@ -2183,197 +2183,23 @@ class OntGraph(rdflib.Graph):
             lu[i] = t
             s, p, o = t
             if s in atrisk or o in atrisk:
-                #if btc_node is None or o != btc_node:  # don't include btc_node # we don't need this with simple cycles i think/
                 incoming[o].append(i)
 
                 objs[s].append(i)
                 if s == o:
                     sos.add(i)
 
-                #if o in atrisk:
-                # FIXME we need something to ensure that even dangling nodes are in g below
-
         g = {}
         for s, trips_with_s_as_object in incoming.items():
             # s p o       sao
             #     o p o2  sas
-            #if s in objs:
             trips_with_s_as_subject = objs[s]
-                #if trips_with_s_as_subject:
             for to in trips_with_s_as_object:
-                #g[to] = [ts for ts in trips_with_s_as_subject if ts != to or ts[0] == ts[-1]]
                 g[to] = [ts for ts in trips_with_s_as_subject if ts != to or ts in sos]
 
-        try:
-            _cycles = list(simple_cycles(g))
-        except KeyError as e:
-            breakpoint()
-            raise e
+        _cycles = list(simple_cycles(g))
 
         cycles = [[lu[t] for t in c] for c in _cycles]
-        if cycles:
-            #breakpoint()
-            pass
-        return cycles
-
-        sccs = tarjan(g)
-        # reminder sccs are NOT all cycles
-
-        #toposort(c) for c in
-        # we likely need a second phase to confirm for short cycles and then run topo
-        cycles = [[lu[t] for t in c] for c in sccs if len(c) > 1 or c[0] in sos]
-        #if cycles and len(cycles[0]) == 1:
-            #breakpoint()
-        return cycles
-
-    def _cycle_check_long(self, btc_node=None):
-        # https://stackoverflow.com/questions/261573/efficient-algorithm-for-detecting-cycles-in-a-directed-graph
-        # of course the approach here is exceptionally bad for long cycles
-        # triples are verts and edges are nodes
-
-        # construct a subset graph that contains only those triples at risk for being in cycles
-        # namely, those where the subject is a bnode
-        # then use that as the set for the dfs
-        atrisk = set(s for s in self.subjects(unique=True) if isinstance(s, rdflib.BNode))
-        objs = defaultdict(list)
-        for t in self:
-            s, p, o = t
-            if s in atrisk or o in atrisk:
-                objs[s].append((p, o))
-
-        def find_cycles(start):
-            _in_cycles_prev = defaultdict(set)
-            # non recursive dfs that finds all cycle paths
-            stack = [(start, [], set())]  # need path members to avoid performance pitfalls for very long cycles
-            while stack:
-                e, path, path_members = stack.pop()
-                if path and e == start:
-                    _in_cycles_prev[path[0]].add(path[-1])
-                    for pep, pen in zip(path[:-1], path[1:]):
-                        _in_cycles_prev[pen].add(pep)
-
-                    yield path
-                    continue
-
-                for p, ne in objs[e]:
-                    if path and path[-1] in _in_cycles_prev[e, p, ne]:
-                        # we've already found this cycle
-                        continue
-
-                    if (e, p, ne) in path_members:  # yeah we need both p and ne here because there might be multiple edges
-                        # p, ne is already in path somehow, maybe multiply converging or via multiple predicates
-                        continue
-
-                    npm = set(path_members)
-                    npm.update((e, p, ne))
-                    stack.append((ne, path + [(e, p, ne)], npm))  # construct a new path because other routes need the old one as a base
-
-        #hrm = {s:list(find_cycles(s)) for s in atrisk}  # XXX does not include cycles that were already detect starting from another node
-        cycles = [cycle for s in atrisk for cycle in find_cycles(s)]
-        return cycles
-
-    def _cycle_check_long(self, btc_node=None):
-        """ return all distinct bnode cycles in the graph """
-
-        def hrm(subject):
-            seen = {}
-            paths = [[]]
-
-            def f(triple, graph):
-                s, predicate, object = triple
-                opath = path = paths[-1]
-                if object in seen:
-                    seen[object] += 1
-                    if triple not in path:
-                        path.append(triple)
-
-                    return
-                else:
-                    seen[object] = 1
-                    # do not append to path here only append to path
-                    # after the yield below because that is the point
-                    # where we know that we are returning from a case
-                    # where the transitive closure ended in a cycle
-                    # rather than a stop iteration
-
-                for p, o in graph[object]:
-                    if isinstance(o, rdflib.BNode):
-                        if o == btc_node:
-                            continue
-
-                        yield object, p, o
-                        # and when control returns here ...
-                        if path:
-                            if s is not None and triple not in path:
-                                path.append(triple)
-                            # ensure that any future calls to f operate on a fresh path
-                            path = []
-                            paths.append(path)
-
-            # don't return _hrm because it merges separate cycles if they share a subject
-            _hrm = list(self.transitiveClosure(f, (None, None, subject)))
-            #paths = [sorted(p) for p in paths if p]
-            _opaths = paths = [p for p in paths if p]
-            if paths and seen[subject] == 1:
-                # FIXME this only covers some of the cases ??? if a
-                # node is a subject and object in one cycle but only a
-                # subject in another we it will also cause problems
-
-                # the last triple added to the cycle will be the one
-                # with the starting subject, but if the starting subject
-                # is only see once then it is not in a cycle because it
-                # would have been reached before the object in some cycle
-                # it will also always appear in the subject position of
-                # the last triple, thus the use of p[-1][0]
-                pass
-
-            out_paths = []
-            for path in paths:
-                # clean up any dangling non-cyclical bits
-                # basic check is that the final subject
-                # should appear as an object
-                # FIXME this algo is dumb
-                pm1 = path
-                while len(pm1) > 1:
-                    pm1n = pm1[:-1]
-                    s = pm1[-1][0]
-                    for t in pm1n:
-                        if t[-1] == s:
-                            out_paths.append(pm1)
-                            break
-
-                    pm1 = pm1n
-
-                if len(pm1) == 1 and pm1[0][0] == pm1[0][-1]:
-                    out_paths.append(pm1)
-
-            paths = out_paths
-            # both s and o must participate in the cycle, and the way
-            # this function works o is gurantted if s is in the cycle
-            # however as observed here o in does not imply s in
-            #if subject.endswith('24'):
-                #breakpoint()
-
-            #if paths and [e for p in paths for t in p for e in t if e.endswith('24')]:
-                #breakpoint()
-
-            return paths
-
-        cycles = []
-        in_cycles = set()
-        for s in self.subjects(unique=True):
-            if s in in_cycles:
-                continue
-
-            if isinstance(s, rdflib.BNode):
-                # we only need to deal with bnodes that appear as
-                # subjects, if there are dangling bnodes they by
-                # defintion cannot be in cycles
-                paths = hrm(s)
-                for cycle in paths:
-                    cycles.append(cycle)
-                    in_cycles.update(set(e for _s, _, _o in cycle for e in (_s, _o)))
-
         return cycles
 
     def asOboGraph(self, predicate=None, label_predicate=None, restriction=True):
