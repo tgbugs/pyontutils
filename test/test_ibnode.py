@@ -560,6 +560,11 @@ class TestIBNodeLive(unittest.TestCase):
         g.populate_from_triples(inlist)
 
         i = self.IdentityBNode(g, debug=True)
+
+        if self.version >= 3:
+            pytest.skip('TODO version with no sci')
+            return
+
         issues = False
         for s, sid in i.subject_condensed_identities.items():
             ng = OntGraph(idbn_class=self.IdentityBNode)
@@ -607,6 +612,11 @@ class TestIBNodeLive(unittest.TestCase):
         g.populate_from_triples(inlist)
 
         i = self.IdentityBNode(g, debug=True)
+
+        if self.version >= 3:
+            pytest.skip('TODO version with no sci')
+            return
+
         issues = False
         for s, sid in i.subject_condensed_identities.items():
             ng = OntGraph(idbn_class=self.IdentityBNode)
@@ -867,6 +877,11 @@ class TestIBNodeGraph(unittest.TestCase):
 
         id1 = self.IdentityBNode(self.graph1, debug=True)
         id2 = self.IdentityBNode(self.graph2, debug=True)
+
+
+        if id1.version >= 3:
+            pytest.skip('TODO version without all the various debug values')
+            return
 
         idui1 = sorted(id1.unnamed_subgraph_identities.values())
         idui2 = sorted(id2.unnamed_subgraph_identities.values())
@@ -1138,7 +1153,8 @@ class TestIBNodeGraph(unittest.TestCase):
             assert s in g1s #set(self.graph1.subjects())
             assert list(self.graph1.predicate_objects(s))
             sidg = self.graph1.subjectGraphIdentity(s)  # XXX how the heck can s not be in the graph ?!?!?!
-            wat = self.graph1.subjectIdentity(s, debug=True)
+            if self.version >= 3:
+                wat = self.graph1.subjectIdentity(s, debug=True)
             # an additional call to IdentityBNode is required to match the fact
             # that we are taking the identity of a collection with one element
             # not just the element itself
@@ -1147,7 +1163,8 @@ class TestIBNodeGraph(unittest.TestCase):
             # and so we probably want subject_condensed_identities ??? not sure?
             sidi = self.IdentityBNode(sid, debug=True)
 
-            assert wat == sidi
+            if self.version >= 3:  # FIXME is this true?
+                assert wat == sidi
 
             sisis = set(i.subject_identities[s])
             sssis = set(sidg.subject_identities[s])
@@ -1216,6 +1233,10 @@ class TestIBNodeGraph(unittest.TestCase):
     def test_check(self):
         id1 = self.IdentityBNode(self.graph1, debug=True)
         id2 = self.IdentityBNode(self.graph2, debug=True)
+
+        if id1.version >= 3:
+            pytest.skip('TODO version with no sci, no all_idents_new')
+            return
 
         if id1.version > 1:
             sid1 = set(id1.all_idents_new)

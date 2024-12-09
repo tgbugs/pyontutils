@@ -147,8 +147,8 @@ class IdentityBNode(rdflib.BNode):
             self._alt_identity = self._identity_function(triples_or_pairs_or_thing, treat_as_type)
             if self.version >= 3:
                 self.identity = self._alt_identity
-                if debug:
-                    self._old_identity = self.identity_function(triples_or_pairs_or_thing)
+                #if debug:
+                    #self._old_identity = self.identity_function(triples_or_pairs_or_thing)
             else:
                 self.identity = self.identity_function(triples_or_pairs_or_thing)
 
@@ -1680,7 +1680,8 @@ data free ???   | 3 f:p "freeeeee"
                 #log.debug(self.all_idents_new)
                 if not self.all_idents_new:
                     # one case that can land us here is if there is a bnode cycle
-                    breakpoint()
+                    #breakpoint()
+                    log.debug('self.all_idents_new was empty')
 
                 # use separator=False here to ensure that behavior matches that of internal call in recurse
                 # if we don't do that then we get a mismatch when we try to use IdentityBNode recursively
