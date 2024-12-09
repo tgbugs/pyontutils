@@ -1498,7 +1498,7 @@ def make_devel():
                                 yield ot.u, rdfs.label, rdflib.Literal(ot.label)
                                 if hasattr(ot, '_graph'):
                                     ipo = str(ilx_partOf)
-                                    for s, p, o in ot._graph.subjectGraphClosure(ot.u):
+                                    for s, p, o in ot._graph.subject_triples_closure(ot.u):
                                         yield s, p, o
                                         if str(p) == ipo and isinstance(o, rdflib.URIRef):
                                             if s == o:

@@ -14,7 +14,7 @@ import rdflib
 from inspect import getsourcefile
 from pathlib import Path, PurePath
 from itertools import chain
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from urllib.parse import urlparse
 import ontquery as oq
 import augpathlib as aug
@@ -23,6 +23,7 @@ from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer, natsort
 from pyontutils import combinators as cmb
 from pyontutils import closed_namespaces as cnses
+from pyontutils.johnson import simple_cycles
 from pyontutils.utils import (refile,
                               TODAY,
                               UTCNOW,
@@ -1526,7 +1527,19 @@ class OntGraph(rdflib.Graph):
 
         return add, rem, same
 
-    def subjectGraphClosure(self, subject, seen=None):
+    def subjectGraph(self, subject):
+        return self._pop_new_from_gen(self.subject_triples(subject))
+
+    def subjectGraphClosure(self, subject):
+        return self._pop_new_from_gen(self.subject_triples_closure(subject))
+
+    def _pop_new_from_gen(self, gen):
+        g = self.__class__()
+        g.namespace_manager.populate_from(self)
+        g.populate_from(gen)
+        return g
+
+    def subject_triples_closure(self, subject, seen=None):
         if seen is None:
             seen = set()
 
@@ -1537,13 +1550,13 @@ class OntGraph(rdflib.Graph):
             else:
                 seen.add(s)
 
-            yield from self.subjectGraphClosure(s, seen=seen)
+            yield from self.subject_triples_closure(s, seen=seen)
 
-        for s, p, o in self.subjectGraph(subject):
+        for s, p, o in self.subject_triples(subject):
             yield s, p, o
             yield from self.transitiveClosure(f, (o, None, None))
 
-    def subjectGraph(self, subject):
+    def subject_triples(self, subject):  # FIXME this is subject_triples ...
         # some days I am smart, as in years ago when working on neuron stuff
         # TODO do we need to check for duplicates and cycels?
         # some days I am dumb, and didn't cut at bnodes, but do now
@@ -1564,7 +1577,48 @@ class OntGraph(rdflib.Graph):
 
         yield from self.transitiveClosure(f, (None, None, subject))
 
-    def subjectIdentity(self, subject, *, debug=False):
+    def subjectCondensedIdentity(self, subject, *, idbn_class=None, debug=False):
+        g, ibn = self._si_internal(subject, idbn_class=idbn_class, debug=debug)
+        return ibn.__class__(subject, as_type='((p o) ...)')
+
+    def subjectEmbeddedIdentity(self, subject, *, idbn_class=None, debug=False):
+        g, ibn = self._si_internal(subject, idbn_class=idbn_class, debug=debug)
+        return ibn.__class__(subject, as_type='(s ((p o) ...))')
+
+    def _si_internal(self, subject, *, idbn_class=None, debug=False):
+        g = self.subjectGraph(subject)
+        if idbn_class is None:
+            idbn_class = self.IdentityBNode
+
+        ibn = idbn_class(g, debug=True)
+        if isinstance(subject, rdflib.BNode):
+            if subject not in ibn._alt_debug['subject_identities']:
+                heads = [m for ms in ibn._alt_debug['cycles_member_index'][subject] for m in ms if m in ibn._alt_debug['subject_identities']]
+                head = heads[0]
+                if len(heads) > 1:
+                    'DERP'
+
+                # XXX a though crosses my mind, we were keeping the actual bnode id in mkey ...
+                log.debug(f'head for {subject} is {head} and graph identity is {ibn}')
+
+        _td = {k:ibn._if_cache[k] for k in ibn._if_cache if subject in k}
+        if not _td:
+            # FIXME I think it is ok to return the cycle broken
+            # identifiers since they should be deterministic ...
+            if isinstance(subject, rdflib.BNode):
+                heads = [m for ms in ibn._alt_debug['cycles_member_index'][subject] for m in ms if m in ibn._alt_debug['subject_identities']]
+                head = heads[0]
+                breakpoint()
+                msg = ('subject does not have a meaningful identity, '
+                       'it may be in a cycle where it is not the head')
+                breakpoint()
+                raise ValueError(msg)
+
+        return g, ibn
+
+    def subjectIdentity(self, subject, *, idbn_class=None, debug=False):
+        return self.subjectEmbeddedIdentity(subject, idbn_class=idbn_class, debug=debug)
+        #raise NotImplementedError('subject identity is ambiguous use subjectCondensedIdentity or subjectEmbeddedIdentity instead')
         # XXX NOTE subjectIdentity and subjectGraphIdentity are NOT the same thing!
         # subjectIdentity is the id in a partcular graph of the closure for that
         # subject, subjectGraphIdentity is the identity of the graph that contains only
@@ -1639,6 +1693,20 @@ class OntGraph(rdflib.Graph):
 
         return ibn
 
+    def subjectEmbeddedGraphIdentity(self, subject, *, idbn_class=None, debug=False):
+        g, ibn = self._si_internal(subject, idbn_class=idbn_class, debug=debug)
+        return ibn
+        # for clarity
+        #return self.subjectGraphIdentity(self, subject, idbn_class=ibn_class, debug=debug)
+
+    #subjectEmbeddedGraphIdentity = subjectGraphIdentity
+
+    #def subjectCondensedGraphIdentity(self, subject, *, idbn_class=None, debug=False):
+        # condensed graph identity is not meaningful, even though that is what blanknodes technically do
+        # if you need to compare condensed identities to see whether two classes are the same
+        # it is better to use subjectCondensedIdentity NOT the graph form
+        #pass
+
     def subjectGraphIdentity(self, subject, *, idbn_class=None, debug=False, use_pairs=False, use_none=False):
         """ calculate the identity of a subgraph for a particular subject
             useful for determining whether individual records have changed
@@ -1648,7 +1716,7 @@ class OntGraph(rdflib.Graph):
         if idbn_class is None:
             idbn_class = self.IdentityBNode
 
-        triples = list(self.subjectGraph(subject))  # subjective
+        triples = list(self.subject_triples(subject))  # subjective
         if not triples:
             breakpoint()
             raise ValueError(f'subject {subject} not in graph {self}')
@@ -1952,9 +2020,12 @@ class OntGraph(rdflib.Graph):
         [new_self.add(t) for t in same_graph]
         return new_self
 
-    def identity(self, cypher=None, debug=False):
+    def identity(self, cypher=None, idbn_class=None, debug=False):
         # TODO cypher ?
-        return IdentityBNode(self, debug=debug)
+        if idbn_class is None:
+            idbn_class = self.IdentityBNode
+
+        return idbn_class(self, debug=debug)
 
     # variously named/connected subsets
 
@@ -1980,7 +2051,7 @@ class OntGraph(rdflib.Graph):
 
     def metadata(self):
         for bi in self.boundIdentifiers:
-            yield from self.subjectGraph(bi)
+            yield from self.subject_triples(bi)
 
     def metadata_unnamed(self):
         yield from ((s, p, o) for s, p, o in self.metadata()
@@ -2002,7 +2073,7 @@ class OntGraph(rdflib.Graph):
         bis = tuple(self.boundIdentifiers)
         for s in self.subjects():
             if not isinstance(s, rdflib.BNode) and s not in bis:
-                yield from self.subjectGraph(s)
+                yield from self.subject_triples(s)
 
     @property
     def data_unnamed(self):
@@ -2017,7 +2088,7 @@ class OntGraph(rdflib.Graph):
         object_bnodes = tuple(o for o in self.objects() if isinstance(o, rdflib.BNode))
         for s in self.subjects():  # FIXME some non-bnode fellows seem to be sneeking in here
             if isinstance(s, rdflib.BNode) and s not in object_bnodes:
-                yield from self.subjectGraph(s)
+                yield from self.subject_triples(s)
 
     def asConjunctive(self, debug=False):
         # TODO a version of this that can populate
@@ -2101,7 +2172,109 @@ class OntGraph(rdflib.Graph):
         return cycle_participants
 
     def cycle_check_long(self, btc_node=None):
+        # use jonhson simple cycle detection because doing anything else is stupid
+        # tarjan scc doesn't work by itself in this case
+        atrisk = set(s for s in self.subjects(unique=True) if isinstance(s, rdflib.BNode))
+        objs = defaultdict(list)
+        incoming = defaultdict(list)
+        lu = {}  #  FIXME TODO make a lowmem version
+        sos = set()
+        for i, t in enumerate(self):
+            lu[i] = t
+            s, p, o = t
+            if s in atrisk or o in atrisk:
+                #if btc_node is None or o != btc_node:  # don't include btc_node # we don't need this with simple cycles i think/
+                incoming[o].append(i)
+
+                objs[s].append(i)
+                if s == o:
+                    sos.add(i)
+
+                #if o in atrisk:
+                # FIXME we need something to ensure that even dangling nodes are in g below
+
+        g = {}
+        for s, trips_with_s_as_object in incoming.items():
+            # s p o       sao
+            #     o p o2  sas
+            #if s in objs:
+            trips_with_s_as_subject = objs[s]
+                #if trips_with_s_as_subject:
+            for to in trips_with_s_as_object:
+                #g[to] = [ts for ts in trips_with_s_as_subject if ts != to or ts[0] == ts[-1]]
+                g[to] = [ts for ts in trips_with_s_as_subject if ts != to or ts in sos]
+
+        try:
+            _cycles = list(simple_cycles(g))
+        except KeyError as e:
+            breakpoint()
+            raise e
+
+        cycles = [[lu[t] for t in c] for c in _cycles]
+        if cycles:
+            #breakpoint()
+            pass
+        return cycles
+
+        sccs = tarjan(g)
+        # reminder sccs are NOT all cycles
+
+        #toposort(c) for c in
+        # we likely need a second phase to confirm for short cycles and then run topo
+        cycles = [[lu[t] for t in c] for c in sccs if len(c) > 1 or c[0] in sos]
+        #if cycles and len(cycles[0]) == 1:
+            #breakpoint()
+        return cycles
+
+    def _cycle_check_long(self, btc_node=None):
+        # https://stackoverflow.com/questions/261573/efficient-algorithm-for-detecting-cycles-in-a-directed-graph
+        # of course the approach here is exceptionally bad for long cycles
+        # triples are verts and edges are nodes
+
+        # construct a subset graph that contains only those triples at risk for being in cycles
+        # namely, those where the subject is a bnode
+        # then use that as the set for the dfs
+        atrisk = set(s for s in self.subjects(unique=True) if isinstance(s, rdflib.BNode))
+        objs = defaultdict(list)
+        for t in self:
+            s, p, o = t
+            if s in atrisk or o in atrisk:
+                objs[s].append((p, o))
+
+        def find_cycles(start):
+            _in_cycles_prev = defaultdict(set)
+            # non recursive dfs that finds all cycle paths
+            stack = [(start, [], set())]  # need path members to avoid performance pitfalls for very long cycles
+            while stack:
+                e, path, path_members = stack.pop()
+                if path and e == start:
+                    _in_cycles_prev[path[0]].add(path[-1])
+                    for pep, pen in zip(path[:-1], path[1:]):
+                        _in_cycles_prev[pen].add(pep)
+
+                    yield path
+                    continue
+
+                for p, ne in objs[e]:
+                    if path and path[-1] in _in_cycles_prev[e, p, ne]:
+                        # we've already found this cycle
+                        continue
+
+                    if (e, p, ne) in path_members:  # yeah we need both p and ne here because there might be multiple edges
+                        # p, ne is already in path somehow, maybe multiply converging or via multiple predicates
+                        continue
+
+                    npm = set(path_members)
+                    npm.update((e, p, ne))
+                    stack.append((ne, path + [(e, p, ne)], npm))  # construct a new path because other routes need the old one as a base
+
+        #hrm = {s:list(find_cycles(s)) for s in atrisk}  # XXX does not include cycles that were already detect starting from another node
+        cycles = [cycle for s in atrisk for cycle in find_cycles(s)]
+        return cycles
+
+    def _cycle_check_long(self, btc_node=None):
         """ return all distinct bnode cycles in the graph """
+
         def hrm(subject):
             seen = {}
             paths = [[]]

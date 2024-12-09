@@ -53,6 +53,45 @@ class TestOntGraphComplex(TestOntGraph):
         assert not c, d
 
 
+class TestCycleCheckLong(unittest.TestCase):
+    def _do_cycle(self, trips, test_trips, neg=False):
+        g = OntGraph().populate_from_triples(trips)
+        cycles = g.cycle_check_long()
+        if neg:
+            assert not cycles
+        else:
+            assert cycles
+            assert [c for c in cycles if [ct for ct in c if ct in test_trips]]
+
+    def test_cycles_0(self):
+        bn0 = rdflib.BNode()
+        bn1 = rdflib.BNode()
+        trips = (
+            (bn0, ilxtr.c0, bn1),
+        )
+        test_trips = trips
+        self._do_cycle(trips, None, neg=True)
+
+    def test_cycles_1(self):
+        bn0 = rdflib.BNode()
+        trips = (
+            (bn0, ilxtr.c0, bn0),
+        )
+        test_trips = trips
+        self._do_cycle(trips, test_trips)
+
+    def test_cycles_2(self):
+        clen = 9999  # bad algos with choke at this size
+        nodes = [rdflib.BNode() for _ in range(clen)]
+        trips = [(na, ilxtr.p, nb) for na, nb in zip(nodes[:-1], nodes[1:])]
+        trips.append((nodes[-1], ilxtr.c0, nodes[0]))
+        mid = clen // 2
+        l = clen - 2
+        u = clen + 2
+        test_trips = trips[l:u]
+        self._do_cycle(trips, test_trips)
+
+
 class TestVersionHistory(unittest.TestCase):
     """
     the test cases here should cover all the possible atomic operations on a store

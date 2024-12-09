@@ -47,7 +47,7 @@ def process_command(t, base_graph):
             raise NotImplementedError(f'unknown arg {arg}')
 
         for s in graph[:rdf.type:type]:
-            yield from graph.subjectGraph(s)  # FIXME naming should e subjectTriples?
+            yield from graph.subject_triples(s)
 
 
 def substitute_graph(graph, base_graph=None):

@@ -3801,7 +3801,7 @@ class Neuron(NeuronBase):
                     return tuple(pes)
 
                 else:
-                    log.critical(f'WHAT\n{list(c.graph.subjectGraph(c.identifier))!r}')  # FIXME something is wrong for negative phenotypes...
+                    log.critical(f'WHAT\n{list(c.graph.subject_triples(c.identifier))!r}')  # FIXME something is wrong for negative phenotypes...
 
                 p = pr.someValuesFrom
                 e = pr.onProperty

@@ -3,10 +3,12 @@ import hashlib
 from collections import defaultdict
 import rdflib
 
-from .utils import log as _log
+from .utils_fast import log as _log
+
 log = _log.getChild('ibnode')
 
 bnNone = rdflib.BNode()  # BNode to use in cases where subject would be None
+#_session_only_token = rdflib.BNode()  # ensure raw bnode identities cannot be compared between sessions
 
 
 def bnodes(ts):
@@ -140,54 +142,23 @@ class IdentityBNode(rdflib.BNode):
 
         self.null_identity = getattr(self, f'_{self.version}_ni')
 
-        def tat(thing):
-            if pot:
-                if len(thing) == 2:
-                    return 'pair'
-                elif len(thing) == 3:
-                    return 'triple'
-                else:
-                    raise TypeError(f'{type(thing)} not a pair or triple ... {thing}')
-
-            if isinstance(thing, self.__class__):
-                if thing.version != self.version:
-                    raise ValueError(f'versions do not match! {thing.version} != {self.version}')  # FIXME error type
-                return 'ident'
-            elif isinstance(thing, rdflib.BNode):
-                return 'raw-bnode'
-            elif isinstance(thing, bytes) or isinstance(thing, str):
-                return 'bytes'
-            elif isinstance(thing, rdflib.Graph):
-                return 'trip-seq'
-            elif isinstance(thing, rdflib.namespace.NamespaceManager):  # FIXME TODO
-                raise NotImplementedError('TODO')
-            elif isinstance(thing, tuple) or isinstance(thing, list):
-                if thing:
-                    t0 = thing[0]
-                    if isinstance(t0, tuple):  # assume pair or trip seq based on t0, which is not always true
-                        if len(t0) == 2:
-                            return 'pair-seq'
-                        elif len(t0) == 3:
-                            return 'trip-seq'
-                        else:
-                            raise NotImplementedError(f'TODO {len(t0)}')
-                    else:
-                        t0type = tat(t0)
-                        return f'{t0type}-seq'
-                        #raise NotImplementedError(f'TODO {type(t0)} {t0}')
-                else:
-                    return 'empty-seq'
+        if self.version > 2:
+            treat_as_type = as_type if as_type else self.tat(triples_or_pairs_or_thing, self.version, pot)
+            self._alt_identity = self._identity_function(triples_or_pairs_or_thing, treat_as_type)
+            if self.version >= 3:
+                self.identity = self._alt_identity
+                if debug:
+                    self._old_identity = self.identity_function(triples_or_pairs_or_thing)
             else:
-                raise NotImplementedError(f'{type(thing)} {thing}')
+                self.identity = self.identity_function(triples_or_pairs_or_thing)
 
-        treat_as_type = as_type if as_type else tat(triples_or_pairs_or_thing)
-        self._alt_identity = self._identity_function(triples_or_pairs_or_thing, treat_as_type)
-        self.identity = self.identity_function(triples_or_pairs_or_thing)
+        else:
+            self.identity = self.identity_function(triples_or_pairs_or_thing)
+
         real_self = super().__new__(cls, self.identity)
         if debug == True:
             return self
 
-        real_self._alt_identity = self._alt_identity
         # not set unless in debug
         #real_self._alt_subject_condensed_identities = self._alt_subject_condensed_identities
         #real_self._alt_subject_embedded_identities = self._alt_subject_embedded_identities
@@ -206,8 +177,54 @@ class IdentityBNode(rdflib.BNode):
         real_self.cypher_field_separator_hash = self.cypher_field_separator_hash
         return real_self
 
+    @staticmethod
+    def tat(thing, version, pot):
+        if pot:
+            if len(thing) == 2:
+                return 'pair'
+            elif len(thing) == 3:
+                return 'triple'
+            else:
+                raise TypeError(f'{type(thing)} not a pair or triple ... {thing}')
+
+        if isinstance(thing, IdentityBNode):
+            if thing.version != version:
+                raise ValueError(f'versions do not match! {thing.version} != {version}')  # FIXME error type
+            return 'ident'
+        elif isinstance(thing, rdflib.BNode):
+            return 'raw-bnode'
+        elif isinstance(thing, bytes) or isinstance(thing, str):
+            return 'bytes'
+        elif isinstance(thing, rdflib.Graph):
+            return 'trip-seq'
+        elif isinstance(thing, rdflib.namespace.NamespaceManager):  # FIXME TODO
+            raise NotImplementedError('TODO')
+        elif isinstance(thing, tuple) or isinstance(thing, list):
+            if thing:
+                t0 = thing[0]
+                if isinstance(t0, tuple):  # assume pair or trip seq based on t0, which is not always true
+                    if len(t0) == 2:
+                        return 'pair-seq'
+                    elif len(t0) == 3:
+                        return 'trip-seq'
+                    else:
+                        raise NotImplementedError(f'TODO {len(t0)}')
+                else:
+                    t0type = IdentityBNode.tat(t0, version, pot)
+                    return f'{t0type}-seq'
+                    #raise NotImplementedError(f'TODO {type(t0)} {t0}')
+            else:
+                return 'empty-seq'
+        else:
+            raise NotImplementedError(f'{type(thing)} {thing}')
+
     def check(self, other):
-        return self.identity == self.identity_function(other)
+        if self.version >= 3:
+            oid = self._identity_function(other, self.tat(other, self.version, False))
+        else:
+            oid = self.identity_function(other)
+
+        return self.identity == oid
 
     def cypher_check(self):
         m1 = self.cypher()
@@ -228,11 +245,17 @@ class IdentityBNode(rdflib.BNode):
             m2.update(b'123')
             assert m1.digest() != m2.digest() , f'Cypher {self.cypher} is invariant to the number of updates'
 
+    null_equivalents = None, list(), tuple(), set(), dict(), b'', '', False
     def to_bytes(self, thing):
         if isinstance(thing, bytes):
             raise TypeError(f'{thing} is already bytes')
         elif type(thing) == str:
             return thing.encode(self.encoding)
+        elif thing is None or thing in self.null_equivalents:
+            return b''  # this makes much more sense
+            # not catching None here will lead to nasty silent failures
+            breakpoint()
+            raise ValueError(f'not converting {thing!r} to bytes directly!')
         else:
             return str(thing).encode(self.encoding)
 
@@ -248,6 +271,7 @@ class IdentityBNode(rdflib.BNode):
             if separator and i > 0:  # insert field separator
                 m.update(self.cypher_field_separator_hash)
             if thing is None:  # all null are converted to the starting hash
+                raise TypeError("should already have converted None -> b'' at this point")
                 thing = self.null_identity
             if type(thing) != bytes:
                 raise TypeError(f'{type(thing)} is not bytes, did you forget to call to_bytes first?')
@@ -1045,6 +1069,7 @@ class IdentityBNode(rdflib.BNode):
 
     _NOTIMP = NotImplementedError
     _if_cache = {}  # FIXME version issue
+    _if_debug_cache = {}
     def _identity_function(self, thing, treat_as_type):
         # FIXME TODO treat_as_type to something other than
         # strings for better performance maybe? probably much later
@@ -1071,12 +1096,20 @@ class IdentityBNode(rdflib.BNode):
             if isinstance(thing, bytes):
                 ident = oid(thing)
             elif isinstance(thing, rdflib.Literal):
-                ident = oid(*[self._identity_function(e, treat_as_type='bytes') for e in (str(thing), thing.datatype, thing.language)])
+                # TODO make sure str(thing) is what we want, I'm pretty sure it is based on how the serialization works
+                # e.g. rdflib.Literal('True', datatype=xsd.boolean) is "True" "xsd:boolean-expanded-string" internally
+                # even though rdflib.Literal.toPython() gives something else
+                v, d, l = [self._identity_function(e, treat_as_type='bytes') for e in (str(thing), thing.datatype, thing.language)]
+                ident = oid(v, d, l, separator=False)
             elif isinstance(thing, rdflib.BNode):
                 breakpoint()
                 raise TypeError(f'no bnodes here {type(thing)}')
+            elif thing in self.null_equivalents:
+                ident = self.null_identity
+            #elif thing is True:  # FIXME TODO ...
+                #ident = oid(b'1')
             else:
-                ident = oid(self.to_bytes(thing))
+                ident = oid(self.to_bytes(thing))  # FIXME dangerous stringification happens in to_bytes right now
         elif treat_as_type in ('pair', '(p o)'):
             ident = oid(*[self._identity_function(e, 'bytes') for e in thing], separator=False)
         elif treat_as_type in ('pair-ident', '(p id)'):
@@ -1096,8 +1129,8 @@ class IdentityBNode(rdflib.BNode):
 
             # we might as well process as much of the bnode work as we can for now
             connected_heads = set()
-            bsubjects = set()
-            bobjects = set()
+            bsubjects = defaultdict(lambda: 0)  # turns out we need to count this too
+            bobjects = defaultdict(lambda: 0)  # need to know how many times a node appears as an object in general because > 1 means free head
             unresolved_bnodes = defaultdict(list)
             for s, p, o in thing:
                 sn = isinstance(s, rdflib.BNode)
@@ -1108,10 +1141,10 @@ class IdentityBNode(rdflib.BNode):
                 if (sn or on):
                     unresolved_pair = True
                     if sn:
-                        bsubjects.add(s)
+                        bsubjects[s] += 1
 
                     if on:
-                        bobjects.add(o)
+                        bobjects[o] += 1
                         if isinstance(s, rdflib.URIRef):
                             connected_heads.add(o)
                     else:
@@ -1129,9 +1162,17 @@ class IdentityBNode(rdflib.BNode):
 
             subject_condensed_identities = {}
             subject_embedded_identities = {}
+            free_heads = set(k for k, v in bobjects.items() if v > 1)
+            replace_when_object = set()
+            cycles_member_index = defaultdict(list)
+            cycles = []  # for debug in case there aren't any unresolved bnodes at all
+            _debug_mkey = []
             if unresolved_bnodes:
-                free_heads = bsubjects - bobjects
-                dangling = bobjects - bsubjects
+                sbsubjects = set(bsubjects)
+                sbobjects = set(bobjects)
+                more_free_heads = sbsubjects - sbobjects
+                free_heads.update(more_free_heads)
+                dangling = sbobjects - sbsubjects
 
                 # resolve dangling
                 for o in dangling:
@@ -1167,33 +1208,145 @@ class IdentityBNode(rdflib.BNode):
                         subject_condensed_identities[btc] = ident_btc
                         subject_embedded_identities[btc] = ident_btc
 
-                    def mkey(b):
+                    def cycle_order_vector(b):
+                        cycles = in_cycles[b]
+                        preds = []
+                        for c in cycles:
+                            ts = [t for t in c if t[0] == b]  # len should always be 1 ???
+                            mint = min(c.index(t) for t in ts)
+                            cord = c[mint:] + c[:mint]  # shift the cycle to start at b
+                            # I'm still mystified as to why I get different identity results when everything else looks like it should be the same
+                            for s, p, o in cord:
+                                preds.append(p)  # FIXME need more than preds thus the fixedpoint that i did before
+
+                        return preds
+
+                    oops_all_zees = 'z' * 999
+                    def so_order_vector(b):
+                        vec = []
+                        for s, o in g[::b]:
+                            if isinstance(s, rdflib.BNode):
+                                s = oops_all_zees
+
+                            vec.append((s, o))
+
+                        return sorted(vec)  # i just need AN order
+
+                    def cycle_subject_vector(b):
+                        cycles = in_cycles[b]
+                        subs = []
+                        for c in cycles:
+                            ts = [t for t in c if t[0] == b]  # len should always be 1 ???
+                            mint = min(c.index(t) for t in ts)
+                            cord = c[mint:] + c[:mint]  # shift the cycle to start at b
+                            for s, p, o in cord[1:]:
+                                subs.append(s)
+
+                        return subs
+
+                    def _mkey(b):
+                        # FIXME we need to come up with a better solution for this because
+                        # cutpoints are critical in determining the final actual id of the output
+                        # the alternative is to take the ids of the cycle where every single node
+                        # is the head and then take the hash of all of those because THAT is
+                        # guranteed to be invariant to cut point, there is a performance penality
+                        # but anyone with crazy bnode cycles is going to get dinged anyway
+
+                        # the ranking here will not match the fixedpoint
+                        # total order ranking logic that i use in ttlser
+                        # but i think that is probably ok as long as the
+                        # whole cyclical portion of the subgraph gets the
+                        # same id no matter what
                         return (
+                            b not in free_heads,  # free heads get priority (if they exist before adding the cutpoints to free heads)
+                            -bobjects[b] if b in bobjects else 0,  # the head with the most references since we only replace it in the cycle
+                            -bsubjects[b] if b in bsubjects else 0,
+
+                            #b not in connected_heads,
+                            #if b in bobjects else
+                            # FIXME also need the count of times the node appears as an object
+                            # in triples in general because more than once means that it is
+                            # also a free replica
+
+                            # XXX FIXME TODO trying to ensure that the cutpoint
+                            # we pick results in the head being the same as
+                            # e.g. the subject in a cyclical subject graph this
+                            # is not sufficient ... actually ... if you take
+                            # a subject graph for all subjects including those
+                            # in cycles, sometimes the one you pick in the cycle
+                            # will not be the head, so that is a separate issue
+                            # the question is what id to issue for the others
+                            # in the cycle ? we don't want to calculate all
+                            # cycle graphs (as discussed) i think the issue
+                            # is in my test, but it raises a good point ...
                             -len(in_cycles[b]),  # number of cycles (before a shared cycle point has more due to rdf asymmetry)
                             len(unresolved_bnodes[b]),  # number of cycle triples (cycle point has more)
                             -sum([len(c) for c in in_cycles[b]]),  # combined length of cycles
                             -len(bnode_identities[b]),  # number of non-cycle triples
                             sorted([p for p, o in unresolved_bnodes[b]]),
-                            sorted(subject_identities[b]),
+                            sorted(subject_identities[b]) if b in subject_identities else [],  # don't index into subject identities because being a member of subject identities is reserved only for actual heads and at this point _all_ subjects in a cycle are still heads
+                            sorted(bnode_identities[b]),  # the identities of any existing pos for the bnode in question XXX hah, well that fixed the sci != new_sci problem for graphs where cycle members are involved in other triples, it won't for cases where there aren't any
+                            # FIXME LOL not taking which predicate two identical subgraphs are attached to into account >_< duh
+                            cycle_order_vector(b),
+                            so_order_vector(b),
+                            #cycle_subject_vector(b),  # this buys us nothing because the new bnode is equivalent to just b by itself
                             b,  # debug only FIXME
                         )
 
-                    in_cycles = {}
+                    # we do this within each cycle
+                    # so to obtain a total order on all cycle
+                    # triples including those in multiple cycles
+                    # the cycles are assigned a number that is the
+                    # index at which the computed identity for that
+                    # cycle for that node will be placed, otherwise
+                    # empty byptestring
+
+                    # this approach allows us to choose the cutpoint based on the
+                    # total structure of the cycle without trying to come up with
+                    # arbitrary rules
+                    sparse_mis = {}
+
+                    # XXX should be defined here but not for debug
+                    # in_cycles
+                    # cycles_members
+                    #in_cycles = {}
                     cycle_members = []
-                    for cycle in cycles:
+                    for i, cycle in enumerate(cycles):
+                        if len(cycle) > 99:
+                            # TODO better logging
+                            log.warning(f'absurd bnode cycle detect with length {len(cycle)}')
+
                         # members can't be sorted yet because mkey needs in_cycles to be complete
                         members = set(e for _s, _, _o in cycle for e in (_s, _o))
                         cycle_members.append(members)
-                        for e in members:
-                            if e not in in_cycles:
-                                in_cycles[e] = []
+                        #for e in members:  # old way no longer used
+                        #    if e not in in_cycles:
+                        #        in_cycles[e] = []
 
-                            in_cycles[e].append(cycle)
+                        #    in_cycles[e].append(cycle)
+                        for member in members:
+                            # construct a cycle where the member of the moment will be at the head
+                            mem_cycle = [(s, p, btc) if o == member else (s, p, o) for s, p, o in cycle]
+                            # FIXME performance can be quite bad here, consider using a single graph
+                            mg = OntGraph().populate_from_triples(mem_cycle)
+                            mi = mg.subjectEmbeddedIdentity(member)
+                            sparse_mis[i, member] = mi
 
-                    _debug_mkey = []
-                    replace_when_object = set()
-                    for members in cycle_members:
-                        _debug_mkey.append(sorted([mkey(b) for b in members]))
+                    if self.debug:
+                        for _cm in cycle_members:
+                            for _m in _cm:
+                                cycles_member_index[_m].append(_cm)
+
+                    def make_mkey(i):
+                        def mkey(b, *, _i=i):
+                            return sparse_mis[_i, b]
+
+                        return mkey
+
+                    #_debug_mkey = []
+                    for i, members in enumerate(cycle_members):
+                        mkey = make_mkey(i)
+                        #_debug_mkey.append(sorted([(mkey(b), b) for b in members]))
                         break_the_cycle = sorted(members, key=mkey)[0]
                         if break_the_cycle in replace_when_object:
                             continue
@@ -1208,16 +1361,24 @@ class IdentityBNode(rdflib.BNode):
                         replace_when_object.add(break_the_cycle)
                         #cycles_broken[break_the_cycle] = [(p, btc) for p, o in cycles_broken[break_the_cycle]]
 
+                    # new free heads are those that will now no longer appear as objects
+                    # i.e. those in replace_when_object because that is equivalent to
+                    # removing them from bobjects above, if they are in a cycle
+                    # then they by definition must have appeard in free head position
+                    # regardless of whether or not they were in connected heads as well
+                    free_heads.update(replace_when_object)
+
                     # so we can't cut the objects when the subject
                     # is the one that is implicated so unfortunately
                     # we have to build an inverted lookup
                     #inverted = defaultdict(list)
+                    valid_replace_triples = set(t for c in cycles for t in c if t[-1] in replace_when_object)
                     cycles_broken = dict(unresolved_bnodes)
                     for s, pos in unresolved_bnodes.items():
                         new_pos = []
-                        #tainted = False
                         for p, o in pos:
-                            if o in replace_when_object:
+                            if (s, p, o) in valid_replace_triples:
+                            #if o in replace_when_object and (s, p, o) in valid_replace_triples:
                                 # inverted[o].append((s, p))
                                 # in theory we can construct an inverted index
                                 # from this loop that will give us subjects/pos
@@ -1225,7 +1386,6 @@ class IdentityBNode(rdflib.BNode):
                                 # maybe as (o ((s p) ...)) ??? of course o becomes btc
                                 # so actually doing this isn't worth the effort
                                 new_pos.append((p, btc))
-                                #tainted = True
                             else:
                                 new_pos.append((p, o))
 
@@ -1234,21 +1394,24 @@ class IdentityBNode(rdflib.BNode):
                 else:
                     cycles_broken = unresolved_bnodes
 
-                ncg = OntGraph().populate_from_triples((s, p, o) for s, pos in cycles_broken.items() for p, o in pos)
-                should_not_but_cycles = ncg.cycle_check_long(btc_node=btc)
-                if should_not_but_cycles:
-                    watg = tuple(set(t for cyc in should_not_but_cycles for t in cyc))
-                    try:
-                        toposort([(s, o) for s, p, o in watg])  # fortunately toposort is correct
-                        breakpoint()  # WAT
-                    except Exception as e:
-                        ecyc = e.args[1]
-                        cycs = [cyc for cyc in should_not_but_cycles if [t for t in cyc if ecyc in t]]
-                        # FIXME looks like double cyclic gets cut at wrong point?
-                        _sigh = sorted(_debug_mkey, reverse=True)
-                        log.exception(e)
-                        breakpoint()
-                        raise e
+                if True or self.debug:
+                    ncg = OntGraph().populate_from_triples((s, p, o) for s, pos in cycles_broken.items() for p, o in pos)
+                    should_not_but_cycles = ncg.cycle_check_long(btc_node=btc)
+                    # FIXME bigger problem here is that there is a cycle in should not but cycels that is not in cycles :/
+                    # this means my cycle check is wrong, which is not surprising since it has had zero real testing :/
+                    if should_not_but_cycles:
+                        watg = tuple(set(t for cyc in should_not_but_cycles for t in cyc))
+                        try:
+                            toposort([(s, o) for s, p, o in watg])  # fortunately toposort is correct
+                            breakpoint()  # WAT
+                        except Exception as e:
+                            ecyc = e.args[1]
+                            cycs = [cyc for cyc in should_not_but_cycles if [t for t in cyc if ecyc in t]]
+                            # FIXME looks like double cyclic gets cut at wrong point?
+                            _sigh = sorted(_debug_mkey, reverse=True)
+                            log.exception(e)
+                            breakpoint()
+                            raise e
 
                 # toposort
                 subject_order = toposort([(s, o) for s, pos in cycles_broken.items() for p, o in pos])
@@ -1294,11 +1457,31 @@ class IdentityBNode(rdflib.BNode):
                         if s in free_heads:
                             assert s not in subject_identities, 'bah'
                             subject_identities[s] = bnode_identities[s]
+                        else:
+                            # we set these even though they are derived from
+                            # the break the cycle bnode or are part of subgraph
+                            # we do not put them in subject identifiers so they
+                            # do not go as top level, but they can be recovered
+                            # and should be stable if we got the cycle break
+                            # logic right
+                            self._if_cache[s, '((p o) ...)'] = ident_s
+                            self._if_cache[s, '(s ((p o) ...))'] = ident_s
                     else:
                         # FIXME TODO watch out for that case where a
                         # uri subject has references to two identical
                         # connected subgraphs replicas, aka no set()
                         subject_identities[s].extend(idents_po)
+
+            elif bnode_identities:
+                # all bnodes might be resolved
+                # because there were only bnodes at the heads of free subgraphs
+                for s, idents_po in bnode_identities.items():
+                    ident_s = sid(*[i for i, po in idents_po], separator=False)
+                    subject_condensed_identities[s] = ident_s
+                    subject_embedded_identities[s] = ident_s
+                    # s is in free heads but free heads does not exist in this branch
+                    assert s not in subject_identities, 'bah'
+                    subject_identities[s] = bnode_identities[s]
 
             seids = []
             for s, idpos in subject_identities.items():
@@ -1329,12 +1512,31 @@ class IdentityBNode(rdflib.BNode):
                 # the new caching in this implementation means that we should
                 # be able to just apply IdentityBNode to the raw object and
                 # get the cached result
-                self._alt_subject_condensed_identities = subject_condensed_identities
-                self._alt_subject_embedded_identities = subject_embedded_identities
+
+                #self._alt_subject_condensed_identities = subject_condensed_identities
+                #self._alt_subject_embedded_identities = subject_embedded_identities
+                #self._alt_seids = seids
+                #self._alt_bnode_identities = bnode_identities
+                #self._alt_subject_identities = subject_identities
+                self._alt_debug = dict(
+                    debug_mkey = _debug_mkey,  # up top because it can get very long
+                    subject_condensed_identities = subject_condensed_identities,
+                    subject_embedded_identities = subject_embedded_identities,
+                    seids = seids,
+                    bnode_identities = bnode_identities,
+                    subject_identities = subject_identities,
+                    free_heads = free_heads,
+                    replace_when_object = replace_when_object,
+                    cycles_member_index = cycles_member_index,
+                    cycles = cycles,
+                )
 
             # XXX this id won't match the current v3 due to slight differences in cycle handling i think
             # needs reivew
             ident = sid(*seids, separator=False)
+
+            if self.debug:  # FIXME this only partially works because we also want it for all sub-identities too
+                self._if_debug_cache[ident] = self._alt_debug
 
         elif treat_as_type == 'pair-seq':
             # XXX NOTE pair seqs may not have any bnodes, there are
@@ -1352,21 +1554,32 @@ class IdentityBNode(rdflib.BNode):
             ident = sid(*ids, separator=False)
 
         elif treat_as_type == 'bytes-seq':
-            ident = sid(*[self._identity_function(_, 'bytes') for _ in thing])
+            ident = sid(*[self._identity_function(_, 'bytes') for _ in thing], separator=False)
         elif treat_as_type == 'ident-seq':
-            ident = sid(*[self._identity_function(_, 'ident') for _ in thing])
+            ident = sid(*[self._identity_function(_, 'ident') for _ in thing], separator=False)
         elif treat_as_type == 'empty-seq':
             # FIXME TODO '' vs b'' vs [] vs tupe() vs set() etc. WHAT IS '()
             ident = self.null_identity
-        elif treat_as_type == 'ident':  # XXX probably shouldn't hit this branch very much since it just bloats the cache
-            ident = thing.identity
-            #raise ValueError("maybe don't do this?")
+        elif treat_as_type == 'ident':
+            ident = oid(thing.identity)  # oid() to make behavior homogenous
+            # ironically in no cases should an identity function ever return
+            # the same value that it was given because that only works if you
+            # are dealing in pure mathematics and not in a reduced space if it
+            # were to return the same value then a colision attack becomes
+            # trivial because there are always guranteed to be two inputs that
+            # return the same value, the thing itself and identity of the thing
+            # which makes it impossible to use the identity function to
+            # distinguish between the thing itself and its identity, a big oops
         elif treat_as_type == 'raw-bnode':
-            # if you explicitly want to compare raw bnodes
-            # we'll let you but their identity is themselves
-            # this type should never be used internally and is
-            # only for backward compat
-            ident = thing
+            raise ValueError('BNodes only have names or collective identity...')
+            if False:  # bnodes_ok:  # old feature which seems not to have been used anywhere?
+                # if you explicitly want to compare raw bnodes we'll let you
+                # but their identity is themselves this type should never be
+                # used internally and is only for backward compat
+                ident = f'bnode-{_session_only_token}-{thing}'.encode()
+                # to keep the types sane we still return an identity, however
+                # the session only token is there to ensure that comparisons
+                # cannot be made between bnodes from different processes
         elif treat_as_type == 'tripair-seq':
             # XXX don't use this, only for backward compat
             # amusingly the only place this shows up is where we remove the

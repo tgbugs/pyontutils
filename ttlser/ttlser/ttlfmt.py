@@ -25,6 +25,9 @@ Options:
     -p --profile    enable profiling on parsing and serialization
     -d --debug      launch debugger after parsing and before serialization
 
+    --curies-from=F parse using curies from file F
+    --noreord       do not reorder lists when serializing
+
 """
 import os
 import sys
@@ -76,8 +79,16 @@ formats = ('ttl', 'json-ld', None, 'xml', 'n3', 'nt', 'nquads', 'trix',
            'trig', 'hturtle', 'rdfa', 'mdata', 'rdfa1.0', 'html')
 
 
-def parse(source, format_guess, outpath, graph=None, infmt=None, graph_class=GRAPHCLASS):
+def bind_curies(g, namespace_manager):
+    for prefix, namespace in namespace_manager.namespaces():
+        g.bind(prefix, namespace)
+
+
+def parse(source, format_guess, outpath, graph=None, infmt=None, graph_class=GRAPHCLASS, use_nsm=None):
     graph = graph_class() if graph is None else graph
+    if use_nsm:
+        bind_curies(graph, use_nsm)
+
     errors = []
     if infmt:
         format_guess = infmt
@@ -90,6 +101,10 @@ def parse(source, format_guess, outpath, graph=None, infmt=None, graph_class=GRA
         try:
             graph.parse(source=source, format=format)
             a = next(iter(graph))
+            if use_nsm:
+                graph.namespace_manager.reset()
+                bind_curies(graph, use_nsm)
+
             return graph, outpath
         except (StopIteration, BadSyntax, JSONDecodeError) as e:
             sys.stderr.write('PARSING FAILED {} {}\n'.format(format, source))
@@ -135,11 +150,11 @@ def serialize(graph, outpath, outfmt=defaults['--outfmt'],
 
 def convert(file_or_list_or_stream, outpath=None, stream=False,
             infmt=None, outfmt=defaults['--outfmt'],
-            debug=False, profile=False, nowrite=False, graph_class=GRAPHCLASS):
+            debug=False, profile=False, nowrite=False, graph_class=GRAPHCLASS, use_nsm=None):
     if stream or type(file_or_list_or_stream) == str:
         file_or_stream = file_or_list_or_stream
         serialize(*parse(**prepare(file_or_stream, outpath, stream),
-                         infmt=infmt),
+                         infmt=infmt, use_nsm=use_nsm),
                   outfmt=outfmt, debug=debug, profile=profile, nowrite=nowrite)
     else:
         # file list is used here because this allows is to merge files
@@ -148,13 +163,14 @@ def convert(file_or_list_or_stream, outpath=None, stream=False,
         file_list = file_or_list_or_stream
         if outpath is not None:
             graph = graph_class()
-            [parse(**prepare(file, outpath), graph=graph, infmt=infmt) for file in file_list]
+
+            [parse(**prepare(file, outpath), graph=graph, infmt=infmt, use_nsm=use_nsm) for file in file_list]
             serialize(graph, outpath, outfmt=outfmt,
                       debug=debug, profile=profile, nowrite=nowrite)
         else:
             [convert(file, infmt=infmt, outfmt=outfmt,
                      debug=debug, profile=profile,
-                     graph_class=graph_class) for file in file_list]
+                     graph_class=graph_class, use_nsm=use_nsm) for file in file_list]
 
 
 def pipe_debug(*args, source=None, graph=None, outpath=None, **kwargs):
@@ -202,6 +218,22 @@ def main():
 
     outpath = args['--output']
     files = args['<file>']
+
+    if args['--curies-from']:
+        ucg = GRAPHCLASS()
+        ucg.parse(args['--curies-from'])
+        use_nsm = ucg.namespace_manager
+    else:
+        use_nsm = None
+
+    if args['--noreord']:
+        from ttlser.serializers import CustomTurtleSerializer
+        class AllPredicates:
+            def __contains__(self, other):
+                return True
+
+        CustomTurtleSerializer.no_reorder_list = AllPredicates()
+
     if not files:
         from ttlser.utils import readFromStdIn
         stdin = readFromStdIn(sys.stdin)
@@ -209,7 +241,7 @@ def main():
             convert(stdin, outpath, stream=True,
                     infmt=infmt, outfmt=outfmt,
                     debug=debug, profile=profile,
-                    nowrite=nowrite)
+                    nowrite=nowrite, use_nsm=use_nsm)
         else:
             print(__doc__)
     else:
@@ -221,7 +253,7 @@ def main():
             convert(files, outpath=outpath,
                     infmt=infmt, outfmt=outfmt,
                     debug=debug, profile=profile,
-                    nowrite=nowrite)
+                    nowrite=nowrite, use_nsm=use_nsm)
         else:
             from joblib import Parallel, delayed
             nj = 9
