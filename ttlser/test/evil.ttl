@@ -84,3 +84,24 @@ _:_d ilxtr:4 _:_c .
 _:_b ilxtr:5 _:_e .
 _:_e ilxtr:6 _:_b .
 _:_e ilxtr:7 _:_d .
+
+# a connected head that is also the best cut point
+
+ilxtr:evil ilxtr:p _:e_1 .
+_:e_1 ilxtr:1 _:e_2 .
+_:e_1 ilxtr:p "a" .
+_:e_2 ilxtr:2 _:e_3 .
+_:e_3 ilxtr:3 _:e_1 .
+
+ilxtr:evil-1 ilxtr:1 _:evil-1 .
+ilxtr:evil-2 ilxtr:2 _:evil-1 .
+_:evil-1 ilxtr:3 "make sure that the id for _:evil-1 is also used in the calculation of the id of the whole graph" .
+
+# multiple nodes in the cycle are connected heads
+
+ilxtr:evil-3 ilxtr:n _:evil-3 .
+ilxtr:evil-3 ilxtr:m _:evil-5 .
+_:evil-3 ilxtr:n _:evil-4 .
+_:evil-4 ilxtr:n _:evil-5 .
+_:evil-5 ilxtr:n _:evil-6 .
+_:evil-6 ilxtr:n _:evil-3 .
