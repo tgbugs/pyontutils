@@ -1289,8 +1289,12 @@ class IdentityBNode(rdflib.BNode):
                                 assert s not in subject_identities, 'bah'
                                 subject_identities[s] = bnode_identities[s]
                             else:
-                                self._if_cache[thing, s, '((p o) ...)'] = ident_s
-                                self._if_cache[thing, s, '(s ((p o) ...))'] = ident_s
+                                try:
+                                    self._if_cache[thing, s, '((p o) ...)'] = ident_s
+                                    self._if_cache[thing, s, '(s ((p o) ...))'] = ident_s
+                                except TypeError:
+                                    # we can't/won't cache unhashable things (e.g. lists)
+                                    pass
                         elif s not in subject_embedded_identities:
                             raise ValueError(f'oops no {s}')
 
@@ -1328,8 +1332,12 @@ class IdentityBNode(rdflib.BNode):
                             # do not go as top level, but they can be recovered
                             # and should be stable if we got the cycle break
                             # logic right
-                            self._if_cache[thing, s, '((p o) ...)'] = ident_s
-                            self._if_cache[thing, s, '(s ((p o) ...))'] = ident_s
+                            try:
+                                self._if_cache[thing, s, '((p o) ...)'] = ident_s
+                                self._if_cache[thing, s, '(s ((p o) ...))'] = ident_s
+                            except TypeError:
+                                # we can't/won't cache unhashable things (e.g. lists)
+                                pass
                     else:
                         # FIXME TODO watch out for that case where a
                         # uri subject has references to two identical
@@ -1365,8 +1373,14 @@ class IdentityBNode(rdflib.BNode):
             for s, idpos in subject_identities.items():
                 if s in subject_embedded_identities:
                     # free subgraph case, so e and c are the same value
-                    self._if_cache[thing, s, '((p o) ...)'] = subject_condensed_identities[s]
-                    _seid = self._if_cache[thing, s, '(s ((p o) ...))'] = subject_embedded_identities[s]
+                    _seid = subject_embedded_identities[s]
+                    try:
+                        self._if_cache[thing, s, '((p o) ...)'] = subject_condensed_identities[s]
+                        self._if_cache[thing, s, '(s ((p o) ...))'] = _seid
+                    except TypeError:
+                        # we can't/won't cache unhashable things (e.g. lists)
+                        pass
+
                     seids.append(_seid)
                     continue
 
@@ -1379,8 +1393,12 @@ class IdentityBNode(rdflib.BNode):
                 spos = tuple(sorted(pos))
                 self._if_cache[spos, 'pair-seq'] = condensed  # XXX probably not helpful  # TODO perf/mem check to see if needed
                 embedded = oid(self._identity_function(s, 'bytes'), condensed, separator=False)
-                self._if_cache[thing, s, '((p o) ...)'] = condensed
-                self._if_cache[thing, s, '(s ((p o) ...))'] = embedded
+                try:
+                    self._if_cache[thing, s, '((p o) ...)'] = condensed
+                    self._if_cache[thing, s, '(s ((p o) ...))'] = embedded
+                except TypeError:
+                    # we can't/won't cache unhashable things (e.g. lists)
+                    pass
                 self._if_cache[(s, spos), '(s ((p o) ...))'] = embedded  # TODO perf/mem check to see if needed
                 subject_condensed_identities[s] = condensed
                 subject_embedded_identities[s] = embedded
@@ -1388,7 +1406,11 @@ class IdentityBNode(rdflib.BNode):
 
             # XXX returning a list of identities as an identity is type
             # insanity, but at least it is marked by having to pass as_type
-            self._if_cache[thing, '(s ((p o) ...)) ...'] = seids  # better version of all_idents_new
+            try:
+                self._if_cache[thing, '(s ((p o) ...)) ...'] = seids  # better version of all_idents_new
+            except TypeError:
+                # we can't/won't cache unhashable things (e.g. lists)
+                pass
 
             ident = sid(*seids, separator=False)
 
@@ -1477,9 +1499,9 @@ class IdentityBNode(rdflib.BNode):
             raise NotImplementedError(f'unknown type {treat_as_type}')
 
         try:
-            # we can't/won't cache unhashable things (e.g. lists)
             self._if_cache[thing, treat_as_type] = ident
         except TypeError:
+            # we can't/won't cache unhashable things (e.g. lists)
             pass
 
         return ident

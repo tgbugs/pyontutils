@@ -1527,11 +1527,14 @@ class OntGraph(rdflib.Graph):
 
         return add, rem, same
 
-    def subjectGraph(self, subject):
-        return self._pop_new_from_gen(self.subject_triples(subject))
+    def subjectGraph(self, subject, bnode_multi_parent=False):
+        return self._pop_new_from_gen(self.subject_triples(subject, bnode_multi_parent=bnode_multi_parent))
 
     def subjectGraphClosure(self, subject):
         return self._pop_new_from_gen(self.subject_triples_closure(subject))
+
+    def subjectsGraph(self, subjects, bnode_multi_parent=False):
+        return self._pop_new_from_gen(self.subjects_triples(subjects, bnode_multi_parent=bnode_multi_parent))
 
     def _pop_new_from_gen(self, gen):
         g = self.__class__()
@@ -1556,13 +1559,43 @@ class OntGraph(rdflib.Graph):
             yield s, p, o
             yield from self.transitiveClosure(f, (o, None, None))
 
-    def subject_triples(self, subject):  # FIXME this is subject_triples ...
+    def subject_triples(self, subject, bnode_multi_parent=False):
         # some days I am smart, as in years ago when working on neuron stuff
         # TODO do we need to check for duplicates and cycels?
         # some days I am dumb, and didn't cut at bnodes, but do now
+        upseen = set()
+        def up(triple, graph):
+            s, predicate, _ = triple
+
+            if s in upseen:
+                return
+            else:
+                upseen.add(s)
+
+            if isinstance(s, rdflib.URIRef):
+                # cut the graph when we run out of bnodes
+                return
+
+            for p, o in graph[::s]:
+                yield s, p, o
+
         seen = set()
         def f(triple, graph):
-            _, predicate, object = triple
+            _s, predicate, object = triple
+
+            if bnode_multi_parent:
+                if isinstance(object, rdflib.BNode):
+                    object_sos = list(graph[::object])
+                    if len(object_sos) > 1:
+                        for ups_s, ups_p in object_sos:
+                            if ups_s != _s:
+                                if isinstance(ups_s, rdflib.URIRef):
+                                    yield ups_s, ups_p, object
+                                else:
+                                    for up_s, up_p, up_o in self.transitiveClosure(up, (ups_s, None, None)):
+                                        if isinstance(up_s, rdflib.URIRef):
+                                            yield up_s, up_p, up_o
+
             if object in seen:
                 return
             else:
@@ -1576,6 +1609,11 @@ class OntGraph(rdflib.Graph):
                 yield object, p, o
 
         yield from self.transitiveClosure(f, (None, None, subject))
+
+    def subjects_triples(self, subjects, bnode_multi_parent=False):
+        """ not guranteed to produce unique trips """
+        for subject in subjects:
+            yield from self.subject_triples(subject, bnode_multi_parent=bnode_multi_parent)
 
     def subjectCondensedIdentity(self, subject, *, idbn_class=None, debug=False):
         g, ibn = self._si_internal(subject, idbn_class=idbn_class, debug=debug)

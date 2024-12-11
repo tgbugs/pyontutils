@@ -6,6 +6,23 @@ from pyontutils.identity_bnode import IdentityBNode
 
 
 class TestOntGraph(unittest.TestCase):
+
+    def test_subjectGraph(self):
+        ge = OntGraph().parse(pathlib.Path('ttlser/test/evil.ttl'))
+
+        sg1 = ge.subjectGraph(ilxtr['evil-1'])
+        sg2 = ge.subjectGraph(ilxtr['evil-1'], bnode_multi_parent=True)
+        sg3 = ge.subjectsGraph([ilxtr['evil-1'], ilxtr['evil-2']])
+
+        #sg1.debug()
+        #sg2.debug()
+        #sg3.debug()
+
+        assert ilxtr['evil-2'] not in sg1.subjects(unique=True)
+        assert ilxtr['evil-2'] in sg2.subjects(unique=True)
+
+
+class TestOntGraphOps(unittest.TestCase):
     ts1 = ((ilxtr.a, ilxtr.b, ilxtr.c),)
     ts2 = ((ilxtr.a, ilxtr.b, ilxtr.d),)
 
@@ -33,7 +50,7 @@ class TestOntGraph(unittest.TestCase):
         assert not c, d
 
 
-class TestOntGraphComplex(TestOntGraph):
+class TestOntGraphOpsComplex(TestOntGraphOps):
     bn1 = rdflib.BNode()
     bn2 = rdflib.BNode()
     ts1 = ((ilxtr.a, ilxtr.b, bn1),
