@@ -383,6 +383,13 @@ class OntMeta(OntRes):
     # headers all the way down data -> ontology header -> response header -> iri
 
     def _graph_sideload(self, data):
+        # data isn't really a progenitor anymore, it is more literally
+        # the thing, we just don't usually store it for longer streams
+        # data is what is dereferenced and the graph is futher derived
+        # nah, stick it in progenitors because the graph is really the
+        # endpoint that we are going for here the bytes are dead
+        self._progenitors['stream-bytes'] = data
+
         # this will overwrite any existing graph
         self._graph = self.Graph().parse(data=data, format=self.format)
 
@@ -395,18 +402,21 @@ class OntMeta(OntRes):
             # rdflib xml parsing uses an incremental parser that
             # constructs its own file object and byte stream
             data = b''.join(gen)
+            self._progenitors['stream-bytes'] = data
             graph.parse(data=data, format=self.format)
 
         elif self.format == 'text/owl-functional':
             self._import_funowl()
             # FIXME funowl could work with iterio I think?
             data = b''.join(gen)
+            self._progenitors['stream-bytes'] = data
             fo = self._parse_funowl(data)
             fo.to_rdf(graph)
 
         else:
             itio = IterIO(gen)
-            itio.name = self.identifier  # some rdflib parses need a name
+            itio.name = self.identifier  # some rdflib parsers need a name
+            self._progenitors['stream-file'] = itio
             graph.parse(source=itio, format=self.format)
 
     def _populate_next(self, graph, *args, yield_response_gen=False, **kwargs):
@@ -432,6 +442,22 @@ class OntMeta(OntRes):
 
         generator = self._populate_next(graph, *args, **kwargs)
         list(generator)  # express the generator without causing a StopIteration
+
+    def rapper_input_type(self):
+        # only on meta to avoid accidentally pulling big graphs
+        if not hasattr(self, 'format'):
+            self.graph
+
+            #'text/owl-manchester'
+            #'text/owl-functional'
+            #'text/n3'
+        flu = {
+            'application/n-triples': 'ntriples',
+            'application/rdf+xml': 'rdfxml',
+            'text/turtle': 'turtle',
+        }
+        if self.format in flu:
+            return flu[self.format]
 
     def __lt__(self, other):
         # FIXME this is ... complicated and currently incorrectly/incomplete/confusing
@@ -490,6 +516,15 @@ class OntResOnt(OntRes):
 
 
 class OntIdIri(OntRes):
+
+    #dereference = idlib.StreamUri.dereference
+
+    #dereference_chain = idlib.StreamUri.dereference_chain
+
+    @property
+    def identifier_actionable(self):
+        return self.iri
+
     def __init__(self, iri):
         self.iri = iri
         # TODO version iris etc.
@@ -539,7 +574,8 @@ class OntMetaIri(OntMeta, OntIdIri):
     def _process_resp_zip(self, resp, file):
         # FIXME since the resp is already closed here
         # need to prevent double close issuse below
-        self._progenitors['stream-http-response'] = resp
+        self._progenitors['stream-http-response'] = resp  # FIXME doesn't match convention in idlib :/
+        self._progenitors['stream-http'] = resp
         self.headers = resp.headers  # XXX I think this is right ?
         # FIXME obvious issue here is if the content length is the
         # same but the checksum differs, e.g. due to single char fixes
@@ -639,6 +675,7 @@ class OntMetaIri(OntMeta, OntIdIri):
         else:
             resp = self._get(send_data=send_data)
             self._progenitors['stream-http-response'] = resp
+            self._progenitors['stream-http'] = resp  # FIXME this is the one idlib uses internally ... hooray enums :/
             self.headers = resp.headers
             # TODO consider yielding headers here as well?
             filelike = None
@@ -682,7 +719,7 @@ class OntMetaIri(OntMeta, OntIdIri):
         elif first.startswith(b'<?xml'):  # FIXME owl xml
             # FIXME overlapping start and end patterns
             start = b'<owl:Ontology'
-            stop = b'</owl:Ontology>|<owl:Ontology rdf:about=".+"/>'
+            stop = b'</owl:Ontology>|<owl:Ontology rdf:about=".+"/>'  # XXX this can definitely cross a boundary
             #stop = b'</owl:Ontology>'  # use with uberon-bridge-to-nifstd.owl to test sent before stop
             sentinel = b'<!--|<owl:Class'
             self.format = 'application/rdf+xml'
@@ -712,13 +749,21 @@ class OntMetaIri(OntMeta, OntIdIri):
 
         yield self.format  # we do this because self.format needs to be accessible before loading the graph
 
+        prev_chunk_tail = b''  # needed to deal with patterns on the boundary, lenth can vary, e.g. see rdf+xml stop :/
+        prev_chunk_tail_len_start_sent = max((len(conventions_type.start), len(conventions_type.sentinel)))
+        prev_chunk_tail_len_stop = len(conventions_type.stop)
         close_rdf = b'\n</rdf:RDF>\n'
         close_fun = b'\n)'
         searching = False
         header_data = b''
         for chunk in chain((first,), gen):
             if not searching:
-                start_start_index, start_end_index = conventions_type.findStart(chunk)
+                # if we are not searching then the prev_chunk_tail was not
+                # yielded at the end of the previous loop and should be part of
+                # this chunk
+                chunk = prev_chunk_tail + chunk
+                prev_chunk_tail = b''
+                start_start_index, start_end_index = conventions_type.findStart(chunk, prev_chunk_tail)
                 if start_start_index is not None:
                     searching = True
                     # yield content prior to start since it may include a stop
@@ -729,9 +774,10 @@ class OntMetaIri(OntMeta, OntIdIri):
 
                     yield header_first_chunk
                     chunk = chunk[start_start_index:]
+                    prev_chunk_tail = b''
 
             if searching: #and stop in chunk:  # or test_chunk_ends_with_start_of_stop(stop, chunk)
-                stop_start_index, stop_end_index = conventions_type.findStop(chunk)
+                stop_start_index, stop_end_index = conventions_type.findStop(chunk, prev_chunk_tail)
                 # FIXME need to handle the case where we hit the sentinel before we hit stop
                 if stop_end_index is not None:
                     # FIXME edge case where a stop crosses a chunk boundary
@@ -775,6 +821,22 @@ class OntMetaIri(OntMeta, OntIdIri):
                         header_data += chunk
 
                     yield chunk
+
+                    if self.format == 'application/rdf+xml':
+                        # XXX NOTE we are assuming that the .+ in the regex for ontology
+                        # is shorter than a single chunk, and this is already doubling
+                        # the amount we have to search, fortunately headers tend to be short
+                        # and the arbitrary length case tends to be even shorter because
+                        # it is just a single self closing tag, but the issue remains
+                        # and this isn't all that expensive for a bit of extra correctness
+                        # XXX technically the right way to do this is to require all
+                        # convention type elements to be of definite length and not match
+                        # things of variable length, but to do that we would have to allow
+                        # multi-part stop and things like that ... sigh
+                        prev_chunk_tail = chunk
+                    else:
+                        # in all other cases the regex is at least as long as the element
+                        prev_chunk_tail = chunk[-prev_chunk_tail_len_stop:]
 
             # FIXME sentinel could be in the same chunk as stop
             else:  # and this is why you need the walrus operator :/ but then no < 3.8 >_<
@@ -820,6 +882,12 @@ class OntMetaIri(OntMeta, OntIdIri):
                     # this is because any information prior to the header stop pattern
                     # is either header or local conventions that will be needed to
                     # parse the header stream ... and thus count as 'header chunks'
+
+                    # we can't yield the tail at this point because if we hit the
+                    # sentinel we would have to try to unyield the start of the sentinel
+                    # which is impossible, thus the logic is a bit different than for stop
+                    prev_chunk_tail = chunk[-prev_chunk_tail_len_start_sent:]
+                    chunk = chunk[:-prev_chunk_tail_len_start_sent]
                     yield chunk
 
         else:
@@ -1617,11 +1685,11 @@ class OntGraph(rdflib.Graph):
 
     def subjectCondensedIdentity(self, subject, *, idbn_class=None, debug=False):
         g, ibn = self._si_internal(subject, idbn_class=idbn_class, debug=debug)
-        return ibn.__class__(subject, as_type='((p o) ...)')
+        return ibn.__class__(subject, as_type='((p o) ...)', in_graph=g)
 
     def subjectEmbeddedIdentity(self, subject, *, idbn_class=None, debug=False):
         g, ibn = self._si_internal(subject, idbn_class=idbn_class, debug=debug)
-        return ibn.__class__(subject, as_type='(s ((p o) ...))')
+        return ibn.__class__(subject, as_type='(s ((p o) ...))', in_graph=g)
 
     def _si_internal(self, subject, *, idbn_class=None, debug=False):
         g = self.subjectGraph(subject)
