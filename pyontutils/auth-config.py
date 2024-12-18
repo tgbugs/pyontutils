@@ -7,7 +7,9 @@
              '{:prefix}/share/pyontutils/curie_map.yaml',  # system
              '/usr/share/pyontutils/curie_map.yaml',  # pypy3
              ],
-  'git-local-base': '../..',
+  'git-local-base': {'default': '../..',
+                     'environment-variables': ['PYONTUTILS_GIT_LOCAL_BASE',
+                                               'GIT_LOCAL_BASE'],},
   'git-remote-base': 'https://github.com/',
   'ontology-local-repo': {'default': '../../NIF-Ontology',
                           'environment-variables': ['PYONTUTILS_ONTOLOGY_LOCAL_REPO',
