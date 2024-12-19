@@ -1651,14 +1651,16 @@ function backup-services-config () {
     local EXISTING=${1}
     local PATH_RUNTIME=${2}
     local YAML=${3}
-    local E_YAML_RAW=$(head -n 1 "${EXISTING}" | grep "^#" | cut -b3-)
-    if [ -n "${E_YAML_RAW}" ]; then
-        local YAML_BACKUP="${PATH_RUNTIME}/${E_YAML_RAW//.raw/}"
-    else
-        local mod_dt=$(stat -c %y "${EXISTING}" | cut -d "." -f1 | sed "s/[-\:]//g" | sed "s/\ /T/")
-        local YAML_BACKUP="${PATH_RUNTIME}/${YAML}-${mod_dt}"
+    if [ -e "${EXISTING}" ]; then
+        local E_YAML_RAW=$(head -n 1 "${EXISTING}" | grep "^#" | cut -b3-)
+        if [ -n "${E_YAML_RAW}" ]; then
+            local YAML_BACKUP="${PATH_RUNTIME}/${E_YAML_RAW//.raw/}"
+        else
+            local mod_dt=$(stat -c %y "${EXISTING}" | cut -d "." -f1 | sed "s/[-\:]//g" | sed "s/\ /T/")
+            local YAML_BACKUP="${PATH_RUNTIME}/${YAML}-${mod_dt}"
+        fi
+        cp -a "${EXISTING}" "${YAML_BACKUP}"
     fi
-    cp -a "${EXISTING}" "${YAML_BACKUP}"
 }
 #+end_src
 
