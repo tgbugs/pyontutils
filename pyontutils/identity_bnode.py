@@ -367,7 +367,7 @@ class IdentityBNode(rdflib.BNode):
                 t0 = thing[0]
                 if isinstance(t0, tuple):  # assume pair or trip seq based on t0, which is not always true
                     if len(t0) == 2:
-                        return it['pair-seq']
+                        return it['pair-seq']  # XXX local conventions, NO BNODES!
                     elif len(t0) == 3:
                         return it['triple-seq']
                     else:
@@ -1499,7 +1499,7 @@ class IdentityBNode(rdflib.BNode):
                             ident_po = self._identity_function((p, ident_o), it['(p id)'])
                         else:
                             raise ValueError('should never get here, should have been dealt with above')
-                            ident_po = self._identity_function((p, o), 'pair')
+                            ident_po = self._identity_function((p, o), it['pair'])
 
                         idents_po.append((ident_po, (p, o)))
 
@@ -1580,7 +1580,7 @@ class IdentityBNode(rdflib.BNode):
                     breakpoint()
                     raise e
                 spos = tuple(sorted(pos))
-                self._if_cache[spos, idf['pair-seq']] = condensed  # XXX probably not helpful  # TODO perf/mem check to see if needed
+                self._if_cache[spos, idf['condensed']] = condensed  # XXX probably not helpful  # TODO perf/mem check to see if needed
                 embedded = oid(self._identity_function(s, it['bytes']), condensed, separator=False)
                 try:
                     self._if_cache[thing, s, idf['((p o) ...)']] = condensed
@@ -1630,12 +1630,19 @@ class IdentityBNode(rdflib.BNode):
             gc = self._identity_function(thing, treat_as_type=it['graph-combined'])
             ident = oid(lc, gc, separator=False)
         elif treat_as_type == idf['graph-combined']:
-            named = [t for t in thing
-                     if  not isinstance(t[0], rdflib.BNode)
-                     and not isinstance(t[2], rdflib.BNode)]
-            bnode = [t for t in thing
-                     if isinstance(t[0], rdflib.BNode)
-                     or isinstance(t[2], rdflib.BNode)]
+            # use tuple so that they will show up in the cache
+            named = rdflib.Graph()  # XXX it is this or tuple or quiet tuple
+            for t in thing:
+                if  not isinstance(t[0], rdflib.BNode)
+                and not isinstance(t[2], rdflib.BNode):
+                named.add(t)
+
+            bnode = rdflib.Graph()  # XXX it is this or tuple or quiet tuple
+            for t in thing:
+                if isinstance(t[0], rdflib.BNode)
+                or isinstance(t[2], rdflib.BNode):
+                bnode.add(t)
+
             gn = self._identity_function(named, treat_as_type=it['graph-named'])
             gb = self._identity_function(bnode, treat_as_type=it['graph-bnode'])
             ident = oid(gn, gb, separator=False)
