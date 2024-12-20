@@ -2,6 +2,7 @@ import sys
 import hashlib
 from collections import defaultdict
 import rdflib
+from enum import Enum
 
 from .utils_fast import log as _log
 
@@ -9,6 +10,166 @@ log = _log.getChild('ibnode')
 
 bnNone = rdflib.BNode()  # BNode to use in cases where subject would be None
 #_session_only_token = rdflib.BNode()  # ensure raw bnode identities cannot be compared between sessions
+
+it = Enum(
+    'InputTypes',
+    [('bytes', 0),
+
+     ('pair', 1),
+     ('(p o)', 1),
+
+     ('triple', 2),
+     ('(s p o)', 2),
+
+     ('pair-seq', 3),
+     ('local-conventions', 3),
+     ('((p n) ...)', 3),
+
+     ('graph', 4),
+     ('triple-seq', 4),
+     ('((s p o) ...)', 4),
+
+     ('graph-and-local-conventions', 5),
+     ('(((p n) ...) ((s p o) ...))', 5),
+
+     # this sort of conflates type and method again, except note that
+     # the signature is different in it vs idf
+     ('graph-combined-and-local-conventions', 6),
+     ('(((p n) ...) ((ns np no) ... (us up uo) ...))', 6),
+
+     ('graph-combined', 7),
+     ('((ns np no) ... (us up uo) ...)', 7),
+
+     ('graph-named', 8),
+     ('((ns np no) ...)', 8),
+
+     ('graph-bnode', 9),
+     ('((us up uo) ...)', 9),
+     ('((s p _) ... (_ p _) ... (_ p o) ...)', 9),
+
+     # other less used
+     ('pair-ident', 10),
+     ('(p id)', 10),
+
+     ('tripair-seq', 11),
+     ('raw-bnode', 12),
+     ('ident', 13),
+     ('bytes-seq', 14),
+     ('ident-seq', 15),
+     ('seq-of-ordered-seqs', 16),
+     ('empty-seq', 17),
+
+     ])
+
+idf = Enum(
+    'IdTypes',
+    [('bytes', 0),
+
+     ('pair', 1),
+     ('(p o)', 1),
+     ('((p) (o))', 1),
+
+     ('pair-alt', 101),
+     ('(p (o))', 101),
+
+     ('triple', 2),
+     ('(s (p o))', 2),
+
+     ('triple-alt', 102),
+     ('(s p o)', 102),
+
+     ('condensed', 3),
+     ('subject-condensed-identity', 3),
+     ('((p o) ...)', 3),
+
+     ('record', 4),
+     ('embedded', 4),
+     ('subject-embedded-identity', 4),
+     ('(s ((p o) ...))', 4),  # note that there is one less pair of parens here than for triple
+     # that is (s (p o)) != (s ((p o))), triple vs record containing a single triple
+
+     ('multi-record', 5),
+     ('multi-embedded', 5),
+     ('multi-subject-embedded-identity', 5),
+     ('(s ((p o) ...)) ...', 5),
+
+     # FIXME there is also some confusion here because
+     # a sequence of triples can be collectively identified
+     # in may ways, and here we are conflating the way we
+     # compute the record with the expected shape of the record
+     # for all of these we assume the input structure is ((s p o) ...)
+     # unless otherwise specified, so this is a bit confusing
+     # (((p n) ...) ((s p o) ...)) is the general structure
+     # and then there are many ways to compute the identity
+     # even before we deal with the cyclical graphs bit an
+     # how we arrive at the condensed identity ... so I think
+     # we may be able to split the as type and the compute ident as bits ...
+     ('record-seq', 6),
+     ('embedded-seq', 6),
+     ('((s ((p o) ...)) ...)', 6),
+
+     # XXX this one is tricky because you can take combined of
+     # a pure named and pure bnode graph and the other component
+     # will be null so it is not homogenous in the way that we
+     # normally like, so I hesitate to include it at all
+     ('graph-combined-identity', 7),
+     ('(((ns ((np no) ...)) ...) ((us ((up uo) ...)) ...))', 7),
+
+     ('local-conventions', 8),
+     ('pair-seq', 8),  # used for local conventions
+     ('((p n) ...)', 8),  # XXX explicitly not ((p o) ...)
+
+     # actual trip-seq which we don't use
+     #('trip-seq', 4),
+     #('((s (p o)) ...)', 4),  # this is what it sounds like
+
+     ('triple-alt-seq', 9),
+     ('((s p o) ...)', 9),
+
+     # other infrequently used bits
+     ('pair-ident', 10),
+     ('(p id)', 10),
+
+     ('ident', 11),
+     ('bytes-seq', 12),
+     ('ident-seq', 13),
+     ('raw-bnode', 14),
+     ('tripair-seq', 15),
+
+     ('graph-combined-and-local-conventions', 16),
+     ('(((p n) ...) (((ns np no) ...) ((us up uo) ...)))', 16),
+
+     ('graph-combined', 17),
+     ('(((ns np no) ...) ((us up uo) ...))', 17),
+
+     ])
+
+# convention mappings
+idfun_v1 = {
+    it['bytes']: idf['bytes'],
+    it['((s p o) ...)']: idf['((s p o) ...)'],
+}
+
+#idfun_v2 = {}
+idfun_v3 = {
+    it['bytes']: idf['bytes'],
+    it['ident']: idf['ident'],
+    it['(p o)']: idf['(p o)'],
+    it['(s p o)']: idf['(s (p o))'],
+    it['((s p o) ...)']: idf['((s ((p o) ...)) ...)'],
+    it['graph-named']: idf['((s ((p o) ...)) ...)'],
+    it['graph-bnode']: idf['((s ((p o) ...)) ...)'],
+    it['local-conventions']: idf['((p n) ...)'],
+    it['(p id)']: idf['(p id)'],
+    it['bytes-seq']: idf['bytes-seq'],
+    it['ident-seq']: idf['ident-seq'],
+    it['raw-bnode']: idf['raw-bnode'],
+    it['graph-combined-and-local-conventions']: idf['graph-combined-and-local-conventions'],
+    it['graph-combined']: idf['graph-combined'],
+    it['graph-named']: idf['record-seq'],
+    it['graph-bnode']: idf['record-seq'],
+    #it['']: idf[''],
+}
 
 
 def bnodes(ts):
@@ -103,7 +264,7 @@ class IdentityBNode(rdflib.BNode):
     default_version = 3
 
     def __new__(cls, triples_or_pairs_or_thing, *, version=None, debug=False, pot=False,
-                as_type=None, in_graph=None, symmetric_predicates=tuple(), no_reorder_list_predicates=tuple()):
+                as_type=None, id_method=None, in_graph=None, symmetric_predicates=tuple(), no_reorder_list_predicates=tuple()):
         self = super().__new__(cls)  # first time without value
         self.version = self.default_version if version is None else version
         if self.version not in self._reccache_top:
@@ -144,7 +305,9 @@ class IdentityBNode(rdflib.BNode):
 
         if self.version > 2:
             treat_as_type = as_type if as_type else self.tat(triples_or_pairs_or_thing, self.version, pot)
-            self._alt_identity = self._identity_function(triples_or_pairs_or_thing, treat_as_type, in_graph=in_graph)
+            self._idfun_map = idfun_v3
+            self._alt_identity = self._identity_function(
+                triples_or_pairs_or_thing, treat_as_type, id_method=id_method, in_graph=in_graph)
             if self.version >= 3:
                 self.identity = self._alt_identity
                 #if debug:
@@ -181,22 +344,22 @@ class IdentityBNode(rdflib.BNode):
     def tat(thing, version, pot):
         if pot:
             if len(thing) == 2:
-                return 'pair'
+                return it['pair']
             elif len(thing) == 3:
-                return 'triple'
+                return it['triple']
             else:
                 raise TypeError(f'{type(thing)} not a pair or triple ... {thing}')
 
         if isinstance(thing, IdentityBNode):
             if thing.version != version:
                 raise ValueError(f'versions do not match! {thing.version} != {version}')  # FIXME error type
-            return 'ident'
+            return it['ident']
         elif isinstance(thing, rdflib.BNode):
-            return 'raw-bnode'
+            return it['raw-bnode']
         elif isinstance(thing, bytes) or isinstance(thing, str):
-            return 'bytes'
+            return it['bytes']
         elif isinstance(thing, rdflib.Graph):
-            return 'trip-seq'
+            return it['triple-seq']
         elif isinstance(thing, rdflib.namespace.NamespaceManager):  # FIXME TODO
             raise NotImplementedError('TODO')
         elif isinstance(thing, tuple) or isinstance(thing, list):
@@ -204,17 +367,17 @@ class IdentityBNode(rdflib.BNode):
                 t0 = thing[0]
                 if isinstance(t0, tuple):  # assume pair or trip seq based on t0, which is not always true
                     if len(t0) == 2:
-                        return 'pair-seq'
+                        return it['pair-seq']
                     elif len(t0) == 3:
-                        return 'trip-seq'
+                        return it['triple-seq']
                     else:
                         raise NotImplementedError(f'TODO {len(t0)}')
                 else:
                     t0type = IdentityBNode.tat(t0, version, pot)
-                    return f'{t0type}-seq'
+                    return it[f'{t0type.name}-seq']
                     #raise NotImplementedError(f'TODO {type(t0)} {t0}')
             else:
-                return 'empty-seq'
+                return it['empty-seq']
         else:
             raise NotImplementedError(f'{type(thing)} {thing}')
 
@@ -1069,7 +1232,7 @@ class IdentityBNode(rdflib.BNode):
 
     _if_cache = {}  # FIXME version issue
     _if_debug_cache = {}
-    def _identity_function(self, thing, treat_as_type, *, in_graph=None):
+    def _identity_function(self, thing, treat_as_type, *, id_method=None, in_graph=None):
         # FIXME TODO treat_as_type to something other than
         # strings for better performance maybe? probably much later
 
@@ -1080,6 +1243,14 @@ class IdentityBNode(rdflib.BNode):
         def sid(*things, separator=True):
             return oid(*sorted(things), separator=separator)
 
+        input_type = treat_as_type
+        if id_method:
+            treat_as_type = id_method
+        else:
+            # by keeping this indirection here it is possible to reuse this
+            # function for multiple different identity functions
+            treat_as_type = self._idfun_map[input_type]
+
         try:
             # we can't/dont't cache unhashable things (e.g. lists)
             if in_graph is not None and (in_graph, thing, treat_as_type) in self._if_cache:
@@ -1089,14 +1260,14 @@ class IdentityBNode(rdflib.BNode):
         except TypeError:
             pass
 
-        if treat_as_type == 'bytes':
+        if treat_as_type == idf['bytes']:
             if isinstance(thing, bytes):
                 ident = oid(thing)
             elif isinstance(thing, rdflib.Literal):
                 # TODO make sure str(thing) is what we want, I'm pretty sure it is based on how the serialization works
                 # e.g. rdflib.Literal('True', datatype=xsd.boolean) is "True" "xsd:boolean-expanded-string" internally
                 # even though rdflib.Literal.toPython() gives something else
-                v, d, l = [self._identity_function(e, treat_as_type='bytes') for e in (str(thing), thing.datatype, thing.language)]
+                v, d, l = [self._identity_function(e, treat_as_type=it['bytes']) for e in (str(thing), thing.datatype, thing.language)]
                 ident = oid(v, d, l, separator=False)
             elif isinstance(thing, rdflib.BNode):
                 breakpoint()
@@ -1107,20 +1278,21 @@ class IdentityBNode(rdflib.BNode):
                 #ident = oid(b'1')
             else:
                 ident = oid(self.to_bytes(thing))  # FIXME dangerous stringification happens in to_bytes right now
-        elif treat_as_type in ('pair', '(p o)'):
-            ident = oid(*[self._identity_function(e, 'bytes') for e in thing], separator=False)
-        elif treat_as_type in ('pair-ident', '(p id)'):
+        elif treat_as_type == idf['pair']:  # in ('pair', '(p o)'):
+            ident = oid(*[self._identity_function(e, it['bytes']) for e in thing], separator=False)
+        elif treat_as_type == idf['pair-ident']:  # in ('pair-ident', '(p id)'):
             # it looks like in the current implementation we do not
             # double hash the identity of the bnode in the object position
             # because it already IS the identity of the bnode in that position
             # its just that passing in an actual blanknode and looking up its
             # id is a separate process
             p, ident_o = thing
-            ident = oid(self._identity_function(p, 'bytes'), ident_o, separator=False)
-        elif treat_as_type in ('triple', '(s (p o))'):
+            ident = oid(self._identity_function(p, it['bytes']), ident_o, separator=False)
+        elif treat_as_type == idf['triple']:  # in ('triple', '(s (p o))'):
             s, p, o = thing
-            ident = oid(self._identity_function(s, 'bytes'), self._identity_function((p, o), 'pair'), separator=False)
-        elif treat_as_type in ('trip-seq', '((s ((p o) ...)) ...)'):
+            ident = oid(self._identity_function(s, it['bytes']),
+                        self._identity_function((p, o), it['pair']), separator=False)
+        elif treat_as_type == idf['record-seq']:  # in ('trip-seq', '((s ((p o) ...)) ...)'):
             bnode_identities = defaultdict(list)
             subject_identities = defaultdict(list)
 
@@ -1153,11 +1325,24 @@ class IdentityBNode(rdflib.BNode):
                         unresolved_bnodes[s].append((p, o))
                         continue  # TODO
 
-                ident_po = self._identity_function((p, o), 'pair')
+                ident_po = self._identity_function((p, o), it['pair'])
                 if sn:
                     bnode_identities[s].append((ident_po, (p, o)))
                 else:
                     subject_identities[s].append((ident_po, (p, o)))
+
+            if input_type == it['graph-named'] and (bsubjects or bobjects):
+                raise TypeError(f'graph-named contains bnodes! {bsubjects} {bobjects}')
+            elif input_type == it['graph-bnode'] and subject_identities:
+                # there shouldn't be anything here at this point except in the
+                # case where there were dangling identities
+                bads = []
+                for _s, (_, (_p, _o)) in subject_identities.items():
+                    if not isinstance(_o, rdflib.BNode):
+                        bads.append((_s, _p, _o))
+
+                if bads:
+                    raise TypeError(f'graph-bnode contains named! {bads}')
 
             subject_condensed_identities = {}
             subject_embedded_identities = {}
@@ -1177,8 +1362,12 @@ class IdentityBNode(rdflib.BNode):
                 for o in dangling:
                     subject_condensed_identities[o] = self.null_identity
                     subject_embedded_identities[o] = self.null_identity
-                    self._if_cache[thing, o, '((p o) ...)'] = self.null_identity
-                    self._if_cache[thing, o, '(s ((p o) ...))'] = self.null_identity
+                    try:
+                        # we can't/dont't cache unhashable things (e.g. lists)
+                        self._if_cache[thing, o, idf['((p o) ...)']] = self.null_identity
+                        self._if_cache[thing, o, idf['(s ((p o) ...))']] = self.null_identity
+                    except TypeError:
+                        pass
 
                 # FIXME TODO move cycle check to its own file to avoid you got it, circular imports HAH
                 from pyontutils.core import OntGraph
@@ -1290,8 +1479,8 @@ class IdentityBNode(rdflib.BNode):
                                 subject_identities[s] = bnode_identities[s]
                             else:
                                 try:
-                                    self._if_cache[thing, s, '((p o) ...)'] = ident_s
-                                    self._if_cache[thing, s, '(s ((p o) ...))'] = ident_s
+                                    self._if_cache[thing, s, idf['((p o) ...)']] = ident_s
+                                    self._if_cache[thing, s, idf['(s ((p o) ...))']] = ident_s
                                 except TypeError:
                                     # we can't/won't cache unhashable things (e.g. lists)
                                     pass
@@ -1307,7 +1496,7 @@ class IdentityBNode(rdflib.BNode):
                             if o not in subject_embedded_identities:
                                 breakpoint()
                             ident_o = subject_embedded_identities[o]
-                            ident_po = self._identity_function((p, ident_o), '(p id)')
+                            ident_po = self._identity_function((p, ident_o), it['(p id)'])
                         else:
                             raise ValueError('should never get here, should have been dealt with above')
                             ident_po = self._identity_function((p, o), 'pair')
@@ -1333,8 +1522,8 @@ class IdentityBNode(rdflib.BNode):
                             # and should be stable if we got the cycle break
                             # logic right
                             try:
-                                self._if_cache[thing, s, '((p o) ...)'] = ident_s
-                                self._if_cache[thing, s, '(s ((p o) ...))'] = ident_s
+                                self._if_cache[thing, s, idf['((p o) ...)']] = ident_s
+                                self._if_cache[thing, s, idf['(s ((p o) ...))']] = ident_s
                             except TypeError:
                                 # we can't/won't cache unhashable things (e.g. lists)
                                 pass
@@ -1375,8 +1564,8 @@ class IdentityBNode(rdflib.BNode):
                     # free subgraph case, so e and c are the same value
                     _seid = subject_embedded_identities[s]
                     try:
-                        self._if_cache[thing, s, '((p o) ...)'] = subject_condensed_identities[s]
-                        self._if_cache[thing, s, '(s ((p o) ...))'] = _seid
+                        self._if_cache[thing, s, idf['((p o) ...)']] = subject_condensed_identities[s]
+                        self._if_cache[thing, s, idf['(s ((p o) ...))']] = _seid
                     except TypeError:
                         # we can't/won't cache unhashable things (e.g. lists)
                         pass
@@ -1391,15 +1580,15 @@ class IdentityBNode(rdflib.BNode):
                     breakpoint()
                     raise e
                 spos = tuple(sorted(pos))
-                self._if_cache[spos, 'pair-seq'] = condensed  # XXX probably not helpful  # TODO perf/mem check to see if needed
-                embedded = oid(self._identity_function(s, 'bytes'), condensed, separator=False)
+                self._if_cache[spos, idf['pair-seq']] = condensed  # XXX probably not helpful  # TODO perf/mem check to see if needed
+                embedded = oid(self._identity_function(s, it['bytes']), condensed, separator=False)
                 try:
-                    self._if_cache[thing, s, '((p o) ...)'] = condensed
-                    self._if_cache[thing, s, '(s ((p o) ...))'] = embedded
+                    self._if_cache[thing, s, idf['((p o) ...)']] = condensed
+                    self._if_cache[thing, s, idf['(s ((p o) ...))']] = embedded
                 except TypeError:
                     # we can't/won't cache unhashable things (e.g. lists)
                     pass
-                self._if_cache[(s, spos), '(s ((p o) ...))'] = embedded  # TODO perf/mem check to see if needed
+                self._if_cache[(s, spos), idf['(s ((p o) ...))']] = embedded  # TODO perf/mem check to see if needed
                 subject_condensed_identities[s] = condensed
                 subject_embedded_identities[s] = embedded
                 seids.append(embedded)
@@ -1407,7 +1596,7 @@ class IdentityBNode(rdflib.BNode):
             # XXX returning a list of identities as an identity is type
             # insanity, but at least it is marked by having to pass as_type
             try:
-                self._if_cache[thing, '(s ((p o) ...)) ...'] = seids  # better version of all_idents_new
+                self._if_cache[thing, idf['(s ((p o) ...)) ...']] = seids  # better version of all_idents_new
             except TypeError:
                 # we can't/won't cache unhashable things (e.g. lists)
                 pass
@@ -1436,7 +1625,21 @@ class IdentityBNode(rdflib.BNode):
                 # FIXME this only partially works because we also want it for all sub-identities too
                 self._if_debug_cache[ident] = self._alt_debug
 
-        elif treat_as_type == 'pair-seq':
+        elif treat_as_type == idf['graph-combined-and-local-conventions']:
+            lc = self._identity_function(thing.namespace_manager, treat_as_type=it['pair-seq'])
+            gc = self._identity_function(thing, treat_as_type=it['graph-combined'])
+            ident = oid(lc, gc, separator=False)
+        elif treat_as_type == idf['graph-combined']:
+            named = [t for t in thing
+                     if  not isinstance(t[0], rdflib.BNode)
+                     and not isinstance(t[2], rdflib.BNode)]
+            bnode = [t for t in thing
+                     if isinstance(t[0], rdflib.BNode)
+                     or isinstance(t[2], rdflib.BNode)]
+            gn = self._identity_function(named, treat_as_type=it['graph-named'])
+            gb = self._identity_function(bnode, treat_as_type=it['graph-bnode'])
+            ident = oid(gn, gb, separator=False)
+        elif treat_as_type == idf['pair-seq']:
             # XXX NOTE pair seqs may not have any bnodes, there are
             # different than the meta section! think curies
             ids = []
@@ -1446,19 +1649,19 @@ class IdentityBNode(rdflib.BNode):
                     raise TypeError('pair-seq cannot contain bnodes')
                     continue  # TODO
 
-                ident_po = self._identity_function((p, o), 'pair')
+                ident_po = self._identity_function((p, o), it['pair'])
                 ids.append(ident_po)
 
             ident = sid(*ids, separator=False)
 
-        elif treat_as_type == 'bytes-seq':
-            ident = sid(*[self._identity_function(_, 'bytes') for _ in thing], separator=False)
-        elif treat_as_type == 'ident-seq':
-            ident = sid(*[self._identity_function(_, 'ident') for _ in thing], separator=False)
+        elif treat_as_type == idf['bytes-seq']:
+            ident = sid(*[self._identity_function(_, it['bytes']) for _ in thing], separator=False)
+        elif treat_as_type == idf['ident-seq']:
+            ident = sid(*[self._identity_function(_, it['ident']) for _ in thing], separator=False)
         elif treat_as_type == 'empty-seq':
             # FIXME TODO '' vs b'' vs [] vs tupe() vs set() etc. WHAT IS '()
             ident = self.null_identity
-        elif treat_as_type == 'ident':
+        elif treat_as_type == idf['ident']:
             ident = oid(thing.identity)  # oid() to make behavior homogenous
             # ironically in no cases should an identity function ever return
             # the same value that it was given because that only works if you
@@ -1468,7 +1671,7 @@ class IdentityBNode(rdflib.BNode):
             # return the same value, the thing itself and identity of the thing
             # which makes it impossible to use the identity function to
             # distinguish between the thing itself and its identity, a big oops
-        elif treat_as_type == 'raw-bnode':
+        elif treat_as_type == idf['raw-bnode']:
             raise ValueError('BNodes only have names or collective identity...')
             if False:  # bnodes_ok:  # old feature which seems not to have been used anywhere?
                 # if you explicitly want to compare raw bnodes we'll let you
@@ -1478,12 +1681,12 @@ class IdentityBNode(rdflib.BNode):
                 # to keep the types sane we still return an identity, however
                 # the session only token is there to ensure that comparisons
                 # cannot be made between bnodes from different processes
-        elif treat_as_type == 'tripair-seq':
+        elif treat_as_type == idf['tripair-seq']:
             # XXX don't use this, only for backward compat
             # amusingly the only place this shows up is where we remove the
             # subject in the first place >_<
             _new_thing = [tp if len(tp) == 3 else (bnNone, *tp) for tp in thing]
-            ident = self._identity_function(_new_thing, 'trip-seq')
+            ident = self._identity_function(_new_thing, it['triple-seq'])
         elif treat_as_type == 'seq-of-ordered-seqs':
             # FIXME TODO this is actually the unifying
             # version for pairs and triples, the issue is that

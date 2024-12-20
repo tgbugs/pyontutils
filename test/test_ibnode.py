@@ -4,7 +4,7 @@ import pprint
 from pathlib import Path
 import rdflib
 import ttlser
-from pyontutils.core import yield_recursive, OntGraph, bnNone
+from pyontutils.core import yield_recursive, OntGraph, bnNone, OntResIri
 from pyontutils.identity_bnode import bnodes, IdentityBNode as IdentityBNodeBase
 from pyontutils.namespaces import rdf, ilxtr
 from .common import temp_path, ensure_temp_path, log
@@ -806,6 +806,7 @@ class TestIBNodeGraph(unittest.TestCase):
 
     IdentityBNode = IdentityBNodeBase
     path_to_test = Path('ttlser/test/nasty.ttl')
+    iri_to_test = None
     format = 'turtle'
 
     @property
@@ -814,9 +815,16 @@ class TestIBNodeGraph(unittest.TestCase):
 
     def setUp(self):
         self.graph1 = OntGraph(idbn_class=self.IdentityBNode)  # rdflib.Graph()
-        file = self.path_to_test
-        with open(file.as_posix(), 'rb') as f:
-            self.ser1 = f.read()
+        if self.path_to_test is None:
+            if self.iri_to_test is None:
+                msg = 'must have iri or path to test'
+                raise ValueError(msg)
+            self.ser1 = b''.join(list(OntResIri(self.iri_to_test).data))
+
+        else:
+            file = self.path_to_test
+            with open(file.as_posix(), 'rb') as f:
+                self.ser1 = f.read()
 
         self.graph1.parse(data=self.ser1, format=self.format)
 
@@ -1396,7 +1404,8 @@ class TestIBNodeGraphAlt(TestIBNodeGraph):
 
 
 class TestIBNodeGraphRo(TestIBNodeGraph):
-    path_to_test = Path('~/git/interlex/ro.owl').expanduser()
+    path_to_test = None
+    iri_to_test = 'http://purl.obolibrary.org/obo/ro.owl'
     format = 'xml'
 
     @pytest.mark.skip('too slow')

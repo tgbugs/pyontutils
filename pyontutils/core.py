@@ -51,7 +51,7 @@ from pyontutils.namespaces import (makePrefixes,
                                    prov,
                                    oboInOwl,
                                    replacedBy,)
-from pyontutils.identity_bnode import IdentityBNode, bnNone
+from pyontutils.identity_bnode import IdentityBNode, bnNone, idf, it as ibn_it
 
 current_file = Path(__file__).absolute()
 oq.utils.log.removeHandler(oq.utils.log.handlers[0])
@@ -1685,11 +1685,11 @@ class OntGraph(rdflib.Graph):
 
     def subjectCondensedIdentity(self, subject, *, idbn_class=None, debug=False):
         g, ibn = self._si_internal(subject, idbn_class=idbn_class, debug=debug)
-        return ibn.__class__(subject, as_type='((p o) ...)', in_graph=g)
+        return ibn.__class__(subject, id_method=idf['((p o) ...)'], in_graph=g)
 
     def subjectEmbeddedIdentity(self, subject, *, idbn_class=None, debug=False):
         g, ibn = self._si_internal(subject, idbn_class=idbn_class, debug=debug)
-        return ibn.__class__(subject, as_type='(s ((p o) ...))', in_graph=g)
+        return ibn.__class__(subject, id_method=idf['(s ((p o) ...))'], in_graph=g)
 
     def _si_internal(self, subject, *, idbn_class=None, debug=False):
         g = self.subjectGraph(subject)
@@ -1834,7 +1834,7 @@ class OntGraph(rdflib.Graph):
             # this does not work and the massive hack above is to help deal with that fact until
             # it can be dealt with in the ibnode implementation so that IdentityBNode can be called
             # recursively to obtain the same value as the internal values
-            as_type = 'tripair-seq'
+            as_type = ibn_it['tripair-seq']
             pairs_triples = [tuple(e for i, e in enumerate(t) if not (e == subject and not i)) for t in triples]  # objective
         elif use_none:
             # this way more or less works, but the final identity return by ibnode is not correct
