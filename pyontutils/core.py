@@ -258,9 +258,15 @@ class OntRes(idlib.Stream):
         # to enable checksumming in one pass, however this will
         # require one more wrapper
         if not hasattr(self, '_graph'):
-            gkwargs = {}
+            gkwargs = {'bind_namespaces': 'none'}
             if hasattr(self, 'path'):
                 gkwargs['path'] = self.path
+
+            gkws = ('bind_namespaces', 'existing', 'namespace_manager',
+                    'ibn_class', 'store', 'identifier', 'base')
+            for gkw in gkws:
+                if gkw in kwargs:
+                    gkwargs[gkw] = kwargs.pop(gkw)
 
             self._graph = self.Graph(**gkwargs)
             try:
@@ -394,11 +400,11 @@ class OntMeta(OntRes):
             self._import_funowl()
             # FIXME funowl could work with iterio I think?
             fo = self._parse_funowl(data)
-            graph = self.Graph()
+            graph = self.Graph(bind_namespaces='none')
             fo.to_rdf(graph)
 
         else:
-            graph = self.Graph().parse(data=data, format=self.format)
+            graph = self.Graph(bind_namespaces='none').parse(data=data, format=self.format)
 
         # this will overwrite any existing graph
         self._graph = graph
@@ -976,7 +982,11 @@ class OntResIri(OntIdIri, OntResOnt):
 
         if compute_identity:
             def makegen():
-                m = IdentityBNode.cypher()
+                if hasattr(self.Graph, 'IdentityBNode'):
+                    m = self.Graph.IdentityBNode.cypher()
+                else:
+                    m = IdentityBNode.cypher()
+
                 for chunk in chain(header_chunks, gen):
                     m.update(chunk)
                     yield chunk
@@ -1423,7 +1433,7 @@ class OntGraph(rdflib.Graph):
         if existing:
             self.__dict__ == existing.__dict__
             if not hasattr(existing, '_namespace_manager'):
-                self._namespace_manager = BetterNamespaceManager(self)
+                self._namespace_manager = BetterNamespaceManager(self, bind_namespaces='none')
                 self.namespace_manager.populate_from(existing)
         else:
             super().__init__(*args, **kwargs)
@@ -1431,11 +1441,14 @@ class OntGraph(rdflib.Graph):
             # change the namespace manager type in subclasses which is _really_ annoying
             # we shortcircuit this here
             if namespace_manager and not isinstance(namespace_manager, BetterNamespaceManager):
-                namespace_manager = BetterNamespaceManager(self).populate_from(namespace_manager)
+                namespace_manager = BetterNamespaceManager(
+                    self, bind_namespaces='none').populate_from(namespace_manager)
 
             self._namespace_manager = namespace_manager
 
-        self.bind('owl', owl)
+        if 'bind_namespaces' not in kwargs or kwargs['bind_namespaces'] != 'none':
+            self.bind('owl', owl)
+
         self.path = path
         if idbn_class is None:
             self.IdentityBNode = IdentityBNode
@@ -1470,7 +1483,8 @@ class OntGraph(rdflib.Graph):
 
     def _get_namespace_manager(self):
         if self._namespace_manager is None:
-            self._namespace_manager = BetterNamespaceManager(self)
+            self._namespace_manager = BetterNamespaceManager(
+                self, bind_namespaces=self._bind_namespaces)
         return self._namespace_manager
 
     def _set_namespace_manager(self, nm):
