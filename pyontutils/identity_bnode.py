@@ -1633,15 +1633,15 @@ class IdentityBNode(rdflib.BNode):
             # use tuple so that they will show up in the cache
             named = rdflib.Graph()  # XXX it is this or tuple or quiet tuple
             for t in thing:
-                if  not isinstance(t[0], rdflib.BNode)
-                and not isinstance(t[2], rdflib.BNode):
-                named.add(t)
+                if (not isinstance(t[0], rdflib.BNode)
+                and not isinstance(t[2], rdflib.BNode)):
+                    named.add(t)
 
             bnode = rdflib.Graph()  # XXX it is this or tuple or quiet tuple
             for t in thing:
-                if isinstance(t[0], rdflib.BNode)
-                or isinstance(t[2], rdflib.BNode):
-                bnode.add(t)
+                if (isinstance(t[0], rdflib.BNode)
+                 or isinstance(t[2], rdflib.BNode)):
+                    bnode.add(t)
 
             gn = self._identity_function(named, treat_as_type=it['graph-named'])
             gb = self._identity_function(bnode, treat_as_type=it['graph-bnode'])
