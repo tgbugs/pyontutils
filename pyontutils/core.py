@@ -390,8 +390,18 @@ class OntMeta(OntRes):
         # endpoint that we are going for here the bytes are dead
         self._progenitors['stream-bytes'] = data
 
+        if self.format == 'text/owl-functional':
+            self._import_funowl()
+            # FIXME funowl could work with iterio I think?
+            fo = self._parse_funowl(data)
+            graph = self.Graph()
+            fo.to_rdf(graph)
+
+        else:
+            graph = self.Graph().parse(data=data, format=self.format)
+
         # this will overwrite any existing graph
-        self._graph = self.Graph().parse(data=data, format=self.format)
+        self._graph = graph
 
     def _populate(self, graph, gen):
         # we don't pop request headers or file metadata off in here
