@@ -920,11 +920,12 @@ class OntResIri(OntIdIri, OntResOnt):
 
     _metadata_class = OntMetaIri
 
-    def _data_next(self, *, send_type=None, send_head=None, send_meta=None, send_data=None):
+    def _data_next(self, *, send_type=None, send_head=None, send_meta=None, send_data=None,
+                   compute_identity=False):
         raise NotImplementedError('this is a template')
 
     @oq.utils.mimicArgs(_data_next)
-    def data_next(self, *args, **kwargs):
+    def data_next(self, *args, compute_identity=False, **kwargs):
         """ an alternate implementation of data """
         # there is this nasty tradeoff where if you implement this in this way
         # where data can take arguments, then _any_ downstream artifact that you
@@ -973,7 +974,19 @@ class OntResIri(OntIdIri, OntResOnt):
             #resp.close()
             #return None
 
-        return chain(header_chunks, gen)
+        if compute_identity:
+            def makegen():
+                m = IdentityBNode.cypher()
+                for chunk in chain(header_chunks, gen):
+                    m.update(chunk)
+                    yield chunk
+
+                self._identity = m.digest()
+
+            return makegen()
+
+        else:
+            return chain(header_chunks, gen)
 
     @property
     def data(self):
