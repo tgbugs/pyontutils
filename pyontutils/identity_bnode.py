@@ -212,6 +212,23 @@ def toposort(adj, unmarked_key=None):
     return out
 
 
+def split_named_bnode(triple_seq):
+    # use graph so that they show up in cache as expected
+    named = rdflib.Graph()
+    for t in triple_seq:
+        if (not isinstance(t[0], rdflib.BNode)
+        and not isinstance(t[2], rdflib.BNode)):
+            named.add(t)
+
+    bnode = rdflib.Graph()
+    for t in triple_seq:
+        if (isinstance(t[0], rdflib.BNode)
+         or isinstance(t[2], rdflib.BNode)):
+            bnode.add(t)
+
+    return named, bnode
+
+
 class IdentityBNode(rdflib.BNode):
     # FIXME __eq__ needs to warn if types are the same but versions are different
 
@@ -1630,21 +1647,18 @@ class IdentityBNode(rdflib.BNode):
             gc = self._identity_function(thing, treat_as_type=it['graph-combined'])
             ident = oid(lc, gc, separator=False)
         elif treat_as_type == idf['graph-combined']:
-            # use tuple so that they will show up in the cache
-            named = rdflib.Graph()  # XXX it is this or tuple or quiet tuple
-            for t in thing:
-                if (not isinstance(t[0], rdflib.BNode)
-                and not isinstance(t[2], rdflib.BNode)):
-                    named.add(t)
-
-            bnode = rdflib.Graph()  # XXX it is this or tuple or quiet tuple
-            for t in thing:
-                if (isinstance(t[0], rdflib.BNode)
-                 or isinstance(t[2], rdflib.BNode)):
-                    bnode.add(t)
-
+            named, bnode = split_named_bnode(thing)
             gn = self._identity_function(named, treat_as_type=it['graph-named'])
             gb = self._identity_function(bnode, treat_as_type=it['graph-bnode'])
+            # TODO figure out if there is some more consistent way to deal with this?
+            for nkey in [k for k in self._if_cache if named in k]:
+                new_nkey = (thing, 'named'), *nkey[1:]
+                self._if_cache[new_nkey] = self._if_cache.pop(nkey)
+
+            for bkey in [k for k in self._if_cache if bnode in k]:
+                new_bkey = (thing, 'bnode'), *bkey[1:]
+                self._if_cache[new_bkey] = self._if_cache.pop(bkey)
+
             ident = oid(gn, gb, separator=False)
         elif treat_as_type == idf['pair-seq']:
             # XXX NOTE pair seqs may not have any bnodes, there are
