@@ -533,3 +533,48 @@ p:property a owl:ObjectProperty ;
 
 # preserve prefixes needed for that part of the test
 c: C: xml: .
+
+# failure to reorder due to symmetric predicates
+[] a owl:Restriction ;
+    owl:onProperty obo:BFO_0000050 ;
+    owl:someValuesFrom obo:UBERON_0006120 ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty obo:BFO_0000050 ;
+            owl:someValuesFrom obo:UBERON_0006780 ] .
+
+[] a owl:Restriction ;
+    owl:onProperty obo:BFO_0000050 ;
+    owl:someValuesFrom obo:UBERON_0006120 ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty obo:BFO_0000050 ;
+            owl:someValuesFrom obo:UBERON_0006779 ] .
+
+# what to do about bnode vs actual and failure to reorder
+
+[] a owl:Restriction ;
+    owl:onProperty obo:RO_0002162 ;
+    owl:someValuesFrom obo:NCBITaxon_3072905 ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty obo:RO_0002162 ;
+            owl:someValuesFrom obo:NCBITaxon_3072906 ] .
+
+[] a owl:Restriction ;
+    owl:onProperty obo:RO_0002162 ;
+    owl:someValuesFrom obo:NCBITaxon_3072906 ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty obo:RO_0002162 ;
+            owl:someValuesFrom [ a owl:Class ;
+                    owl:complementOf obo:NCBITaxon_3072906 ] ] .
+
+[] a owl:Restriction ;
+    owl:onProperty obo:RO_0002162 ;
+    owl:someValuesFrom obo:NCBITaxon_3072905 ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty obo:RO_0002162 ;
+            owl:someValuesFrom [ a owl:Class ;
+                    owl:complementOf obo:NCBITaxon_3072905 ] ] .
+
+[] a owl:Restriction ;
+    owl:onProperty blx:1 ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty blx:1 ] .

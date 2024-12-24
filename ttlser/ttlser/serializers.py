@@ -177,7 +177,7 @@ class CustomTurtleSerializer(TurtleSerializer):
     roundtrip_prefixes = '',
     short_name = 'nifttl'
     _name = 'ttlser deterministic'
-    __version = 'v1.2.2'
+    __version = 'v1.2.3'
     _newline = True
     _nl = '\n'
     _space = ' '
@@ -310,6 +310,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                     store.add((o, p, s))
                 else:  # both bnodes
                     sym_cases.append((s, p, o))
+                    store.add((o, p, s))
 
         super(CustomTurtleSerializer, self).__init__(store)
         self.litsortkey = self.make_litsortkey(self.sortkey)
@@ -327,7 +328,11 @@ class CustomTurtleSerializer(TurtleSerializer):
         for s, p, o in sym_cases:
             if self._globalSortKey(s) > self._globalSortKey(o):  # TODO verify that this does what we expect
                 store.remove((s, p, o))
-                store.add((o, p, s))
+            elif self._globalSortKey(s) < self._globalSortKey(o):  # TODO verify that this does what we expect
+                store.remove((o, p, s))
+            else:
+                # equivalent remove the o p s case
+                store.remove((o, p, s))
 
         def debug():
             lv = [(l.node, l.vals)
@@ -412,7 +417,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 for p, o in self.store.predicate_objects(n):
                     # TODO speedup by not looking up from store every time
                     if o not in self.object_rank:
-                        if p == RDF.first or p == RDF.rest or p in self.symmetric_predicates:
+                        if p == RDF.first or p == RDF.rest:
                             continue
 
                         pr = self.predicate_rank[p]
@@ -427,7 +432,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 if n in self.list_rankers and self.list_rankers[n].vis_vals:
                     list_vis_rank.extend(self.list_rankers[n].rank_vec)
                 for p, o in self.store.predicate_objects(n):
-                    if p == RDF.first or p == RDF.rest or p in self.symmetric_predicates:
+                    if p == RDF.first or p == RDF.rest:
                         continue
                     pr = self.predicate_rank[p]
                     rv = specref(visible_ranks, pr)
@@ -727,7 +732,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             # this is a list
 
             if SDEBUG:
-                self.write('{self._nl}# ' + str(self._globalSortKey(node)) + self._nl)  # FIXME REMOVE
+                self.write(f'{self._nl}# ' + str(self._globalSortKey(node)) + self._nl)  # FIXME REMOVE
             self.write('(')
             self.depth += 1  # 2
             self.doList(node)
@@ -739,7 +744,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             self.depth += 2
             self.write('[')
             if SDEBUG:
-                self.write('{self._nl}#{self._space}' +
+                self.write(f'{self._nl}#{self._space}' +
                            str(self._globalSortKey(node)) +
                            self._nl)  # FIXME REMOVE
             self.depth -= 1
