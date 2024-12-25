@@ -1,6 +1,9 @@
 @prefix ilxtr: <http://uri.interlex.org/tgbugs/uris/readable/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 
+_:dupe ilxtr:dupe _:derp .
+
+
 ilxtr:b0 rdf:first ilxtr:x ;
     rdf:rest
     ilxtr:b1 .
@@ -105,3 +108,6 @@ _:evil-3 ilxtr:n _:evil-4 .
 _:evil-4 ilxtr:n _:evil-5 .
 _:evil-5 ilxtr:n _:evil-6 .
 _:evil-6 ilxtr:n _:evil-3 .
+
+
+_:dupe ilxtr:dupe _:derp .
