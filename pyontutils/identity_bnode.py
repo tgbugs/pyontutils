@@ -277,7 +277,7 @@ class IdentityBNode(rdflib.BNode):
     cypher = hashlib.sha256
     cypher_field_separator = ' '
     encoding = sys.getdefaultencoding()
-    sortlast = b'\xff' * 64
+    sortlast = b'\uf8ff'
     default_version = 3
 
     def __new__(cls, triples_or_pairs_or_thing, *, version=None, debug=False, pot=False,
@@ -333,6 +333,7 @@ class IdentityBNode(rdflib.BNode):
                 self.identity = self.identity_function(triples_or_pairs_or_thing)
 
         else:
+            self._idfun_map = {}  # TODO
             self.identity = self.identity_function(triples_or_pairs_or_thing)
 
         real_self = super().__new__(cls, self.identity)
@@ -350,6 +351,7 @@ class IdentityBNode(rdflib.BNode):
 
         real_self.version = self.version
         real_self.debug = debug
+        real_self._idfun_map = self._idfun_map
         real_self._pot = self._pot
         real_self.identity = self.identity
         real_self.null_identity = self.null_identity
@@ -1249,7 +1251,8 @@ class IdentityBNode(rdflib.BNode):
 
     _if_cache = {}  # FIXME version issue
     _if_debug_cache = {}
-    def _identity_function(self, thing, treat_as_type, *, id_method=None, in_graph=None):
+    _if_predicate_cache = {}  # this one usually doesn't need to be reset and is heavily used
+    def _identity_function(self, thing, treat_as_type, *, id_method=None, in_graph=None, is_pred=False):
         # FIXME TODO treat_as_type to something other than
         # strings for better performance maybe? probably much later
 
@@ -1270,7 +1273,13 @@ class IdentityBNode(rdflib.BNode):
 
         try:
             # we can't/dont't cache unhashable things (e.g. lists)
-            if in_graph is not None and (in_graph, thing, treat_as_type) in self._if_cache:
+            if is_pred:
+                try:
+                    return self._if_predicate_cache[thing]
+                except KeyError:
+                    pass
+
+            elif in_graph is not None and (in_graph, thing, treat_as_type) in self._if_cache:
                 return self._if_cache[(in_graph, thing, treat_as_type)]
             elif (thing, treat_as_type) in self._if_cache:
                 return self._if_cache[thing, treat_as_type]
@@ -1296,7 +1305,7 @@ class IdentityBNode(rdflib.BNode):
             else:
                 ident = oid(self.to_bytes(thing))  # FIXME dangerous stringification happens in to_bytes right now
         elif treat_as_type == idf['pair']:  # in ('pair', '(p o)'):
-            ident = oid(*[self._identity_function(e, it['bytes']) for e in thing], separator=False)
+            ident = oid(self._identity_function(thing[0], it['bytes'], is_pred=True), self._identity_function(thing[1], it['bytes']), separator=False)
         elif treat_as_type == idf['pair-ident']:  # in ('pair-ident', '(p id)'):
             # it looks like in the current implementation we do not
             # double hash the identity of the bnode in the object position
@@ -1304,7 +1313,7 @@ class IdentityBNode(rdflib.BNode):
             # its just that passing in an actual blanknode and looking up its
             # id is a separate process
             p, ident_o = thing
-            ident = oid(self._identity_function(p, it['bytes']), ident_o, separator=False)
+            ident = oid(self._identity_function(p, it['bytes'], is_pred=True), ident_o, separator=False)
         elif treat_as_type == idf['triple']:  # in ('triple', '(s (p o))'):
             s, p, o = thing
             ident = oid(self._identity_function(s, it['bytes']),
@@ -1722,11 +1731,14 @@ class IdentityBNode(rdflib.BNode):
         else:
             raise NotImplementedError(f'unknown type {treat_as_type}')
 
-        try:
-            self._if_cache[thing, treat_as_type] = ident
-        except TypeError:
-            # we can't/won't cache unhashable things (e.g. lists)
-            pass
+        if is_pred:
+            self._if_predicate_cache[thing] = ident
+        else:
+            try:
+                self._if_cache[thing, treat_as_type] = ident
+            except TypeError:
+                # we can't/won't cache unhashable things (e.g. lists)
+                pass
 
         return ident
 
