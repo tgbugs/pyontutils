@@ -856,7 +856,7 @@ class OntMetaIri(OntMeta, OntIdIri):
 
             # FIXME sentinel could be in the same chunk as stop
             else:  # and this is why you need the walrus operator :/ but then no < 3.8 >_<
-                sent_start_index, sent_end_index = conventions_type.findSentinel(chunk)
+                sent_start_index, sent_end_index = conventions_type.findSentinel(chunk, prev_chunk_tail)
                 if sent_start_index is not None:
                     #sent_end_index = chunk.index(sentinel) + len(sentinel)
                     header_last_chunk = chunk[:sent_start_index]
