@@ -741,10 +741,14 @@ class OntMetaIri(OntMeta, OntIdIri):
             self.format = 'application/rdf+xml'
 
         elif first.startswith(b'@prefix') or first.startswith(b'#lang rdf/turtle'):
+            # ttl 1.2 grammar allows other things at the start of a file but
+            # for us if it doesn't start with @prefix we probably don't want it
+            # because it is probably evil
             start = b' owl:Ontology'  # FIXME this is not standard
             # FIXME snchn.IndexGraph etc ... need a more extensible way to mark the header ...
             stop = b' \\.\n'  # FIXME can be fooled by strings
-            sentinel = b'^### '  # FIXME only works for ttlser
+            sentinel = b'\n[^@].+[^gy][^y] [;.]\n'  # FIXME has all sorts of false positives and misses tons of cases
+            #sentinel = b'^### '  # FIXME only works for ttlser
             #sentinel = b' a '  # FIXME if a |owl:Ontology has a chunk break on | this is incorrect
             # also needs to be a regex that ends in [^owl:Ontology]
             self.format = 'text/turtle'
