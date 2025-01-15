@@ -11,10 +11,12 @@ def nst_to_adj(l):
     second = [p for r in l[1:] if r for p in nst_to_adj(r)]
     return tuple(first + second)
 
+
 def assoc(k, ass):
     for a, b in ass:
         if a == k:
             return a, b
+
 
 def dvals(k, ass):
     pair = assoc(k, ass)
@@ -215,7 +217,9 @@ def bind_rdflib():
     def getlist(g, bn0, to_python=False):
         def f(node, g):
             o = None
-            for o in g[node:rdf.first:]:
+
+            #for o in g[node:rdf.first:]:
+            for o in g.objects(node, rdf.first):
                 if isinstance(o, rdflib.BNode):
                     # unfortunately we have to branch on the result type
                     # or have to look ahead to see if the list continues
@@ -234,15 +238,17 @@ def bind_rdflib():
                     else:
                         yield o
 
-            for o in g[node:rdf.rest:]:
+            #for o in g[node:rdf.rest:]:
+            for o in g.objects(node, rdf.rest):
                 if o != rdf.nil:
                     yield from getlist(g, o, to_python=to_python)
 
             if o is None and isinstance(node, rdflib.BNode):  # [ :a  :b ] case
-                for p, o in g[node:]:
+                #for p, o in g[node:]:
+                for p, o in g.predicate_objects(node):
                     if to_python:
                         yield rl((p.toPython() if isinstance(p, rdflib.Literal) else p),
-                                 (o.toPython() if isinstance(o, rdflib.Literal) else o),)
+                                (o.toPython() if isinstance(o, rdflib.Literal) else o),)
                     else:
                         yield rl(p, o)
 
