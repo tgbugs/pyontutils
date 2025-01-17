@@ -281,10 +281,13 @@ class OntRes(idlib.Stream):
     @property
     def identifier_bound(self):
         try:
-            return next(self.graph[:rdf.type:owl.Ontology])
-        except StopIteration:
-            # TODO maybe warn?
-            pass
+            return self.graph.boundIdentifier
+        except NameError:
+            try:
+                return next(self.graph[:rdf.type:owl.Ontology])
+            except StopIteration:
+                # TODO maybe warn?
+                pass
 
     @property
     def identifier_version(self):
@@ -1510,11 +1513,6 @@ class OntGraph(rdflib.Graph):
         # and can leverage its trie
         self.namespace_manager
         raise NotImplementedError('yet')
-
-    def metadata(self):
-        """ the header/metadata/ontology section of an rdf file """
-        raise NotImplementedError('yet')
-        return OntGraphMetadata(self)
 
     @property
     def data(self):
