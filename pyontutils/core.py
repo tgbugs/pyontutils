@@ -548,17 +548,22 @@ class OntIdIri(OntRes):
         self.iri = iri
         # TODO version iris etc.
 
+    _request_timeout = 5
     def _get(self, *, send_data=None, send_successor={'Accept': 'text/turtle'}):
         if self.iri.startswith('file://'):  # requests transport adapters seem overly complex?
             parsed = urlparse(self.iri)
             return OntIdPath(parsed.path)._get()
         else:
             if send_data is None:
-                return self._requests.get(self.iri, stream=True, headers=send_successor)  # worth a shot ...
+                return self._requests.get(
+                    self.iri, stream=True, headers=send_successor,  # worth a shot ...
+                    timeout=self._request_timeout)
             else:
-                return self._requests.post(self.iri, stream=True,
-                                    headers=send_successor,
-                                    data=send_data)
+                return self._requests.post(
+                    self.iri, stream=True,
+                    headers=send_successor,
+                    data=send_data,
+                    timeout=self._request_timeout,)
 
     @property
     def identifier(self):
@@ -568,7 +573,9 @@ class OntIdIri(OntRes):
     def headers(self):  # FIXME vs get vs post
         """ request headers """
         if not hasattr(self, '_headers'):
-            resp = self._requests.head(self.identifier)  # TODO status handling for all these
+            resp = self._requests.head(  # TODO status handling for all these
+                self.identifier,
+                timeout = self._request_timeout,)
             self._headers = resp.headers
 
         return self._headers
