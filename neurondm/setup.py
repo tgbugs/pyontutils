@@ -85,13 +85,13 @@ try:
         classifiers=[
             'Development Status :: 4 - Beta',
             'License :: OSI Approved :: MIT License',
-            'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
             'Programming Language :: Python :: 3.8',
             'Programming Language :: Python :: 3.9',
             'Programming Language :: Python :: 3.10',
             'Programming Language :: Python :: 3.11',
             'Programming Language :: Python :: 3.12',
+            'Programming Language :: Python :: 3.13',
             'Programming Language :: Python :: Implementation :: CPython',
             'Programming Language :: Python :: Implementation :: PyPy',
             'Operating System :: POSIX :: Linux',
@@ -101,7 +101,7 @@ try:
         keywords=('neuron types NIF ontology neuroscience phenotype '
                 'OWL rdf rdflib data model'),
         packages=['neurondm', 'neurondm.models'],  # don't package models due to data resources needs?
-        python_requires='>=3.6',
+        python_requires='>=3.7',
         tests_require=tests_require,
         install_requires=[
             'hyputils>=0.0.8',

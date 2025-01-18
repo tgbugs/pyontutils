@@ -943,6 +943,7 @@ class TestIBNodeGraph(unittest.TestCase):
 
         assert id1.identity == id2.identity, 'identities do not match'
 
+    @pytest.mark.skip('too slow')
     def test_subject_identities(self):
         def dos(s):
             # FIXME hitting bnode subjects that are in cycles

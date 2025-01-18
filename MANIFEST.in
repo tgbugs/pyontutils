@@ -24,4 +24,5 @@ recursive-exclude * *.swo
 
 include nifstd/scigraph/curie_map.yaml
 include nifstd/scigraph/graphload-base-template.yaml
+include ttlser/test/evil.ttl
 include ttlser/test/nasty.ttl
