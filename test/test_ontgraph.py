@@ -1,8 +1,9 @@
-import pathlib
 import unittest
+import pytest
+import pathlib
 import rdflib
 from pyontutils.core import OntGraph, ilxtr
-from pyontutils.identity_bnode import IdentityBNode
+from pyontutils.identity_bnode import IdentityBNode, idf, it as ibn_it
 
 
 class TestOntGraph(unittest.TestCase):
@@ -277,14 +278,22 @@ class TestVersionHistory(unittest.TestCase):
         gc0 = OntGraph()
         gc0.populate_from_triples(self.gc0)
         gc0d = gc0.asWithIdentifiedBNodes()
+        gi = IdentityBNode(gc0, debug=True)
         i = IdentityBNode(gc0d, debug=True)
+        assert gi == i, f'oops {gi} != {i}'
         bads = []
-        for k, v in i.bnode_identities.items():
-            bnvhex = rdflib.BNode(v.hex())
-            if k != bnvhex:
-                bads.append((k, nbvhex))
+        bn_bytes = [
+            (k[1], v) for k, v in i._if_cache.items()
+            if gc0d in k and idf['((p o) ...)'] in k and isinstance(k[1], rdflib.BNode)]
+        for k, v in bn_bytes:
+            #bnvhex = rdflib.BNode(v.hex())
+            bnvhex = v.hex()
+            nk = k.split('_')[0]
+            if nk != bnvhex:
+                bads.append((nk, bnvhex))
 
-        breakpoint()
+        if bads:
+            breakpoint()
 
 
         self.g0
@@ -306,13 +315,20 @@ class TestVersionHistory(unittest.TestCase):
         )
         badgraphs = []
         for graph in graphs:
+            gi = IdentityBNode(graph, debug=True)
             dgraph = graph.asWithIdentifiedBNodes()
             i = IdentityBNode(dgraph, debug=True)
+            assert gi == i, f'oops {gi} != {i}'
             bads = []
-            for k, v in i.bnode_identities.items():
-                bnvhex = rdflib.BNode(v.hex())
-                if k != bnvhex:
-                    bads.append((k, nbvhex))
+            bn_bytes = [
+                (k[1], v) for k, v in i._if_cache.items()
+                if dgraph in k and idf['((p o) ...)'] in k and isinstance(k[1], rdflib.BNode)]
+            for k, v in bn_bytes:
+                #bnvhex = rdflib.BNode(v.hex())
+                bnvhex = v.hex()
+                nk = k.split('_')[0]
+                if nk != bnvhex:
+                    bads.append((nk, bnvhex))
 
             if bads:
                 badgraphs.append((graph, dgraph, bads))
@@ -331,12 +347,11 @@ class TestVersionHistory(unittest.TestCase):
     def test_fork_history(self):
         pass
 
+    @pytest.mark.skip('diff_{from,to} not ready yet')
     def test_hrm(self):
-        gt0
-        gt1
+        gt0 = OntGraph()
+        gt1 = OntGraph()
 
-        gt1.diff_from(gt0)
-        gt0.diff_to(gt1)
-
-        pass
+        dt10 = gt1.diff_from(gt0)
+        df10 = gt0.diff_to(gt1)
 

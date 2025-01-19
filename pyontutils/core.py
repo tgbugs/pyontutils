@@ -2394,8 +2394,16 @@ class OntGraph(rdflib.Graph):
         g = self.__class__()
         ibn = IdentityBNode(self, debug=True)  # FIXME HACK
         replace_pairs = []
-        for bnode, checksum_bytes in ibn.bnode_identities.items():  # FIXME why is bnode_identifies a defaultdict(list)
-            replace_pairs.append((rdflib.BNode(checksum_bytes.hex()), bnode))
+        bn_bytes = [
+            (k[1], v) for k, v in ibn._if_cache.items()
+            if self in k and idf['((p o) ...)'] in k and isinstance(k[1], rdflib.BNode)]
+
+        # have to deal with replicas here otherwise identity can be distorted
+        reps = defaultdict(lambda:-1)
+        for bnode, checksum_bytes in bn_bytes:
+            reps[checksum_bytes] += 1
+            suffix = reps[checksum_bytes]
+            replace_pairs.append((rdflib.BNode(checksum_bytes.hex() + f'_{suffix}'), bnode))
 
         return self.replaceIdentifiers(replace_pairs)
 
