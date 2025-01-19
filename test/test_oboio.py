@@ -150,7 +150,9 @@ class TestOboIo(unittest.TestCase):
     @skipif_no_net
     @pytest.mark.skipif(not shutil.which('robot'), reason='robot not installed')
     def test_robot_rt(self):
-        of = oio.OboFile(data=obo_test_string)
+        # the import in the test string no longer exists which breaks robot since it tries to resolve it
+        noimp = '\n'.join([l for l in obo_test_string.split('\n') if not l.startswith('import:')])
+        of = oio.OboFile(data=noimp)
         obor1 = of.asObo(stamp=False, version=oio.OBO_VER_ROBOT)
         rtp = temp_path / 'robot-test.obo'
         robot_path = temp_path / 'robot-test.test.obo'
