@@ -1,7 +1,9 @@
 import pytest
 import unittest
+import subprocess
 import pprint
 from pathlib import Path
+from collections import Counter
 import rdflib
 import ttlser
 from pyontutils.core import yield_recursive, OntGraph, bnNone, OntResIri
@@ -1400,6 +1402,7 @@ class TestIBNodeGraph(unittest.TestCase):
         assert success, 'check failed!'
 
 
+@pytest.mark.skip('identity for graphs with cycles is terrifyingly broken right now')
 class TestIBNodeGraphAlt(TestIBNodeGraph):
     path_to_test = Path('ttlser/test/evil.ttl')
 
@@ -1595,3 +1598,62 @@ class TextXVersion(unittest.TestCase):
                 assert False, 'should have failed with version mismatch'
             except ValueError as e:  # FIXME change error type when changed interally as well
                 pass
+
+
+class TestStability(unittest.TestCase):
+
+    @pytest.mark.skip('requires pypy and cpython TODO a cpython only version to hunt down the problem')
+    def test_stab(self):
+        ''' Puttling the STAB in stability '''
+        # so ... pypy3 is stable across a multiple runs, but cpython is not, HOORAY !!!!!!!
+        # with nasty.ttl we get the same answer every time for pypy and cpython
+        # with evil.ttl same answer every time for pypy but cpython produces a different answer every time
+        # and this happens even when I modify the notation3 parser to use the exact same bnode ids
+        # it seems the issue is likely in IdentityBNode because for evil.ttl the output to
+        # sigh-test is identical every time for pypy and cpython but the IdentityBNode value changes for cpython
+        # for nasty.ttl the contents of sigh-test are different every time because there are non-literal bnodes
+        # but since there are no cycles the IdentityBNode values is the same every time
+        # also, testing 100 times there are some hashes that start to recur but literally none of them match
+        # the stable pypy value of 884f8ebc113119bf30672a28b329ad1bcab9b8ee990de5db7a40d78ea740aa71
+        # pretty clearly related to cycles, but the difference between pypy and cpython behavior
+        # is terrifying to the point where I think I need to raise an error if there are cycles
+        # until this is fixed
+
+        pyrts = [('/usr/bin/pypy3', 4, 'py'), ('/usr/bin/python3.12', 100, 'cp')]
+
+        res = {}
+        results = []
+        for fn in ('nasty', 'evil'):
+            argh = {}
+            for pyrt, runs, sn in pyrts:
+                ivars = []
+                for rn in range(runs):
+                    tv = f'''import sys, pathlib, rdflib
+from pprint import pformat
+from pyontutils.core import OntGraph
+from pyontutils.identity_bnode import IdentityBNode
+g = OntGraph().parse(pathlib.Path('ttlser/test/{fn}.ttl'))
+with open('/tmp/sigh-test-{fn}-{sn}-{rn}.py', 'wt') as f:
+    f.write(pformat(sorted(g)))
+print(sys.executable, rdflib.__file__, IdentityBNode(g).identity.hex())
+'''
+                    argv = [pyrt, '-c', tv]
+                    p = subprocess.Popen(argv,
+                                         stdin=subprocess.PIPE,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE,)
+                    out, err = p.communicate()
+                    if err.strip():
+                        print(err.decode())
+
+                    sigh = py, r, ident = out.decode().split()
+                    ivars.append(ident)
+                    grrr = [fn, rn] + sigh
+                    results.append(grrr)
+
+
+                argh[pyrt] = dict(Counter(ivars).most_common())
+
+            res[fn] = argh
+
+        breakpoint()

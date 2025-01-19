@@ -557,8 +557,8 @@ class OntIdIri(OntRes):
                 return self._requests.get(self.iri, stream=True, headers=send_successor)  # worth a shot ...
             else:
                 return self._requests.post(self.iri, stream=True,
-                                    headers=send_successor,
-                                    data=send_data)
+                                           headers=send_successor,
+                                           data=send_data)
 
     @property
     def identifier(self):
@@ -634,6 +634,7 @@ class OntMetaIri(OntMeta, OntIdIri):
             cache_dir = cache_root / id_hash[:2]
             cache_dir.mkdir(exist_ok=True, parents=True)
             file = aug.LocalPath(cache_dir / id_hash)
+            # FIXME TODO see ~/ni/dev/ziphead.py
             with self._get(send_data=send_data) as resp:
                 self._process_resp_zip(resp, file)
 
@@ -1007,7 +1008,21 @@ class OntResIri(OntIdIri, OntResOnt):
 
     @property
     def data(self):
-        format, *header_chunks, (resp, gen) = self.metadata()._data(yield_response_gen=True)
+        try:
+            format, *header_chunks, (resp, gen) = self.metadata()._data(yield_response_gen=True)
+        except TypeError as e:
+            try:
+                # sometimes python will throw a completely nutso error like
+                # TypeError: cannot unpack non-iterable generator object
+                # and because of some implementation issue with pypy3 the
+                # real error is masked, so we have to do this to get the
+                # real error on pypy3
+                wat = list(self.metadata()._data(yield_response_gen=True))
+            except Exception as e2:
+                raise e2 from e
+
+            raise e
+
         self.headers = resp.headers
         self.format = format
         # TODO populate header graph? not sure this is actually possible
@@ -2157,7 +2172,8 @@ class OntGraph(rdflib.Graph):
 
         # NOTE the BNodes need to retain their identity across the 3 graphs
         # so that they reassemble correctly
-        new_self = self.__class__(path=self.path)
+        new_self = self.__class__(path=self.path, bind_namespaces='none')
+        new_self.namespace_manager.populate_from(self)
         if include_input_triples:
             [new_self.add(t) for t in add_replace_graph]
 
@@ -2391,7 +2407,6 @@ class OntGraph(rdflib.Graph):
         pass
 
     def asWithIdentifiedBNodes(self):
-        g = self.__class__()
         ibn = IdentityBNode(self, debug=True)  # FIXME HACK
         replace_pairs = []
         bn_bytes = [

@@ -1468,6 +1468,13 @@ class IdentityBNode(rdflib.BNode):
 
                         cycles_broken[s] = new_pos
 
+                    msg = '''NotImplementedCorrectlyError
+see test/test_ibnode::TestStability::test_stab, this impl is NOT stable on
+cpython and pretty much never collides with the stable behavior in pypy
+until this is resolved do not use this for graphs with cycles, otherwise
+you will only very rarely be able to determine that two graphs are the same'''
+                    raise NotImplementedError(msg)
+
                 else:
                     cycles_broken = unresolved_bnodes
 
