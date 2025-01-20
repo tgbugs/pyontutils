@@ -17,6 +17,7 @@ argvs = [
     ['clifn', 'sub-command-2', 'sub-command-1', 'n', 'o'],
     ['clifn', 'sub-command-2', 'sub-command-1', '-o', 'p'],
     ['clifn', 'sub-command-2', 'sub-command-1', '-o', 'q', 'p'],
+    ['clifn', 'sub-command-2', 'sub-command-1', '--value', 'hello there', 'derp'],
 ]
 
 def test_argvs():
@@ -24,6 +25,8 @@ def test_argvs():
     for argv in argvs:
         sys.argv = argv
         try:
+            clifn.main()
+            sys.argv += ['--debug']
             clifn.main()
         except BaseException as e:
             bads.append((argv, e))

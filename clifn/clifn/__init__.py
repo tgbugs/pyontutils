@@ -13,6 +13,7 @@ Usage-Bad:
 
 Options:
     -o --optional      an optional argument
+    -v --value=V       an optional with a value [default: v]
     -d --debug
 """
 
@@ -20,9 +21,8 @@ import re
 import sys
 from types import GeneratorType
 from keyword import kwlist
-from terminaltables import AsciiTable
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 
 def python_identifier(string:str):
@@ -115,9 +115,20 @@ class Options:
                                     if v or k.startswith('-')
                 ], key=key)
         ]
-        atable = AsciiTable([['arg', '']] + rows, title='docopt args')
-        atable.justify_columns[1] = 'center'
-        return atable.table
+        rows = [['arg', '']] + rows
+        widtha = max([len(arg) for arg, _ in rows]) + 1
+        widthv = max([len(value) for arg, value in rows]) + 1
+        lead = '\n| '
+        title = 'docopt args'
+        title_line = f'+-{title:-<{widtha}}+{"-" * (widthv + 1)}+'
+        tail_line = f'\n+-{"-" * widtha}+{"-" * (widthv + 1)}+'
+        head = (f'{lead}{rows[0][0]: <{widtha}}| {rows[0][1]: <{widthv}}|'
+                f'\n+-{"-" * widtha}+-{"-" * widthv}+')
+        out = (title_line + head + lead +
+               lead.join([f'{arg: <{widtha}}| {value: <{widthv}}|'
+                          for arg, value in rows[1:]])
+               + tail_line)
+        return out
 
 
 class Dispatcher:

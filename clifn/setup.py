@@ -48,7 +48,6 @@ setup(
     tests_require=tests_require,
     install_requires=[
         'docopt',
-        'terminaltables',  # TODO see if we can remove this
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
                     'test': tests_require,
