@@ -104,8 +104,8 @@ try:
         python_requires='>=3.7',
         tests_require=tests_require,
         install_requires=[
-            'hyputils>=0.0.8',
-            'pyontutils>=0.1.31',
+            'hyputils>=0.0.10',
+            'pyontutils>=0.1.38',
         ],
         extras_require={'dev': ['pytest-cov', 'wheel'],
                         'test': tests_require,
