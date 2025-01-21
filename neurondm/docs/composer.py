@@ -46,6 +46,9 @@ def simplify(e):
 
 
 def simplify_nested(f, nested):
+    if nested is None:
+        return
+
     for e in nested:
         if isinstance(e, list) or isinstance(e, tuple):
             yield tuple(simplify_nested(f, e))
