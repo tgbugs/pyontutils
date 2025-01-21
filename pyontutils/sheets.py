@@ -7,7 +7,7 @@ from numbers import Number
 from urllib.parse import urlparse
 import idlib
 import htmlfn as hfn
-from terminaltables import AsciiTable
+from terminaltables3 import AsciiTable
 from pyontutils.utils import byCol, log as _log
 from pyontutils.config import auth
 from pyontutils.clifun import python_identifier
