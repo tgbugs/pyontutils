@@ -94,6 +94,7 @@ def map_predicates(sheet_pred, prefix=ilxtr):
         'hasBiologicalSex': prefix.hasBiologicalSex,
         'hasCircuitRole': prefix.hasCircuitRolePhenotype,  # used in femrep
         'hasCircuitRolePhenotype': prefix.hasCircuitRolePhenotype,
+        'hasFunctionalCircuitRolePhenotype': prefix.hasFunctionalCircuitRolePhenotype,
         'hasForwardConnectionPhenotype': prefix.hasForwardConnectionPhenotype,  # FIXME this needs to be unionOf
         'Axon-Leading-To-Sensory-Terminal': prefix.hasAxonLeadingToSensorySubcellularElementIn,
 
@@ -136,12 +137,16 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
         cs = [c() for c in sheet_classes]
 
     trips = [[cl] + [c if isinstance(c, OntId) else c.value for c in
-                     ((r.id() if hasattr(r, 'id') else OntId(r.uri().value)),
+                     ((r.id() if hasattr(r, 'id') else OntId(r.subject_uri().value)),
                       (r.predicate() if hasattr(r, 'predicate') else r.relationship()),
-                      (r.identifier() if r.identifier().value.strip() else
-                       derp(TEMP['MISSING_' + r.structure().value.replace(' ', '-')])))]
+                      ((r.identifier() if r.identifier().value.strip()
+                        else derp(TEMP['MISSING_' + r.structure().value.replace(' ', '-')]))
+                       if hasattr(r, 'identifier') else
+                       (OntId(r.object_uri().value) if r.object_uri().value.strip()
+                        else derp(TEMP['MISSING_' + r.object().value.replace(' ', '-')]))
+                       ))]
              for cl in cs for r in cl.rows()
-             if r.row_index > 0 and (r.id().value if hasattr(r, 'id') else r.uri().value)
+             if r.row_index > 0 and (r.id().value if hasattr(r, 'id') else r.subject_uri().value)
              #and (not hasattr(r, 'exclude') or not r.exclude().value)
              and r.proposed_action().value.lower() != "don't add"
              ]
@@ -185,14 +190,14 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
         for r in cl.rows():
             try:
                 if (r.row_index > 0 and
-                    (r.id if hasattr(r, 'id') else r.uri)().value and
+                    (r.id if hasattr(r, 'id') else r.subject_uri)().value and
                     r.proposed_action().value.lower() != "don't add"):
                     # extra trips
                     #print(repr(r.id()))
-                    _id = (r.id().value if hasattr(r, 'id') else OntId(r.uri().value))
+                    _id = (r.id().value if hasattr(r, 'id') else OntId(r.subject_uri().value))
                     _prefix = nlpns.split('/')[-2] if hasattr(r, 'id') else 'comprt'
                     s = _id if isinstance(_id, OntId) else OntId(nlpns[_id])
-                    #print(s)
+                    #log.debug(s)
                     if hasattr(r, 'sentence_number'):
                         asdf(s, ilxtr.sentenceNumber, r.sentence_number)
                     if hasattr(r, 'different_from_existing'):
@@ -218,12 +223,12 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                     if hasattr(r, 'axonal_course_poset') and r.axonal_course_poset().value:
                         # s.u and OntId(...).u to avoid duplicate subjects/objects in the graph
                         # due to type vs instance issues for rdflib.URIRef and OntId
-                        _v = r.identifier().value
+                        _v = r.object_uri().value if hasattr(r, 'object_uri') else r.identifier().value
                         if not _v:
                             _structure = r.structure().value
                             _alt_v = TEMP['MISSING_' + _structure.replace(' ', '-')]
                         else:
-                            _structure = r.structure().value
+                            _structure = r.structure().value if hasattr(r, 'structure') else r.object().value
                             _alt_v = TEMP.BROKEN_EMPTY
 
                         if not debug and not _v:
@@ -276,6 +281,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                 raise ValueError(msg)
 
         s = _s if isinstance(_s, OntId) else OntId(nlpns[_s])
+        #log.debug(s)
         try:
             p = map_predicates(_p)
         except KeyError as e:
@@ -296,7 +302,8 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                 _o = IntersectionOf(OntId(_r).u, OntId(_l).u)
                 #_o = _r  # FIXME TODO handle region/layer
         elif p == ilxtr.hasForwardConnectionPhenotype:
-            _o = nlpns[_o]
+            if not isinstance(_o, OntId):
+                _o = nlpns[_o]
 
         if isinstance(_o, IntersectionOf):
             o = _o
@@ -348,6 +355,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
     sigh_bind('kidney', snames['All KIDNEY connections'][1])
     sigh_bind('liver', snames['ALL Liver_Human_Rat_Mouse'][1])
     sigh_bind('swglnd', snames['Sheet1'][1])
+    sigh_bind('comprt', nlp_ns('composer'))
 
     config.write()
     labels = (
