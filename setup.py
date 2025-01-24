@@ -101,6 +101,7 @@ setup(
         'orthauth[sxpr]>=0.0.18',
         'pyld',
         'pyyaml',
+        'rdflib>=6.2.0',
         'requests',
         'terminaltables3',
         'ttlser>=1.1.6',
