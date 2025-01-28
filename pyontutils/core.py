@@ -296,10 +296,13 @@ class OntRes(idlib.Stream):
             the id to get
         """
         try:
-            return next(self.graph[self.identifier_bound:owl.versionIRI])
-        except StopIteration:
-            # TODO maybe warn?
-            pass
+            return self.graph.versionIdentifier
+        except NameError:
+            try:
+                return next(self.graph[self.identifier_bound:owl.versionIRI])
+            except StopIteration:
+                # TODO maybe warn?
+                pass
 
     @property
     def imports(self):
@@ -2198,7 +2201,10 @@ class OntGraph(rdflib.Graph):
 
     @property
     def boundIdentifier(self):  # FIXME regularize naming ...
-        return next(self.boundIdentifiers)
+        try:
+            return next(self.boundIdentifiers)
+        except StopIteration:
+            return
 
     @property
     def versionIdentifiers(self):
@@ -2208,7 +2214,10 @@ class OntGraph(rdflib.Graph):
 
     @property
     def versionIdentifier(self):
-        return next(self.versionIdentifiers)
+        try:
+            return next(self.versionIdentifiers)
+        except StopIteration:
+            return
 
     def metadata(self):
         for bi in self.boundIdentifiers:
