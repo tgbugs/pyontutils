@@ -553,7 +553,7 @@ class OntIdIri(OntRes):
 
     def _get(self, *, send_data=None, send_successor={'Accept': 'text/turtle'}):
         if self.iri.startswith('file://'):  # requests transport adapters seem overly complex?
-            parsed = urlparse(self.iri)
+            parsed = urlparse(self.iri)  # FIXME this will fail on windows
             return OntIdPath(parsed.path)._get()
         else:
             if send_data is None:

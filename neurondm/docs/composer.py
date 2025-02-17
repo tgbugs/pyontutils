@@ -650,7 +650,7 @@ def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconc
         if local:
             ori = OntResPath(olr / (p + suffix))
         else:
-            ori = OntResIri(orr + p + suffix)
+            ori = OntResIri(orr + gen_neurons_path + f + suffix)
 
         [g.add((s, rdfs.label, o)) for s, o in ori.graph[:rdfs.label:]]
 

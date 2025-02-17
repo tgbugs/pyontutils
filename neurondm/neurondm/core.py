@@ -1780,7 +1780,7 @@ class graphBase:
             try:
                 #core_graph.parse(cg, format='turtle')
                 if cg.startswith('file://'):
-                    cg = cg[7:]  # FIXME ... from_uri ...
+                    cg = cg[(8 if os.name == 'nt' else 7):]  # FIXME ... from_uri ...
                     ora = OntResAny(RepoPath(cg))
                 else:
                     ora = OntResIri(cg)
