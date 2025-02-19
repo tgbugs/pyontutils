@@ -104,7 +104,7 @@ asc = Phenotype('ilxtr:SpinalCordAscendingProjectionPhenotype', 'ilxtr:hasProjec
 desc = Phenotype('ilxtr:SpinalCordDescendingProjectionPhenotype', 'ilxtr:hasProjectionPhenotype')
 intfug = Phenotype('ilxtr:IntestinoFugalProjectionPhenotype', 'ilxtr:hasProjectionPhenotype')
 
-enteric = Phenotype('ilxtr:EntericPhenotype')  # probably not just partOf some enteric nervous system ... though maybe given developmental origin
+enteric = Phenotype('ilxtr:EntericPhenotype', 'ilxtr:hasAnatomicalSystemPhenotype')  # probably not just partOf some enteric nervous system ... though maybe given developmental origin
 nos = Phenotype('TEMPIND:Nos1', 'ilxtr:hasMolecularPhenotype')
 
 mapping = {
