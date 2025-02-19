@@ -100,10 +100,12 @@ def map_predicates(sheet_pred, prefix=ilxtr):
 
         # from composer
         'hasSomaLocatedIn': prefix.hasSomaLocatedIn,
+        'hasDendriteLocatedIn': prefix.hasDendriteLocatedIn,
         'hasAxonLocatedIn': prefix.hasAxonLocatedIn,
         'hasAxonPresynapticElementIn': prefix.hasAxonPresynapticElementIn,
         'hasAxonSensorySubcellularElementIn': prefix.hasAxonSensorySubcellularElementIn,
         'hasProjection': prefix.hasProjectionPhenotype,  # XXX check the semantics on this one
+        'hasProjectionPhenotype': prefix.hasProjectionPhenotype,  # XXX check the semantics on this one
         'hasProjectionLaterality': prefix.hasProjectionLaterality,  # XXX check the semantics on this one because it expects contra/ipsi not left/right
         'hasSomaPhenotype': prefix.hasSomaPhenotype,  # XXX what is this being used for? I can't find any objects?
     }[sheet_pred]

@@ -15,8 +15,9 @@ def get_csv_sheet(path):
 
     # remove rows that are missing a value since the export doesn't do
     # that and we will get missing if not provided
-    idx = _rows[0].index('Identifier')
-    rows = [r for r in _rows if r[idx]]  # Identifier
+    idx = _rows[0].index('Object URI')
+    sidx = _rows[0].index('Subject')
+    rows = [r for r in _rows if r[idx] and r[sidx]]  # Object URI
 
     s = sheets.Sheet(fetch=False)
     s.sheet_name = 'comprt'
@@ -33,6 +34,11 @@ def main():
     cs = [sht]
     config = Config('composer-roundtrip')
     nlp_main(cs=cs, config=config, neuron_class=Neuron)  # FIXME neuron_class is incorrect and changes per model
+
+    # TODO need to narrow the diff so that sparc-nlp contains only the
+    # subject graphs for the subset of neurons in composer
+    #OntGraph
+    return config,
 
 
 def _oldmain():
