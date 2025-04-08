@@ -57,6 +57,7 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
     echo "Instead run \`source ${0}\`"
     exit 1
 fi
+shopt -q -o pipefail || { echo 'You have not set -o pipefile!'; return 1; }
 #+end_src
 ** Developing this file                                            :noexport:
 If you are using emacs, then =flycheck-mode= will run =shellcheck= for you!
@@ -1544,13 +1545,16 @@ check-file $PATH_CYPHER_RESOURCES $PATH_SERVICES $PATH_CURIES || return $?
 #+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function build-services () {
     <<&vars-build-services>>
+
     # make build location
     mkdir -p "${PATH_BUILD}"
 
     # TODO allow urls?
     # make raw
     cat "${PATH_SERVICES}" > "${PATH_YAML_RAW}" || return $?
+
     yq -Sy '' "${PATH_CURIES}" | sed 's/^/    /' >> "${PATH_YAML_RAW}" || return $?
+
     cat "${PATH_CYPHER_RESOURCES}" >> "${PATH_YAML_RAW}" || return $?
 
     # make services header
@@ -1894,6 +1898,7 @@ Set =path-scigraph-functions= here
 
 #+name: &source-scigraph-functions
 #+begin_src bash :noweb yes :exports none
+set -o pipefail
 source "$(eval echo <<path-scigraph-functions()>>)"
 #+end_src
 * Per operating system :noexport:
