@@ -20,7 +20,12 @@ from colorlog import ColoredFormatter
 
 def logToFile(logger, path):
     lfh = logging.FileHandler(path.as_posix())
-    lfh.setFormatter(logger.handlers[0].formatter)
+    if not hasattr(logger, 'handlers') or not logger.handlers:
+        # if the logger has not handlers then use our default log formatter
+        lfh.setFormatter(log.handlers[0].formatter)
+    else:
+        lfh.setFormatter(logger.handlers[0].formatter)
+
     logger.addHandler(lfh)
     return lfh
 
