@@ -1,7 +1,7 @@
 import augpathlib as aug
 from pyontutils.core import OntGraph, OntResPath
 from pyontutils.config import auth
-from pyontutils.namespaces import makePrefixes
+from pyontutils.namespaces import makePrefixes, ilxtr
 
 
 #import json
@@ -77,7 +77,7 @@ refs_insts = [c(fetch=False) for c in refs_classes]
 lcnv_insts = [c(fetch=False) for c in lcnv_classes]
 
 #print(block_lines)
-from neurondm.lang import Phenotype, Neuron, Config, OntId
+from neurondm.lang import Phenotype, Neuron, NeuronEBM, Config, OntId
 #i = insts[0]
 #pprint(dir(i.row_object(0)))
 
@@ -185,10 +185,11 @@ lcnv = {i.name: {r.prefix().value if hasattr(r, 'prefix') else 'AAAA':  # r.name
                  for r in i.rows()[1:]} for i in lcnv_insts if hasattr(i, '_values') or i.fetch()}
 
 neuron_classes = {
-    sn: type(f'Neuron{sn.capitalize()}', (Neuron,), {'owlClass': f'ilxtr:Neuron{sn.capitalize()}',
-                                                     '_model_refs': mrefs[sn_id[sn]],
-                                                     '_model_id': sn_id[sn],
-                                                     })
+    sn: type(f'Neuron{sn.capitalize()}', (NeuronEBM,),
+             {'owlClass': ilxtr[f'Neuron{sn.capitalize()}'],
+              '_model_refs': mrefs[sn_id[sn]],
+              '_model_id': sn_id[sn],
+              })
     for sn in [('kblad' if _ == 'keast' else
                 ('bolew' if _ == 'unbranched' else _))
                for _ in
@@ -245,27 +246,32 @@ def citations(ncs, neus):
                 yield s, p, o
 
 
-# XXX TODO need to ensure that the type phenotype axioms so that the model superclass is included
-config = Config('apinat-pops-more')
-neus = [dophen(oid, bag, refs) for bag, _, oid, _, refs in bagged]
-#test = list(citations(neuron_classes.values(), neus))
-pprint(neus)
-#sys.modules['__main__'].__file__ = __file__
-#import linecache
-#linecache.cache[__file__] = size, mtime, lines, fullname
-config.write()
-config.write_python()
+def main():
+    # XXX TODO need to ensure that the type phenotype axioms so that the model superclass is included
+    config = Config('apinat-pops-more')
+    neus = [dophen(oid, bag, refs) for bag, _, oid, _, refs in bagged]
+    #test = list(citations(neuron_classes.values(), neus))
+    pprint(neus)
+    #sys.modules['__main__'].__file__ = __file__
+    #import linecache
+    #linecache.cache[__file__] = size, mtime, lines, fullname
+    config.write()
+    config.write_python()
 
-# cleanup
-ogp = config._written_graph.path  # XXX cannot trust config.out_graph_path() due to failover if path does not exist in graphBase >_< hooray
-og = OntGraph(path=ogp)
-og.parse()
-ng = OntGraph().populate_from_triples((t for t in og if 'able' not in t[1] and 'abel' not in t[1]))
-ng.populate_from(citations(neuron_classes.values(), neus))
-ng.namespace_manager.populate_from(og)
-ng.namespace_manager.populate_from(makePrefixes('PMID', 'doi', 'dc'))
-ng.write(ogp)
+    # cleanup
+    ogp = config._written_graph.path  # XXX cannot trust config.out_graph_path() due to failover if path does not exist in graphBase >_< hooray
+    og = OntGraph(path=ogp)
+    og.parse()
+    ng = OntGraph().populate_from_triples((t for t in og if 'able' not in t[1] and 'abel' not in t[1]))
+    ng.populate_from(citations(neuron_classes.values(), neus))
+    ng.namespace_manager.populate_from(og)
+    ng.namespace_manager.populate_from(makePrefixes('PMID', 'doi', 'dc'))
+    ng.write(ogp)
 
-if False:
-    pprint([(a, b, c, d) for a, b, c, d in bagged if not a])
-    pprint([(d, b, c) for a, b, c, d in bagged if d])
+    if False:
+        pprint([(a, b, c, d) for a, b, c, d in bagged if not a])
+        pprint([(d, b, c) for a, b, c, d in bagged if d])
+
+
+if __name__ == '__main__':
+    main()

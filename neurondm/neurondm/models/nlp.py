@@ -368,6 +368,8 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
     [config._written_graph.remove(t) for t in to_remove]
     [config._written_graph.add(t) for t in to_add]
     add_partial_orders(config._written_graph, snst)
+    for _n in nrns:
+        _n.partialOrder(nested=snst[_n.id_])
     # uncomment to debug type vs instance issues
     #sigh = sorted(set(s for s in config._written_graph.subjects() if isinstance(s, rdflib.URIRef)))
     config._written_graph.write()

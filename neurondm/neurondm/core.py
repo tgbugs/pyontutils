@@ -1886,10 +1886,11 @@ class graphBase:
         graphBase._molecular_predicates, graphBase._molecular_predicate_supers = mp, mps
 
         # scigraph setup
-        if scigraph is not None:
-            graphBase._sgv = Vocabulary(cache=True, basePath=scigraph)
-        else:
-            graphBase._sgv = Vocabulary(cache=True)
+        if not hasattr(graphBase, '_sgv'):
+            if scigraph is not None:
+                graphBase._sgv = Vocabulary(cache=True, basePath=scigraph)
+            else:
+                graphBase._sgv = Vocabulary(cache=True)
 
     @staticmethod
     def write():
@@ -3212,7 +3213,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
         if self._nested_partial_order is not None:
             bn = orders.to_rdf(graph, self._nested_partial_order)
-            graph.add((s, ilxtr.neuronPartialOrder, bn))
+            graph.add((self.id_, ilxtr.neuronPartialOrder, bn))
 
         self._sighed = True
 
