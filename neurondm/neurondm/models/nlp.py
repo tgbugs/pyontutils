@@ -80,7 +80,25 @@ sheet_classes = [
     if ns is not None]
 
 
-def map_predicates(sheet_pred, prefix=ilxtr):
+def make_annotation_properties(prefix=ilxtr):
+    return (
+        prefix.hasComposerUri,
+        prefix.alertNote,
+        rdflib.URIRef('https://uri.interlex.org/composer/uris/readable/hasComposerURI'),  # XXX needs to be http sadly i think
+        rdflib.URIRef('http://uri.interlex.org/tgbugs/uris/readable/composerGenLabel'),
+    )
+
+
+def map_uris(sheet_uri, prefix=ilxtr):
+    try:
+        return {
+            ilxtr.hasProjection: prefix.hasProjectionPhenotype,  # FIXME iri is not real
+        }[sheet_uri]
+    except KeyError as e:
+        return sheet_uri
+
+
+def map_predicates(sheet_pred, prefix=ilxtr):  # FIXME use the closed namespace
     p = {
         '': TEMP.BROKEN_EMPTY,
         'Soma': prefix.hasSomaLocatedIn,
@@ -97,6 +115,7 @@ def map_predicates(sheet_pred, prefix=ilxtr):
         'hasFunctionalCircuitRolePhenotype': prefix.hasFunctionalCircuitRolePhenotype,
         'hasForwardConnectionPhenotype': prefix.hasForwardConnectionPhenotype,  # FIXME this needs to be unionOf
         'Axon-Leading-To-Sensory-Terminal': prefix.hasAxonLeadingToSensorySubcellularElementIn,
+        'hasAxonLeadingToSensorySubcellularElementIn': prefix.hasAxonLeadingToSensorySubcellularElementIn,
 
         # from composer
         'hasSomaLocatedIn': prefix.hasSomaLocatedIn,
@@ -108,6 +127,8 @@ def map_predicates(sheet_pred, prefix=ilxtr):
         'hasProjectionPhenotype': prefix.hasProjectionPhenotype,  # XXX check the semantics on this one
         'hasProjectionLaterality': prefix.hasProjectionLaterality,  # XXX check the semantics on this one because it expects contra/ipsi not left/right
         'hasSomaPhenotype': prefix.hasSomaPhenotype,  # XXX what is this being used for? I can't find any objects?
+        'hasComposerUri': prefix.hasComposerUri,  # annotation property
+        'alertNote': prefix.alertNote,  # FIXME we have predicate uri in composer now
     }[sheet_pred]
     return p
 
@@ -140,23 +161,34 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
 
     trips = [[cl] + [c if isinstance(c, OntId) else c.value for c in
                      ((r.id() if hasattr(r, 'id') else OntId(r.subject_uri().value)),
-                      (r.predicate() if hasattr(r, 'predicate') else r.relationship()),
+                      (OntId(r.predicate_uri().value) if hasattr(r, 'predicate_uri') else
+                       (r.predicate() if hasattr(r, 'predicate') else r.relationship())),
                       ((r.identifier() if r.identifier().value.strip()
                         else derp(TEMP['MISSING_' + r.structure().value.replace(' ', '-')]))
                        if hasattr(r, 'identifier') else
-                       (OntId(r.object_uri().value) if r.object_uri().value.strip()
+                       (OntId(r.object_uri().value) if r.object_uri().value.strip()  # FIXME need to fill object text case, likely below
                         else derp(TEMP['MISSING_' + r.object().value.replace(' ', '-')]))
                        ))]
              for cl in cs for r in cl.rows()
              if r.row_index > 0 and (r.id().value if hasattr(r, 'id') else r.subject_uri().value)
              #and (not hasattr(r, 'exclude') or not r.exclude().value)
              and r.proposed_action().value.lower() != "don't add"
+             # FIXME we handle annotation properties separately right now
+             # all this code is a mess so just roll with it for now
+             and not (hasattr(r, 'object_text') and r.object_text().value.strip())
              ]
 
     to_add = []
 
     def vl(meth):
-        return rdflib.Literal(meth().value)
+        c = meth()
+        v = c.value
+        vs = v.strip()
+        if v != vs:
+            msg = f'whitespace issue in {c}'
+            log.warning(msg)
+
+        return rdflib.Literal(vs)
 
     def asdf(s, p, rm, split=False, rdf_type=rdflib.Literal):
         v = vl(rm)
@@ -169,14 +201,21 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
             else:
                 to_add.append((s.u, p, v))
 
-    def lcc(uri_or_curie):
-        if '<' in uri_or_curie:
-            # see pyontutils.utils_extra check_value
-            return rdflib.URIRef(url_quote(uri_or_curie, ':/;()'))
-        else:
-            return OntId(uri_or_curie).u
+    def bind_lcc(c):
+        def lcc(uri_or_curie, _c=c):
+            if '<' in uri_or_curie:
+                # see pyontutils.utils_extra check_value
+                return rdflib.URIRef(url_quote(uri_or_curie, ':/;()'))
+            elif uri_or_curie.startswith('10.'):
+                log.error(f'bad doi {uri_or_curie} in {_c}')
+                return OntId('DOI:' + uri_or_curie).u
+            else:
+                return OntId(uri_or_curie).u
+
+        return lcc
 
     dd = defaultdict(list)
+    cfdd = defaultdict(list)
     ec = {}
     def wrap(s):
         class cl:
@@ -206,8 +245,12 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                         asdf(s, ilxtr.curatorNote, r.different_from_existing)
                     asdf(s, ilxtr.curatorNote, r.curation_notes)
                     asdf(s, ilxtr.reviewNote, r.review_notes)
-                    asdf(s, ilxtr.reference, r.reference_pubmed_id__doi_or_text)
+                    if hasattr(r, 'reference_pubmed_id__doi_or_text'):
+                        # meaning change in composer to literature_citation
+                        # XXX TODO but that means literature_citation must handle freetext
+                        asdf(s, ilxtr.reference, r.reference_pubmed_id__doi_or_text)
                     if hasattr(r, 'literature_citation'):
+                        lcc = bind_lcc(r.literature_citation())
                         asdf(s, ilxtr.literatureCitation, r.literature_citation, split=',', rdf_type=lcc)
                     asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)
                     asdf(s, skos.prefLabel, r.neuron_population_label_a_to_b_via_c)
@@ -222,7 +265,14 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                         o = OntId(r.explicit_complement().value)
                         ec[(s, p)] = o
 
-                    if hasattr(r, 'axonal_course_poset') and r.axonal_course_poset().value:
+                    if hasattr(r, 'object_text') and r.object_text().value.strip():
+                        p = (OntId(r.predicate_uri().value) if hasattr(r, 'predicate_uri') else
+                             (r.predicate() if hasattr(r, 'predicate') else r.relationship()))
+                        asdf(s, p, r.object_text)
+
+                    yes_cfu = hasattr(r, 'connected_from_uri') and r.connected_from_uri().value
+                    yes_acp = hasattr(r, 'axonal_course_poset') and r.axonal_course_poset().value
+                    if yes_cfu or yes_acp:
                         # s.u and OntId(...).u to avoid duplicate subjects/objects in the graph
                         # due to type vs instance issues for rdflib.URIRef and OntId
                         _v = r.object_uri().value if hasattr(r, 'object_uri') else r.identifier().value
@@ -252,7 +302,18 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
 
                             _obj = orders.rl(region=_obj)
 
-                        dd[s.u].append((int(r.axonal_course_poset().value), _obj))
+                        if yes_cfu:
+                            for _frm in r.connected_from_uri().value.split(';'):
+                                if ',' in _frm:
+                                    _r, _l = [OntId(_.strip()).u for _ in _frm.split(',')]
+                                    frm = orders.rl(region=_r, layer=_l)
+                                else:
+                                    frm = orders.rl(region=OntId(_frm.strip()).u)
+
+                                cfdd[s.u].append((frm, _obj))
+
+                        if yes_acp:
+                            dd[s.u].append((int(r.axonal_course_poset().value), _obj))
 
                     if working_set:
                         class v:
@@ -264,8 +325,14 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                 log.error(msg)
                 raise e
 
-    sorders = {k:sorted(v) for k, v in dd.items()}
-    sadj = {k:ind_to_adj(v) for k, v in sorders.items()}
+    if cfdd:
+        sadj = {k:sorted(v) for k, v in cfdd.items()}
+    elif dd:
+        sorders = {k:sorted(v) for k, v in dd.items()}
+        sadj = {k:ind_to_adj(v) for k, v in sorders.items()}
+    else:
+        sadj = {}
+
     snst = {k:orders.adj_to_nst(v) for k, v in sadj.items()}
 
     # XXX config must be called before creating any phenotypes
@@ -273,6 +340,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
     if config is None:
         config = Config('sparc-nlp')
 
+    annotation_properties = make_annotation_properties()
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
         _, nlpns, working_set = snames[c.sheet_name]
@@ -284,11 +352,14 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
 
         s = _s if isinstance(_s, OntId) else OntId(nlpns[_s])
         #log.debug(s)
-        try:
-            p = map_predicates(_p)
-        except KeyError as e:
-            log.error(f'sigh {s}')
-            raise e
+        if isinstance(_p, OntId):
+            p = map_uris(_p.u)
+        else:
+            try:
+                p = map_predicates(_p)
+            except KeyError as e:
+                log.error(f'sigh {s}')
+                raise e
 
         if not _o:  # handle empty cell case
             msg = f'missing object? {s.curie} {OntId(p).curie} ???'
@@ -320,6 +391,10 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                     raise e
 
         if p == owl.equivalentClass:
+            to_add.append((s.u, p, o.u))
+            continue
+
+        if p in annotation_properties:
             to_add.append((s.u, p, o.u))
             continue
 

@@ -3,7 +3,7 @@ import rdflib
 import augpathlib as aug
 from pyontutils import sheets
 from pyontutils.namespaces import TEMP, ilxtr, rdfs, skos
-from neurondm.models.nlp import map_predicates, main as nlp_main
+from neurondm.models.nlp import map_predicates, main as nlp_main, NeuronSparcNlp
 from neurondm.core import log as _log, uPREFIXES, Config, Neuron
 
 log = _log.getChild('composer')
@@ -17,8 +17,12 @@ def get_csv_sheet(path):
     # that and we will get missing if not provided
     idx = _rows[0].index('Object URI')
     sidx = _rows[0].index('Subject URI')
+    tidx = _rows[0].index('Object Text')
+    ridx = _rows[0].index('Reference (pubmed ID, DOI or text)')
+    _rows[0][ridx] = 'literature citation'  # XXX HACK
+
     rows = [[c if c != 'http://www.notspecified.info' else ''
-             for c in r] for r in _rows if r[idx] and r[sidx]]  # Object URI
+             for c in r] for r in _rows if (r[idx] or r[tidx]) and r[sidx]]
     assert len(rows) > 1
 
     s = sheets.Sheet(fetch=False)
@@ -147,7 +151,7 @@ def main():
         # composer export derived
         ilxtr.curatorNote,
         ilxtr.inNLPWorkingSet,
-        ilxtr.reference,
+        #ilxtr.reference,  # XXX this is not present from composer so leave out to reduce noise
         ilxtr.reviewNote,
         ilxtr.sentenceNumber,
 
@@ -169,7 +173,9 @@ def main():
     cco_nrns = [
         anncop(NeuronComposer(*n.pes, id_=n.id_, label=n._origLabel, partialOrder=n.partialOrder()),
                config._written_graph)
-        for n in nrns if 'sparc-nlp/composer' in n.id_]
+        for n in nrns if 'sparc-nlp/composer' in n.id_
+        or 'composer/uris/set' in n.id_
+    ]
     remlabs_write(config_composer_only)
     config_composer_only.write_python()
 
@@ -177,9 +183,11 @@ def main():
     config_composer_roundtrip = Config('composer-roundtrip')
     # FIXME TODO use ex_nrns to create a lookup for these
     ccr_nrns = [
-        anncop(Neuron(*n.pes, id_=n.id_, label=n._origLabel, partialOrder=n.partialOrder()),
+        anncop((NeuronSparcNlp if 'sparc-nlp' in n.id_ else Neuron)(*n.pes, id_=n.id_, label=n._origLabel, partialOrder=n.partialOrder()),
                config._written_graph)
-        for n in nrns if 'sparc-nlp/composer' not in n.id_]
+        for n in nrns if 'sparc-nlp/composer' not in n.id_
+        and 'composer/uris/set' not in n.id_
+    ]
     remlabs_write(config_composer_roundtrip)
     config_composer_roundtrip.write_python()
     rtids = set(n.id_ for n in ccr_nrns)
@@ -198,9 +206,6 @@ def main():
 
     breakpoint()
 
-    # TODO need to narrow the diff so that sparc-nlp contains only the
-    # subject graphs for the subset of neurons in composer
-    #OntGraph
     return config,
 
 
