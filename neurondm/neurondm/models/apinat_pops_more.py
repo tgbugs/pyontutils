@@ -272,6 +272,8 @@ def main():
         pprint([(a, b, c, d) for a, b, c, d in bagged if not a])
         pprint([(d, b, c) for a, b, c, d in bagged if d])
 
+    return config,
+
 
 if __name__ == '__main__':
     main()

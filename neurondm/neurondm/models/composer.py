@@ -204,8 +204,6 @@ def main():
     remlabs_write(config_existing)
     config_existing.write_python()
 
-    breakpoint()
-
     return config,
 
 
