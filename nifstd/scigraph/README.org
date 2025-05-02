@@ -57,8 +57,9 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
     echo "Instead run \`source ${0}\`"
     exit 1
 fi
-shopt -q -o pipefail || { echo 'You have not set -o pipefile!'; return 1; }
+shopt -q -o pipefail || { echo 'You have not set -o pipefail!'; return 1; }
 #+end_src
+
 ** Developing this file                                            :noexport:
 If you are using emacs, then =flycheck-mode= will run =shellcheck= for you!
 You don't even have to run it independently.
