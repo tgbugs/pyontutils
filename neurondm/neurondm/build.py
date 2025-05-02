@@ -1219,6 +1219,7 @@ def make_devel():
           'apinat-partial-orders.ttl',
           #'apinatomy-locations.ttl',
           #'nerves.ttl',
+          'composer.ttl',
           'sparc-nlp.ttl',
           'apinat-simple-sheet.ttl',
           )
