@@ -79,8 +79,8 @@ def methods_mapping():
     local = rdflib.Namespace(str(local))
     T0 = TEMP['0']
     l0 = local['0']
-    b = OntGraph().populate_from_triples(bg.subjectGraph(T0))
-    a = OntGraph().populate_from_triples(ag.subjectGraph(l0))
+    b = OntGraph().populate_from_triples(bg.subject_triples(T0))
+    a = OntGraph().populate_from_triples(ag.subject_triples(l0))
     b.debug()
     a.debug()
     it = b.subjectIdentity(T0)
