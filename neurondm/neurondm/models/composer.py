@@ -39,7 +39,7 @@ from pyontutils.core import OntGraph, OntResIri, OntResPath
 from neurondm.core import graphBase, OntTerm, OntId, RDFL
 from . import apinat_npo  # populate Neuron subclasses
 from . import apinat_pops_more  # populate Neuron subclasses
-def load_config(gitref='neurons', local=False,):
+def load_config(gitref='neurons', local=False, restore=True):
     # FIXME naming ... really load_config_neurons ...
     # FIXME from ../../docs/compoers.py
 
@@ -53,6 +53,7 @@ def load_config(gitref='neurons', local=False,):
     if len(OntTerm.query._services) > 1:
         # backup services and avoid issues on rerun
         _old_query_services = OntTerm.query._services
+        # noloc excludes the rdflib local service for graphBase.core_graph
         _noloc_query_services = _old_query_services[1:]
 
     OntTerm.query._services = (RDFL(g, OntId),)
@@ -90,16 +91,13 @@ def load_config(gitref='neurons', local=False,):
 
         [g.add((s, rdfs.label, o)) for s, o in ori.graph[:rdfs.label:]]
 
-    # FIXME this is failing to load the apinatomy populations ??? possibly
-    # because they have two rdfs:subClassOf axioms ???
     config.load_existing(g)
-    # FIXME all neurons are not being loaded here ...
-    # likely because we are missing types
     neurons = config.neurons()  # scigraph required here if deps not removed above
 
-    # restore old
-    graphBase._sgv = _old_vocab
-    OntTerm.query._services = _noloc_query_services
+    if restore:
+        # restore old
+        graphBase._sgv = _old_vocab
+        OntTerm.query._services = _noloc_query_services
 
     return neurons, config, g
 

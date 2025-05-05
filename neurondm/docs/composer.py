@@ -8,6 +8,7 @@ from pyontutils.core import OntGraph, OntResIri, OntResPath
 from pyontutils.namespaces import rdfs, ilxtr
 from neurondm.core import Config, graphBase, log
 from neurondm.core import OntTerm, OntId, RDFL
+from neurondm.models.composer import load_config
 from neurondm import orders
 
 
@@ -24,8 +25,8 @@ def makelpesrdf():
     def lpes(neuron, predicate):
         """ get predicates from python bags """
         # TODO could add expected cardinality here if needed
-        return [str(o) for o in neuron.getObjects(predicate)
-                if not collect.append((predicate, o))]
+        return [(ph._neurdf_prefix_type, ph.p) for ph in neuron.pes
+                if ph.e == predicate and not collect.append((ph._neurdf_prefix_type, predicate, ph.p))]
 
     def lrdf(neuron, predicate):
         """ get predicates from graph """
@@ -70,12 +71,27 @@ def filter_cycles(adj):
     return out
 
 
+from neurondm.models.apinat_pops_more import _genlabel
+def wssn(nid):
+    p, f = nid.rsplit('/', 1)
+    if f.startswith('neuron-type-'):
+        label, x = _genlabel(nid)
+        return x
+    elif 'sparc-nlp/' in nid:
+        p, x, n = nid.rsplit('/', 2)
+        return x
+    else:
+        return None
+
+
 def for_composer(n, cull=False):
     lpes, lrdf, collect = makelpesrdf()
     _po = n.partialOrder()
+    idwssn = wssn(n.id_)
     fc = dict(
         id = str(n.id_),
-        label = str(n.origLabel),
+        label = str(n.origLabel),  # this is our rdfs label not prefLabel
+        # prefLabel = ???,  # TODO I don't think we roundtrip this normally
         origin = lpes(n, ilxtr.hasSomaLocatedIn),
         dest = (
             # XXX looking at this there seems to be a fault assumption that
@@ -97,7 +113,7 @@ def for_composer(n, cull=False):
         species =            lpes(n, ilxtr.hasInstanceInTaxon),
         sex =                lpes(n, ilxtr.hasBiologicalSex),
         circuit_type =       lpes(n, ilxtr.hasCircuitRolePhenotype),
-        phenotype =          lpes(n, ilxtr.hasAnatomicalSystemPhenotype),  # current meaning of composer phenotype
+        #phenotype =          lpes(n, ilxtr.hasAnatomicalSystemPhenotype),  # no longer current
         anatomical_system =  lpes(n, ilxtr.hasAnatomicalSystemPhenotype),
         # there are a number of dimensions that we aren't converting right now
         dont_know_fcrp =     lpes(n, ilxtr.hasFunctionalCircuitRolePhenotype),
@@ -110,6 +126,9 @@ def for_composer(n, cull=False):
         provenance =      lrdf(n, ilxtr.literatureCitation),
         sentence_number = lrdf(n, ilxtr.sentenceNumber),
         note_alert =      lrdf(n, ilxtr.alertNote),
+        working_set =     lrdf(n, ilxtr.inNLPWorkingSet),
+        ws_short =        idwssn,  # lrdf(n, ilxtr.workingSetShortName),  # XXX TODO materialize probably
+
         # XXX provenance from ApiNATOMY models as a whole is not ingested
         # right now because composer lacks support for 1:n from neuron to
         # prov, (or rather lacks prov collections) and because it attaches
@@ -122,19 +141,18 @@ def for_composer(n, cull=False):
         # unlikely to be encountered for real neurons any time soon
         _ignore = lpes(n, ilxtr.hasClassificationPhenotype),  # used to ensure we account for all phenotypes
     )
-    npo = set((p.e, p.p) for p in n.pes)
+    npo = set((p._neurdf_prefix_type, p.e, p.p) for p in n.pes)
     cpo = set(collect)
     unaccounted_pos = npo - cpo
     if unaccounted_pos:
         log.warning(
             (n.id_, [[n.in_graph.namespace_manager.qname(e) for e in pos]
-                     for pos in unaccounted_pos]))
+                     for npt, *pos in unaccounted_pos]))
     return {k:v for k, v in fc.items() if v} if cull else fc
 
 
-def location_summary(neurons, services, anatent_simple=False):
+def location_summary(neurons, anatent_simple=False):
     import csv
-    OntTerm.query._services = services
     locations = sorted(set(
         OntTerm(pe.p) for n in neurons for pe in n.pes
         if pe.e in n._location_predicates))
@@ -193,24 +211,30 @@ def reconcile(n):
     lobjs = set(o for p in n._location_predicates._litmap.values() for o in n.getObjects(p))
     po_rl = set(e for pair in orders.nst_to_adj(n.partialOrder()) for e in pair)
     po_r = set(t.region if isinstance(t, orders.rl) else t for t in po_rl)
+    po_l = set(t.layer for t in po_rl if isinstance(t, orders.rl))
     po_rl.difference_update({rdflib.Literal('blank')})
     po_r.difference_update({rdflib.Literal('blank')})
+    po_l.difference_update({rdflib.Literal('blank')})
     #[if isinstance(e, orders.rl) else ]
     both = po_r & lobjs
     either = po_r | lobjs
     missing_axioms = po_r - lobjs
     missing_orders = lobjs - po_r
+    missing_orders_rl =  lobjs - ( po_r | po_l )
     withl_missing_axioms = po_rl - lobjs
     withl_missing_orders = lobjs - po_rl
+    ok_reg_l = not (missing_axioms or missing_orders_rl)
     ok_reg = not (missing_axioms or missing_orders)
     ok_rl = not (withl_missing_axioms or withl_missing_orders)
     return {
         'ok_reg': ok_reg,
         'ok_rl': ok_rl,
+        'ok_reg_l': ok_reg_l,
         'withl_missing_axioms': withl_missing_axioms,
         'withl_missing_orders': withl_missing_orders,
-        'missing_axioms': withl_missing_axioms,
-        'missing_orders': withl_missing_orders,
+        'missing_axioms': missing_axioms,
+        'missing_orders': missing_orders,
+        'missing_orders_rl': missing_orders_rl,
     }
 
 
@@ -405,6 +429,7 @@ process_types = {
     # FIXME also issue with inferring dendrite bag because we don't know whether the might be an explicit dendrite
     ilxtr.hasAxonPresynapticElementIn: 'wbkg:lt-axon-bag',
     ilxtr.hasAxonSensorySubcellularElementIn: 'lt-axon-sens-bag',
+    ilxtr.hasAxonLeadingToSensorySubcellularElementIn: 'lt-axon-sens-tube',
 }
 
 
@@ -496,6 +521,7 @@ def _seggen(n, blob, lookup):
             log.error(msg)
             return {}, dis
         elif r_type:
+            # FIXME soma -> + axon
             actual_type = process_types[r_type]
         elif l_type:
             log.critical(f'uhoh {r_id} {l_id} {l_type}')
@@ -607,55 +633,9 @@ def chaingen(n, blob, lookup, index=0):
 
 def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconcile=False, viz=False, chains=False):
     # if (local := True, anatomical_entities := True, anatent_simple := False, do_reconcile := False, viz := False, chains := False):
-
-    config = Config('random-merge')
-    g = OntGraph()  # load and query graph
-
-    # remove scigraph and interlex calls
-    graphBase._sgv = None
-    del graphBase._sgv
-    if len(OntTerm.query._services) > 1:
-        # backup services and avoid issues on rerun
-        _old_query_services = OntTerm.query._services
-        _noloc_query_services = _old_query_services[1:]
-
-    OntTerm.query._services = (RDFL(g, OntId),)
-
-    # base paths to ontology files
-    gen_neurons_path = 'ttl/generated/neurons/'
-    suffix = '.ttl'
-    if local:
-        from pyontutils.config import auth
-        olr = auth.get_path('ontology-local-repo')
-        local_base = olr / gen_neurons_path
-    else:
-        orr = 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/neurons/'
-        remote_base = orr + gen_neurons_path
-
-    # full imports
-    for f in ('apinat-partial-orders',
-              'apinat-pops-more',
-              'apinat-simple-sheet',
-              'sparc-nlp'):
-        if local:
-            ori = OntResPath(local_base / (f + suffix))
-        else:
-            ori = OntResIri(remote_base + f + suffix)
-        [g.add(t) for t in ori.graph]
-
-    # label only imports
-    for f in ('apinatomy-neuron-populations',
-              '../../npo'):
-        p = os.path.normpath(gen_neurons_path + f)
-        if local:
-            ori = OntResPath(olr / (p + suffix))
-        else:
-            ori = OntResIri(orr + gen_neurons_path + f + suffix)
-
-        [g.add((s, rdfs.label, o)) for s, o in ori.graph[:rdfs.label:]]
-
-    config.load_existing(g)
-    neurons = config.neurons()  # scigraph required here if deps not removed above
+    restore = do_reconcile or viz or anatomical_entities
+    neurons, ex_config, ex_g = load_config(local=local, restore=restore)
+    new_neurons = [n for n in neurons if 'neuron-type-' not in n.id_]  # filter out existing apinatomy populations
 
     # ingest to composer starts here
     mvp_ingest = [n for n in neurons if not multi_orig_dest(n)]
@@ -704,24 +684,110 @@ def main(local=False, anatomical_entities=False, anatent_simple=False, do_reconc
         _recs = [(n, reconcile(n)) for n in neurons]
         recs_reg = [(n, r) for n, r in _recs if not r['ok_reg']]
         recs_rl = [(n, r) for n, r in _recs if not r['ok_rl']]
-        msg = f'{len(recs_reg)} pops with reg issues, {len(recs_rl)} pops with rl issues'
+        recs_reg_l = [(n, r) for n, r in _recs if not r['ok_reg_l']]
+        msg = f'{len(recs_reg)} pops with reg issues, {len(recs_rl)} pops with rl issues, {len(recs_reg_l)} pops with reg_l'
         log.info(msg)
         sigh_reg = sorted([(len(r["missing_axioms"]), len(r["missing_orders"]), n, r) for n, r in recs_reg],
                           key=lambda t: (t[0] + t[1], t[0], t[1]), reverse=True)
         sigh_how = [s[:2] + tuple(OntId(_.id_).curie for _ in s[2:3]) for s in sigh_reg]
         rep_reg = 'a  o  i\n' + '\n'.join(f'{a: >2} {o: >2} {i}' for a, o, i in sigh_how)
+        missing_orders = sorted(set([e for n, r in _recs for e in r['missing_orders']]))
+        missing_orders_rl = sorted(set([e for n, r in _recs for e in r['missing_orders_rl']]))
+
+        # missing orders populations where neither region nor layer are accounted for
+        morl = [(n, r) for n, r in _recs if r['missing_orders_rl']]
+
+        import pprint
+        from pyontutils.core import IlxTerm
+        from neurondm.orders import rl
+        from collections import Counter
+        derp = defaultdict(list)
+        for n, r in _recs:
+            if r['missing_orders_rl']:
+                for mo in r['missing_orders_rl']:
+                    derp[mo].append(n)
+        dderp = {OntTerm(k): v for k, v in derp.items()}
+        mcmorl_issues = Counter([_.id_ for k, v in dderp.items() for _ in v]).most_common()
+
+        derps = set([_ for k, v in dderp.items() for _ in v])
+        lderps = len(derps)  # 63 for mo, 25 for
+
+        _report = ''
+        for k, v in dderp.items():
+            _report += '\n--------------------------------------\n'
+            _report += repr(k)
+            for _ in v:
+                _report += '\n'
+                _report += str(_)
+                _report += pprint.pformat(_.partialOrder())
+
+        log.debug(_report)
+
+        lu_mo = [OntTerm(t) for t in missing_orders]
+        lu_mo_rl = [OntTerm(t) for t in missing_orders_rl]
+
+        ilu_mo = [IlxTerm(t) for t in missing_orders]
+        ilu_mo_rl = [IlxTerm(t) for t in missing_orders_rl]
+
+        def sigh(t, pred):
+            if not t.validated:
+                # FIXME this is where query services wants RDFL
+                # for things like ilxtr:cardiac-interganglionic-nerve
+                # but the bug is really in OntTerm which should still
+                # be able to answer predicates when not validated ...
+                return tuple()
+
+            if pred in t.predicates:
+                v = t.predicates[pred]
+                if not isinstance(v, tuple):
+                    return v,
+
+                return v
+
+            return tuple()
+
+        # XXX cases where region/layer were modelled as subClassOf/partOf pairs  # XXX probably need to fix modeling of these in interlex
+        ilu_scopo = [(t, sigh(t, 'rdfs:subClassOf'), sigh(t, 'ilx.partOf:')) for t in ilu_mo_rl]
+        ilu = [(a, rl(b[0].u, c[0].u)) for a, b, c in ilu_scopo if b and c if len(b) == 1 and len(c) == 1]
+
+        _manual_lookup_table = {
+            '': rl('', ''),
+        }
+
+        # XXX cases where region/layer/layer were modelled as part part vessles in layer of colon mostly
+        # sdcol-f is not actually the issue here it seems
+        #f = [n for n in neurons if 'sdcol-f' in n.id_][0]
+        #f.pes()
+        #f.partialOrder()
+
+        # XXX cases where an axiom appears as a layer in a partial order because the layer is already a direct part of the region e.g. bromo-1 case
+        # TODO try to automate detection of these cases during conversion from apinatomy to partial orders
+        #b = [n for n in neurons if 'bromo-1' in n.id_][0]
+        #b.pes()
+        #b.partialOrder()
+
+        # XXX cases where a super class was used (e.g. toracic instead of T1-T5)
+        # TODO could try to add a subClassOf check if other matches fail? but doesn't resolve the desire for an exact match
+        # e.g. bromo-1
+
+        # XXX cases where the partial order split a structure into two parts e.g. proximal and distal stomach but axioms use the parent part
+        # e.g. sstom-5
+
+        #reg_missing_orders = [r['missing_orders'] for n, r in recs_reg]
+        #rl_missing_orders = [r['missing_orders'] for n, r in recs_rl]
+        breakpoint()
 
     if anatomical_entities:
-        location_summary(neurons, _noloc_query_services, anatent_simple)
+        location_summary(neurons, anatent_simple)
 
     if viz:
         synviz(neurons)
-        OntTerm.query._services = _old_query_services
         [gviz(n) for n in neurons]
 
     if chains:
         import json
         chains = npo_to_apinat(neurons)
+        #chains = npo_to_apinat([n for n in neurons if 'mmset1/11' in n.id_])
         ok = [c for c in chains['chains'] if c['ok']]
         wl = [c for c in chains['chains'] if [_ for _ in c['levels'] if _]]
         wr = [c for c in chains['chains'] if 'root' in c and c['root']]

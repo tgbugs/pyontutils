@@ -63,8 +63,8 @@ snames = {
     'MM Set 4': (NLP2, nlp_ns('mmset4'), None),
     'Seminal Vesicles': (NLPSemVes, nlp_ns('semves'), 'seminal vesicles'),
     'Prostate': (NLPProst, nlp_ns('prostate'), 'prostate'),
-    '1. Female Reproductive-HUMAN': (NLPFemrep, nlp_ns('femrep'), 'female reproductive system human'),
-    '3. Female-RAT': (NLPFemreprat, nlp_ns('femrep'), 'female reproductive system rat'),  # separate sheet ids differ
+    '1. Female Reproductive-HUMAN': (NLPFemrep, nlp_ns('femrep'), 'female reproductive system'),
+    '3. Female-RAT': (NLPFemreprat, nlp_ns('femrep'), 'female reproductive system'),  # separate sheet ids differ
     'All SM connections': (NLPSenseMotor, nlp_ns('senmot'), 'sensory motor'),
     'ALL Liver_Human_Rat_Mouse': (NLPLiver, nlp_ns('liver'), 'liver'),
     'All KIDNEY connections': (NLPKidney, nlp_ns('kidney'), 'kidney'),
@@ -133,7 +133,7 @@ def map_predicates(sheet_pred, prefix=ilxtr):  # FIXME use the closed namespace
     return p
 
 
-def ind_to_adj(ind_uri):
+def ind_to_adj(ind_uri, *, neuron_id=None):
     inds = sorted(set([i for i, u in ind_uri]))
     edges = []
     for a, b in zip(inds[:-1], inds[1:]):
@@ -146,7 +146,11 @@ def ind_to_adj(ind_uri):
                         edge =  iu, ju
                         edges.append(edge)
 
-    return edges
+    sedges = set(edges)
+    if len(edges) != len(sedges):
+        log.warning(f'duplicate edges detected for {neuron_id}')
+
+    return sorted(sedges)
 
 
 def main(debug=False, cs=None, config=None, neuron_class=None):
@@ -329,7 +333,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
         sadj = {k:sorted(v) for k, v in cfdd.items()}
     elif dd:
         sorders = {k:sorted(v) for k, v in dd.items()}
-        sadj = {k:ind_to_adj(v) for k, v in sorders.items()}
+        sadj = {k:ind_to_adj(v, neuron_id=k) for k, v in sorders.items()}
     else:
         sadj = {}
 

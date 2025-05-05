@@ -3,6 +3,9 @@ from collections import Counter, defaultdict
 
 
 def nst_to_adj(l):
+    if not l:
+        return []
+
     start = l[0]
     if (isinstance(start, list) or isinstance(start, tuple)):
         raise ValueError('malformed')
