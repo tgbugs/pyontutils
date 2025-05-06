@@ -499,6 +499,7 @@ Options:
     -d --debug              debug mode
     -h --help               show this
     -n --no-network         no network calls
+       --auth               do auth github
 """
 
 import augpathlib as aug
@@ -516,6 +517,8 @@ def main():
     if main.options.no_network:
         aug.PackagePath._github_json = None
         aug.PackagePath._pypi_json = None
+    elif main.options.auth:
+        aug.PackagePath._github_do_auth = True
 
     out = main()
 
