@@ -285,3 +285,57 @@ class TestCycle(unittest.TestCase):
         assert len(g) == len(gt), 'urg'
         assert len(g) == len(gn), 'urg'
         assert len(gt) == len(gn), 'urg'
+
+
+class TestPredicateScoStrEq(unittest.TestCase):
+
+    serializer = CustomTurtleSerializer
+
+    def test_sco_pred(self):
+        class OtherType: pass
+        class Oof(rdflib.URIRef):
+            def __hash__(self):
+                return hash((self.__class__, super().__hash__()))
+
+            def __eq__(self, other):
+                def complex_type_compare(a, b):
+                    aii = isinstance(a, OtherType)
+                    bii = isinstance(b, OtherType)
+                    return aii and bii or (not aii and not bii)
+
+                if type(self) == type(other) or complex_type_compare(self, other):
+                    # XXX down cast to str for equality is what causes the issue
+                    return str(self) == str(other)
+
+                else:
+                    return False
+
+            def __ne__(self, other):
+                return not self.__eq__(other)
+
+
+        g = rdflib.Graph()
+        s = rdflib.BNode()
+        preds = (
+            str(rdflib.RDF.type),
+            str(rdflib.RDFS.label),
+            'http://example.org/p1',
+            'http://example.org/p2',
+        )
+        for p in preds:
+            p_u = rdflib.URIRef(p)
+            p_o = Oof(p)
+            g.add((s, p_u, rdflib.BNode()))
+            g.add((s, p_o, rdflib.BNode()))
+
+        nser = self.serializer(g)
+
+        stream = BytesIO()
+        nser.serialize(stream)
+        nit = stream.getvalue().decode()
+        pord = [
+            ((self.serializer.predicateOrder.index(p)
+              if p in self.serializer.predicateOrder else
+              -1),
+             p)
+            for p in nser.predicateOrder]

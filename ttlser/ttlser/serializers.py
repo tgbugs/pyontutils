@@ -488,8 +488,23 @@ class CustomTurtleSerializer(TurtleSerializer):
         pr = sorted(sorted(set(self.store.predicates(None, None)),
                            key=self.store.qname),
                     key=lambda p: self.sortkey(self.store.qname(p)))
-        a = [p for p in self.predicateOrder if p in pr]  # remove predicateOrder not in pr
-        b = [p for p in pr if p not in self.predicateOrder]  # dedupe pr before merging
+        # predicates in predicateOrder go first but are not guranteed to arrive
+        # in predicateOrder thus a_nord
+        a_nord = []
+        b = []
+        for p in pr:
+            # XXX DO NOT iterate over self.predicateOrder and pr separately and
+            # the merge to arrive at the new value for self.predicateOrder
+            # because if there are duplicate values due to e.g. a subClassOf
+            # URIRef being used, then len(a + b) != len(pr) therefore we only
+            # iterate over pr to ensure that len(a + b) == len(pr) always
+            if p in self.predicateOrder:
+                a_nord.append((self.predicateOrder.index(p), p))
+            else:
+                b.append(p)
+
+        a = [p for i, p in sorted(a_nord)]
+
         self.predicateOrder = a + b  # predicateOrder first, then any remaining
         self.npreds = len(self.predicateOrder)
         return {o:i for i, o in
