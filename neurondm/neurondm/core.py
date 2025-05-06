@@ -3347,11 +3347,12 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
     def _shortname(self):
         return f'({self.shortname})' if self.shortname else ''
 
+    _label_hack = False
     @property
     def label(self):  # FIXME for some reasons this doesn't always make it to the end?
-        return self.genLabel
+        if self._label_hack:
+            return self.genLabel
 
-        # for now we are not going to switch on this, display issues will be display issues
         if self._override and self._origLabel is not None:
             self.Class.label = (rdflib.Literal(self._origLabel),)
             return self._origLabel
@@ -3392,8 +3393,12 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
     @property
     def prefLabel(self):
-        if self.origLabel:
-            return self.origLabel
+        ol = self.origLabel
+        if ol:
+            if ol == self.label:
+                return
+
+            return ol
 
         return self.genLabel
 
@@ -3423,7 +3428,6 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         # having measured those values, also handy when we don't know how to parse a value
         # but there is note attached
         #raise AttributeError(f'{self} has no phenotype for {predicate}')  # FIXME AttributeError seems wrong
-
 
     def getObjects(self, predicate):
         for p in self.pes:
@@ -3463,7 +3467,10 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                if not hasattr(self, 'temp_id') or
                self.id_ != self.temp_id else '')
         asdf += id_
-        lab =  ',\n' + t + f"label={str(self.origLabel) + sn!r}" if self._origLabel else ''
+        lab =  ((',\n' + t + (f"label={str(self.origLabel)!r}"
+                              if self._override else
+                              f"label={str(self.origLabel) + sn!r}"))
+                if self._origLabel else '')
         asdf += lab
         asdf += ')'
         return asdf
@@ -3834,8 +3841,9 @@ class Neuron(NeuronBase):
         if ol and ol != gl:
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
 
-        pl = rdflib.Literal(self.prefLabel)
-        graph.add((self.id_, skos.prefLabel, pl))
+        if self.prefLabel:
+            pl = rdflib.Literal(self.prefLabel)
+            graph.add((self.id_, skos.prefLabel, pl))
 
         sl = rdflib.Literal(self.simpleLabel)
         graph.add((self.id_, ilxtr.simpleLabel, sl))
@@ -3940,14 +3948,17 @@ class NeuronEBM(Neuron):
 
     @property
     def prefLabel(self):
-        if self.origLabel:
-            label = self.origLabel
-            if self._shortname:
-                label += f' {self._shortname}'
+        ol = self.origLabel
+        if ol:
+            if ol == self.label:
+                return
 
-            return label
-        else:
-            return self.genLabel
+            if self._shortname and not self._override:
+                ol += f' {self._shortname}'
+
+            return ol
+
+        return self.genLabel
 
 
 class TypeNeuron(Neuron):  # TODO

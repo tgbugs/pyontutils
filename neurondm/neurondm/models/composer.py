@@ -19,7 +19,11 @@ def get_csv_sheet(path):
     sidx = _rows[0].index('Subject URI')
     tidx = _rows[0].index('Object Text')
     ridx = _rows[0].index('Reference (pubmed ID, DOI or text)')
+    derp_idx = _rows[0].index('Object')
     _rows[0][ridx] = 'literature citation'  # XXX HACK
+    for _r in _rows[1:]:  # FIXME EVEN BIGGER HACK
+        if (not (_r[idx] or _r[tidx])) and _r[derp_idx]:
+            _r[tidx] = _r[derp_idx]
 
     rows = [[c if c != 'http://www.notspecified.info' else ''
              for c in r] for r in _rows if (r[idx] or r[tidx]) and r[sidx]]
@@ -107,12 +111,14 @@ class NeuronComposer(Neuron):
     shortname = 'cmpsr'
 
 
-def remlabs_write(config):
+def remlabs_write(config, keep=tuple()):
     config.write()
-    labels = (
-        #ilxtr.genLabel,
-        ilxtr.localLabel, ilxtr.simpleLabel,
-        ilxtr.simpleLocalLabel, rdfs.label, skos.prefLabel)
+    labels = tuple(
+        l for l in (#ilxtr.genLabel,
+            ilxtr.origLabel,
+            ilxtr.localLabel, ilxtr.simpleLabel,
+            ilxtr.simpleLocalLabel, rdfs.label, skos.prefLabel)
+        if l not in keep)
     to_remove = [t for t in config._written_graph if t[1] in labels]
     [config._written_graph.remove(t) for t in to_remove]
     #[config._written_graph.add(t) for t in to_add]
@@ -147,6 +153,7 @@ def main():
 
     acops = (
         # composer export derived
+        skos.prefLabel,
         ilxtr.curatorNote,
         ilxtr.inNLPWorkingSet,
         #ilxtr.reference,  # XXX this is not present from composer so leave out to reduce noise
@@ -169,19 +176,21 @@ def main():
 
     config_composer_only = Config('composer')
     cco_nrns = [
-        anncop(NeuronComposer(*n.pes, id_=n.id_, label=n._origLabel, partialOrder=n.partialOrder()),
+        anncop(NeuronComposer(
+            *n.pes, id_=n.id_, label=n._origLabel, override=True, partialOrder=n.partialOrder()),
                config._written_graph)
         for n in nrns if 'sparc-nlp/composer' in n.id_
         or 'composer/uris/set' in n.id_
     ]
-    remlabs_write(config_composer_only)
+    remlabs_write(config_composer_only, keep=(rdfs.label, skos.prefLabel))
     config_composer_only.write_python()
 
     # FIXME TODO likely need to use OntGraph.subjectGraph to copy these correctly
     config_composer_roundtrip = Config('composer-roundtrip')
     # FIXME TODO use ex_nrns to create a lookup for these
     ccr_nrns = [
-        anncop((NeuronSparcNlp if 'sparc-nlp' in n.id_ else Neuron)(*n.pes, id_=n.id_, label=n._origLabel, partialOrder=n.partialOrder()),
+        anncop((NeuronSparcNlp if 'sparc-nlp' in n.id_ else Neuron)(
+            *n.pes, id_=n.id_, label=n._origLabel, override=True, partialOrder=n.partialOrder()),
                config._written_graph)
         for n in nrns if 'sparc-nlp/composer' not in n.id_
         and 'composer/uris/set' not in n.id_
@@ -196,7 +205,8 @@ def main():
     #ex_nrns = ex_config.neurons()
     config_existing = Config('composer-existing')
     cex_nrns = [
-        anncop(n.__class__(*n.pes, id_=n.id_, label=n._origLabel, partialOrder=n.partialOrder()),
+        anncop(n.__class__(
+            *n.pes, id_=n.id_, label=n._origLabel, override=True, partialOrder=n.partialOrder()),
                ex_g)
         for n in ex_nrns if n.id_ in rtids]
     remlabs_write(config_existing)

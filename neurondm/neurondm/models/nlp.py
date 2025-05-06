@@ -194,7 +194,8 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
 
         return rdflib.Literal(vs)
 
-    def asdf(s, p, rm, split=False, rdf_type=rdflib.Literal):
+    extra_kwargs = {}
+    def asdf(s, p, rm, split=False, rdf_type=rdflib.Literal, as_kwarg=None):
         v = vl(rm)
         if v:
             # XXX watch out for non-homogenous subject types
@@ -203,7 +204,13 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                 for _v in v.split(split):
                     to_add.append((s.u, p, rdf_type(_v.strip())))
             else:
-                to_add.append((s.u, p, v))
+                if as_kwarg:
+                    if s not in extra_kwargs:
+                        extra_kwargs[s] = {}
+
+                    extra_kwargs[s][as_kwarg] = v
+                else:
+                    to_add.append((s.u, p, v))
 
     def bind_lcc(c):
         def lcc(uri_or_curie, _c=c):
@@ -256,9 +263,15 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                     if hasattr(r, 'literature_citation'):
                         lcc = bind_lcc(r.literature_citation())
                         asdf(s, ilxtr.literatureCitation, r.literature_citation, split=',', rdf_type=lcc)
-                    asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)
+                    #asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)  # will confuse since we use override
                     asdf(s, skos.prefLabel, r.neuron_population_label_a_to_b_via_c)
-                    asdf(s, rdfs.label, wrap(f'neuron type {_prefix} {_id}'))
+                    if hasattr(r, 'subject') and r.subject().value.strip():
+                        asdf(s, rdfs.label, r.subject, as_kwarg='label')
+                        extra_kwargs[s]['override'] = True
+                    else:
+                        asdf(s, rdfs.label, wrap(f'neuron type {_prefix} {_id}'), as_kwarg='label')
+                        extra_kwargs[s]['override'] = True
+
                     if hasattr(r, 'alert_explanation'):
                         asdf(s, ilxtr.alertNote, r.alert_explanation)
                     if hasattr(r, 'alert_note'):
@@ -416,8 +429,10 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
         neuron_class = NeuronSparcNlp
     sigh = []
     nrns = []
+    ed = {}
     for id, phenos in dd.items():
-        n = neuron_class(*phenos, id_=id)
+        kwargs = extra_kwargs[id] if id in extra_kwargs else ed
+        n = neuron_class(*phenos, id_=id, **kwargs)
         if False and eff(n):
             n._sigh()  # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX FIXME figure out why this is not getting called internally
             sigh.append(n)

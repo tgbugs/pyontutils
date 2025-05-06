@@ -444,12 +444,12 @@ with Huang2017:
         f = lambda *args, label=None, override=None, id_=None: (
             args, dict(label=label, override=override, id_=id_))
         fig1a = dict(
-        PVBC = f(Basket,     Inter, PV,        label='PVBC cortical neuron', override=True, id_=gid(43)),
-        CHC =  f(Chandelier, Inter, Nkx2_1,    label='CHC cortical neuron', override=True, id_=gid(44)),
-        CCKC = f(Basket,     Inter, VIP, CCK,  label='CCKC cortical neuron', override=True, id_=gid(40)),
-        MNC =  f(Martinotti, Inter, SST, CR,   label='MNC cortical neuron', override=True, id_=gid(42)),
-        ISC =  f(OnToInter,  Inter, VIP, CR,   label='ISC cortical neuron', override=True, id_=gid(41)),
-        LPC =  f(Projection,        SST, NOS1, label='LPC cortical neuron', override=True, id_=gid(45)),
+        PVBC = f(Basket,     Inter, PV,        label='PVBC cortical neuron', override=False, id_=gid(43)),
+        CHC =  f(Chandelier, Inter, Nkx2_1,    label='CHC cortical neuron', override=False, id_=gid(44)),
+        CCKC = f(Basket,     Inter, VIP, CCK,  label='CCKC cortical neuron', override=False, id_=gid(40)),
+        MNC =  f(Martinotti, Inter, SST, CR,   label='MNC cortical neuron', override=False, id_=gid(42)),
+        ISC =  f(OnToInter,  Inter, VIP, CR,   label='ISC cortical neuron', override=False, id_=gid(41)),
+        LPC =  f(Projection,        SST, NOS1, label='LPC cortical neuron', override=False, id_=gid(45)),
         )
 
         f7 = dict(
@@ -477,9 +477,9 @@ with Huang2017:
             #figs7[k].equivalentClass(v)  # TODO asserted by Josh Huang in figure s7
 
         if extra:
-            peps = [Neuron(*p.pes, label=f'{l} peptides neuron', override=True)
+            peps = [Neuron(*p.pes, label=f'{l} peptides neuron', override=False)
                     for l, p in zip(fig1a, f7['peptides'])]
-            sigs = [Neuron(*p.pes, label=f'{l} signaling neuron', override=True)
+            sigs = [Neuron(*p.pes, label=f'{l} signaling neuron', override=False)
                     for l, p in zip(fig1a, f7['signaling'])]
             # asserted by Tom Gillespie interpreting Huang
             [p.equivalentClass(s) for p, s in zip(peps, sigs)]
