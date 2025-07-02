@@ -7,7 +7,7 @@ from collections import Counter
 import rdflib
 import ttlser
 from pyontutils.core import yield_recursive, OntGraph, bnNone, OntResIri
-from pyontutils.identity_bnode import bnodes, IdentityBNode as IdentityBNodeBase
+from pyontutils.identity_bnode import bnodes, IdentityBNode as IdentityBNodeBase, idf, it as ibn_it
 from pyontutils.namespaces import rdf, ilxtr
 from .common import temp_path, ensure_temp_path, log
 
@@ -800,6 +800,34 @@ class TestIBNodeLive(unittest.TestCase):
         i = self.IdentityBNode((
             's', 'p', rdflib.Literal('l0')
         ), pot=True, debug=True)
+
+        breakpoint()
+
+    def test_record_alt(self):
+        graph = OntGraph()
+        bn0 = rdflib.BNode()
+        bn1 = rdflib.BNode()
+        trips = (
+            (ilxtr.s0, ilxtr.p0, ilxtr.o0),
+            (ilxtr.s0, ilxtr.p0, ilxtr.o1),
+            (ilxtr.s0, ilxtr.p1, rdflib.Literal('o2')),
+            (ilxtr.s0, ilxtr.p2, bn0),  # conn
+            (bn0     , ilxtr.p3, bn1),  # link
+            (bn1     , ilxtr.p3, rdflib.Literal('o3')),  # term
+        )
+        _ = [graph.add(t) for t in trips]
+
+        ai = self.IdentityBNode(graph, as_type=ibn_it['triple-seq'], id_method=idf['record-alt-seq'])
+        ni = self.IdentityBNode(graph, as_type=ibn_it['triple-seq'], id_method=idf['record-seq'])
+
+        ai._if_cache[graph, idf['record-alt-seq']]
+        ai._if_cache[graph, idf['record-seq']]
+
+        ai._if_cache[graph, idf['multi-record-alt']]
+        ai._if_cache[graph, idf['multi-record']]
+
+        ai._if_cache[graph, ilxtr.s0, idf['record-alt']]
+        ai._if_cache[graph, ilxtr.s0, idf['record']]
 
         breakpoint()
 

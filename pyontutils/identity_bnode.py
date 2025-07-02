@@ -88,10 +88,18 @@ idf = Enum(
      ('(s ((p o) ...))', 4),  # note that there is one less pair of parens here than for triple
      # that is (s (p o)) != (s ((p o))), triple vs record containing a single triple
 
+     ('record-alt', 104),  # this is more easily computed from triple_identity and subgraph_identity
+     ('((s (p o)) ...)', 104),
+     ('(((s) ((p) (o))) ...)', 104),
+     ('(((s) ((p) (o))) ... ((s) ((p) id)) ...)', 104),
+
      ('multi-record', 5),
      ('multi-embedded', 5),
      ('multi-subject-embedded-identity', 5),
      ('(s ((p o) ...)) ...', 5),
+
+     ('multi-record-alt', 105),
+     ('((s (p o)) ...) ...', 105),
 
      # FIXME there is also some confusion here because
      # a sequence of triples can be collectively identified
@@ -107,6 +115,9 @@ idf = Enum(
      ('record-seq', 6),
      ('embedded-seq', 6),
      ('((s ((p o) ...)) ...)', 6),
+
+     ('record-alt-seq', 106),
+     ('(((s (p o)) ...) ...)', 106),
 
      # XXX this one is tricky because you can take combined of
      # a pure named and pure bnode graph and the other component
@@ -1318,7 +1329,7 @@ class IdentityBNode(rdflib.BNode):
             s, p, o = thing
             ident = oid(self._identity_function(s, it['bytes']),
                         self._identity_function((p, o), it['pair']), separator=False)
-        elif treat_as_type == idf['record-seq']:  # in ('trip-seq', '((s ((p o) ...)) ...)'):
+        elif treat_as_type == idf['record-seq'] or treat_as_type == idf['record-alt-seq']:  # in ('trip-seq', '((s ((p o) ...)) ...)'):
             bnode_identities = defaultdict(list)
             subject_identities = defaultdict(list)
 
@@ -1591,6 +1602,9 @@ you will only very rarely be able to determine that two graphs are the same'''
                     assert s not in subject_identities, 'bah'
                     subject_identities[s] = bnode_identities[s]
 
+            if treat_as_type == idf['record-alt-seq']:
+                rasids = []
+
             seids = []
             for s, idpos in subject_identities.items():
                 if s in subject_embedded_identities:
@@ -1614,17 +1628,27 @@ you will only very rarely be able to determine that two graphs are the same'''
                     raise e
                 spos = tuple(sorted(pos))
                 self._if_cache[spos, idf['condensed']] = condensed  # XXX probably not helpful  # TODO perf/mem check to see if needed
-                embedded = oid(self._identity_function(s, it['bytes']), condensed, separator=False)
+                _subject_identity = self._identity_function(s, it['bytes'])
+                embedded = oid(_subject_identity, condensed, separator=False)
                 try:
                     self._if_cache[thing, s, idf['((p o) ...)']] = condensed
                     self._if_cache[thing, s, idf['(s ((p o) ...))']] = embedded
                 except TypeError:
                     # we can't/won't cache unhashable things (e.g. lists)
                     pass
+
                 self._if_cache[(s, spos), idf['(s ((p o) ...))']] = embedded  # TODO perf/mem check to see if needed
                 subject_condensed_identities[s] = condensed
                 subject_embedded_identities[s] = embedded
                 seids.append(embedded)
+                if treat_as_type == idf['record-alt-seq']:
+                    rasid = sid(*[oid(_subject_identity, i, separator=False) for i in ids], separator=False)
+                    try:
+                        self._if_cache[thing, s, idf['((s (p o)) ...)']] = rasid
+                    except TypeError:
+                        # we can't/won't cache unhashable things (e.g. lists)
+                        pass
+                    rasids.append(rasid)
 
             # XXX returning a list of identities as an identity is type
             # insanity, but at least it is marked by having to pass as_type
@@ -1635,6 +1659,15 @@ you will only very rarely be able to determine that two graphs are the same'''
                 pass
 
             ident = sid(*seids, separator=False)
+
+            if treat_as_type == idf['record-alt-seq']:
+                try:
+                    self._if_cache[thing, idf['((s (p o)) ...) ...']] = rasids
+                except TypeError:
+                    # we can't/won't cache unhashable things (e.g. lists)
+                    pass
+
+                ident = sid(*rasids, separator=False)
 
             if self.debug:
                 # these are for debug only because values will not repopulate
