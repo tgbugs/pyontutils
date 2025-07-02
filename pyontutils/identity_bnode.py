@@ -21,6 +21,9 @@ it = Enum(
      ('triple', 2),
      ('(s p o)', 2),
 
+     ('triple-conn', 18),
+     ('(s p id)', 18),
+
      ('pair-seq', 3),
      ('local-conventions', 3),
      ('((p n) ...)', 3),
@@ -74,6 +77,9 @@ idf = Enum(
 
      ('triple', 2),
      ('(s (p o))', 2),
+
+     ('triple-conn', 18),
+     ('(s (p id))', 18),
 
      ('triple-alt', 102),
      ('(s p o)', 102),
@@ -1329,6 +1335,10 @@ class IdentityBNode(rdflib.BNode):
             s, p, o = thing
             ident = oid(self._identity_function(s, it['bytes']),
                         self._identity_function((p, o), it['pair']), separator=False)
+        elif treat_as_type == idf['triple-conn']:
+            s, p, ident_o = thing
+            ident = oid(self._identity_function(s, it['bytes']),
+                        self._identity_function((p, ident_o), it['pair-ident']), separator=False)
         elif treat_as_type == idf['record-seq'] or treat_as_type == idf['record-alt-seq']:  # in ('trip-seq', '((s ((p o) ...)) ...)'):
             bnode_identities = defaultdict(list)
             subject_identities = defaultdict(list)
