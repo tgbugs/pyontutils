@@ -104,7 +104,7 @@ a:1 a owl:Class .
 
 # test ordering of multiple restrictions
 BLX:2 a owl:Class ;
-    rdfs:subClassOf 
+    rdfs:subClassOf
         [ a owl:Restriction ;
             owl:onProperty other:b1 ;
             owl:allValuesFrom other:4 ],
@@ -578,3 +578,29 @@ c: C: xml: .
     owl:onProperty blx:1 ;
     owl:disjointWith [ a owl:Restriction ;
             owl:onProperty blx:1 ] .
+
+# multi-parent bnode case
+
+<mp0> a owl:Class ;
+    p:oh-boy _:0 .
+
+<mp1> a owl:Class ;
+    p:oh-boy _:0 .
+
+_:0 a owl:Restriction ;
+    owl:onProperty blx:2 ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty blx:2 ] .
+
+# multi-parent on read but not on write due to duplicated input
+
+<nmp0> a owl:Class ;
+    p:oh-boy _:1 .
+
+<nmp0> a owl:Class ;
+    p:oh-boy _:1 .
+
+_:1 a owl:Restriction ;
+    owl:onProperty blx:3 ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty blx:3 ] .

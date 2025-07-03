@@ -183,6 +183,8 @@ class CustomTurtleSerializer(TurtleSerializer):
     _space = ' '
     sortkey = staticmethod(natsort)
     make_litsortkey = staticmethod(make_litsort)
+    _do_id_swap = False
+    _idswap = {}
     no_reorder_list = (OWL.propertyChainAxiom,)
     no_reorder_rdf_star = {
          OWL.annotatedTarget: OWL.annotatedProperty,
@@ -334,6 +336,44 @@ class CustomTurtleSerializer(TurtleSerializer):
                 # equivalent remove the o p s case
                 store.remove((o, p, s))
 
+        if self._do_id_swap:
+            _gen = (_ for _ in range(len(store) * 2))
+            # FIXME so hilariously ... sadly? symmetric predicates
+            # is unstable here because you have two consecutive bnodes
+            # that can invert at will, so we can't just go in order we have
+            # to go by the actual node rank since they will be equal and the
+            # bnodes are actually completely identical ... actually this
+            # might be a divergence between serialization order and bnode order ...
+            lu = {s: (BNode(self._idswap[s].hex()) if hasattr(self, '_idswap') and s in self._idswap else BNode(next(_gen)))
+                  for s, rank in sorted(
+                          self.node_rank.items(),
+                          key=(lambda kv: (
+                              kv[1], #kv[0]  # XXX NOTE as nice as it might be to sort on the actual bnode value
+                              # if we do so then the ordering becomes inconsistent with the ordering that the
+                              # the actual serialization process sees, which breaks tests involving bnodes
+                              # XXX double note that this only works because python dicts iterate in the same
+                              # order every time, if iteration order changed each time then this would break
+                              # since this is mostly for debug and tests I'm not particularly worried about it
+                                        )))}
+            self._ilu = {v: k for k, v in lu.items()}
+            for _k, _v in lu.items():
+                self.node_rank[_v] = self.node_rank[_k]
+
+            for s, p, o in store:
+                if isinstance(s, BNode):
+                    ns = lu[s]
+                else:
+                    ns = s
+
+                if isinstance(o, BNode):
+                    no = lu[o]
+                else:
+                    no = o
+
+                if isinstance(s, BNode) or isinstance(o, BNode):
+                    store.remove((s, p, o))
+                    store.add((ns, p, no))
+
         def debug():
             lv = [(l.node, l.vals)
                   for l in sorted(self.list_rankers.values(),
@@ -409,6 +449,8 @@ class CustomTurtleSerializer(TurtleSerializer):
         def fixedpoint(ranks):
             for n, rank_vecs in bnodes.items():
                 if n in self._list_helpers:
+                    if DEBUG:
+                        list_internals.add(n)
                     continue
                 rank_vecs[1] = [empty for _ in range(self.npreds)]
                 rank_vecs[2][1] = []
@@ -418,6 +460,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                     # TODO speedup by not looking up from store every time
                     if o not in self.object_rank:
                         if p == RDF.first or p == RDF.rest:
+                            # these are the list ranker head cases
                             continue
 
                         pr = self.predicate_rank[p]
@@ -425,14 +468,19 @@ class CustomTurtleSerializer(TurtleSerializer):
                         rv = specref(invisible_ranks, pr)
                         rv.append(ranks[o])
 
+        if DEBUG:
+            list_internals = set()
         def one_time():
             for n, (visible_ranks, invisible_ranks, (list_vis_rank, _list_invis_unused)) in bnodes.items():
                 if n in self._list_helpers:
+                    if DEBUG:
+                        list_internals.add(n)
                     continue
                 if n in self.list_rankers and self.list_rankers[n].vis_vals:
                     list_vis_rank.extend(self.list_rankers[n].rank_vec)
                 for p, o in self.store.predicate_objects(n):
                     if p == RDF.first or p == RDF.rest:
+                        # these are the list ranker head cases
                         continue
                     pr = self.predicate_rank[p]
                     rv = specref(visible_ranks, pr)
@@ -468,20 +516,40 @@ class CustomTurtleSerializer(TurtleSerializer):
             [sys.stderr.write('\n{v:<4}{k}'.format(v=v, k=k))
              for k, v in sorted(self.object_rank.items(),
                                 key=lambda t:t[1])]
-            def sss(l):
-                return ' '.join(['{:>5}'.format(str(_))
-                                 if _ != [max_worst_case] else '-----'
-                                 for _ in l])
+            sys.stderr.write('\n')
+            [sys.stderr.write('\n{v:<4}{k}'.format(v=v, k=k))
+             for k, v in sorted(self.predicate_rank.items(),
+                                key=lambda t:t[1])]
+            def sss(l, k=None):
+                return ' '.join([
+                    '{:>5}'.format(str(_))
+                    if _ != [max_worst_case] else
+                    ('  -  ' if k is not None and k in list_internals else '-----')
+                    # internal list bnodes always show up as max worst
+                    # case, but we want to see which ones they are
+                    for _ in l])
             r = {o:i for i, o in enumerate(list(zip(*sorted(rank().items(), key=lambda t:t[1])))[0])}
+            sys.stderr.write('\n\nrank index v\nout value v\npredicate ranks >\n')
             sys.stderr.write('\n' + ' ' * 5 + sss(range(len(self.predicate_rank))) + '\n')
             [sys.stderr.write('\n' +
-                              '{:>4} '.format(r[k]) + sss(a) + '\n' +
-                              '{:>4} '.format(out[k]) + sss(b) + '\n' +
-                              ' ' * 5 + sss(c))
+                              '{:>4} '.format(r[k]) + sss(a, k) + '\n' +
+                              '{:>4} '.format(out[k]) + sss(b, k) + '\n' +
+                              ' ' * 5 + sss(c, k))
+             #       v  i  ll
              for k, (a, b, c) in sorted(normalize().items(),
-                                     key=lambda t:t[1])]
+                                        key=lambda t:t[1])]
             sys.stderr.write('\n' + ' ' * 5 + sss(range(len(self.predicate_rank))) + '\n')
-        if DEBUG: debug()
+        if DEBUG:
+            debug()
+            sigh = max(set(out.values()))
+            # sigh = self.max_or + max(set(irank.values()))  # alt calc
+            maxvt = set(k for k, v in out.items() if v == sigh)
+            maxvt_ni = maxvt - list_internals
+            derp = {k: v for k, v in bnodes.items() if k in maxvt}
+            maxvt_trips = {b:(list(self.store[b::]), list(self.store[::b])) for b in maxvt}  # ok yes these are VERY CLEARLY the list_internal cases ... wtf
+            maxvt_ni_trips = {k: v for k, v in maxvt_trips.items() if k in maxvt_ni}
+            #breakpoint()
+
         return out
 
     def _PredRank(self):
@@ -855,6 +923,23 @@ class CustomTurtleSerializer(TurtleSerializer):
         stream.write(self._nl.encode('ascii'))
         n, v = self._name, self.__version
         stream.write(u'### Serialized using the {} serializer {}{}'.format(n, v, self._nl).encode('ascii'))
+
+        if self._do_id_swap:
+            # undo the debug
+            for s, p, o in self.store:
+                if isinstance(s, BNode):
+                    ns = self._ilu[s]
+                else:
+                    ns = s
+
+                if isinstance(o, BNode):
+                    no = self._ilu[o]
+                else:
+                    no = o
+
+                if isinstance(s, BNode) or isinstance(o, BNode):
+                    self.store.remove((s, p, o))
+                    self.store.add((ns, p, no))
 
 
 class HtmlTurtleSerializer(CustomTurtleSerializer):

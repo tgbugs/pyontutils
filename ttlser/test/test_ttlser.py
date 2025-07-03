@@ -128,10 +128,15 @@ class TestTtlser(unittest.TestCase):
         randomize_BNode_order(graph)
         randomize_prefix_order(graph)
 
-        ttlser = self.serializer(graph)
-        ttlser.node_rank = randomize_dict_order(ttlser.node_rank)  # not it
-        stream = BytesIO()
-        ttlser.serialize(stream)
+        self.serializer._do_id_swap = True
+        try:
+            ttlser = self.serializer(graph)
+            ttlser.node_rank = randomize_dict_order(ttlser.node_rank)  # not it
+            stream = BytesIO()
+            ttlser.serialize(stream)
+        finally:
+            self.serializer._do_id_swap = False
+
         actual = stream.getvalue()
 
         actual = actual.rsplit(b'\n',2)[0]  # drop versioninfo

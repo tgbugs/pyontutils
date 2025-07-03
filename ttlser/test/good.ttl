@@ -303,6 +303,18 @@ BLX:BB a owl:Class ;
             owl:onProperty other:b1 ;
             owl:someValuesFrom other:2 ] .
 
+<http://ihavenoqname.org/mp0> a owl:Class ;
+    p:oh-boy _:30 .
+
+<http://ihavenoqname.org/mp1> a owl:Class ;
+    p:oh-boy _:30 .
+
+<http://ihavenoqname.org/nmp0> a owl:Class ;
+    p:oh-boy [ a owl:Restriction ;
+            owl:onProperty blx:3 ;
+            owl:disjointWith [ a owl:Restriction ;
+                    owl:onProperty blx:3 ] ] .
+
 ns1:1234 a owl:Class .
 
 ns1:12345 a owl:Class .
@@ -719,3 +731,8 @@ l:plistTest owl:propertyChainAxiom (
             blx:predicate3
             blx:predicate1
             blx:predicate2 ) .
+
+_:30 a owl:Restriction ;
+    owl:onProperty blx:2 ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty blx:2 ] .
