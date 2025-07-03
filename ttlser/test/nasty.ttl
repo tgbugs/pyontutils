@@ -604,3 +604,14 @@ _:1 a owl:Restriction ;
     owl:onProperty blx:3 ;
     owl:disjointWith [ a owl:Restriction ;
             owl:onProperty blx:3 ] .
+
+# subgraphs identical except connecting predicate differs
+
+<sigh> a owl:Class ;
+    p:p0 _:2 ;
+    p:p1 _:2 .
+
+_:2 a owl:Restriction ;
+    owl:onProperty blx:4 ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty blx:4 ] .
