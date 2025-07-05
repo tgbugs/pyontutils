@@ -125,6 +125,11 @@ idf = Enum(
      ('record-alt-seq', 106),
      ('(((s (p o)) ...) ...)', 106),
 
+     ('record-named', 19),
+     ('record-bnode', 20),
+     ('record-combined', 21),  # FIXME how to compute ... one way is via graph-named and graph-bnode ? but we don't cache record-bnode and record-named ? or do we ? we don't because graph-named and graph-bnode identities can't be computer for the same input graph since we use split_named_bnode though we do use thing 'named' and thing 'bnode' so maybe that will work?
+     ('((s ((np no) ...)) (s ((up uo) ...)))' , 21),
+
      # XXX this one is tricky because you can take combined of
      # a pure named and pure bnode graph and the other component
      # will be null so it is not homogenous in the way that we
@@ -1300,6 +1305,26 @@ class IdentityBNode(rdflib.BNode):
                 return self._if_cache[(in_graph, thing, treat_as_type)]
             elif (thing, treat_as_type) in self._if_cache:
                 return self._if_cache[thing, treat_as_type]
+            elif (treat_as_type == idf['record-named'] and in_graph is not None and
+                  ((in_graph, 'named'), thing, idf['record']) in self._if_cache):
+                out = self._if_cache[((in_graph, 'named'), thing, idf['record'])]
+                self._if_cache[in_graph, thing, idf['record-named']] = out
+                return out
+            elif (treat_as_type == idf['record-bnode'] and in_graph is not None and
+                  ((in_graph, 'bnode'), thing, idf['record']) in self._if_cache):
+                out = self._if_cache[((in_graph, 'bnode'), thing, idf['record'])]
+                self._if_cache[in_graph, thing, idf['record-bnode']] = out
+                return out
+            elif (treat_as_type == idf['record-combined'] and in_graph is not None and
+                  (((in_graph, 'named'), thing, idf['record']) in self._if_cache or
+                   ((in_graph, 'bnode'), thing, idf['record']) in self._if_cache)):
+                kn = ((in_graph, 'named'), thing, idf['record'])
+                rn = self._if_cache[kn] if kn in self._if_cache else self.null_identity
+                kb = ((in_graph, 'bnode'), thing, idf['record'])
+                rb = self._if_cache[kb] if kb in self._if_cache else self.null_identity
+                out = oid(rn, rb, separator=False)
+                self._if_cache[in_graph, thing, idf['record-combined']] = out
+                return out
         except TypeError:
             pass
 
