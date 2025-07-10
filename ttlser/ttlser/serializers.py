@@ -952,6 +952,7 @@ class HtmlTurtleSerializer(CustomTurtleSerializer):
         from htmlfn import atag
         self.atag = atag
         self._labels = {s:str(o) for s, o in store[:RDFS.label:]}
+        self._internal_links = None
         super(HtmlTurtleSerializer, self).__init__(store, *args, **kwargs)
 
     def startDocument(self):  # modified to natural sort prefixes + html escape
@@ -963,28 +964,66 @@ class HtmlTurtleSerializer(CustomTurtleSerializer):
             self.write(self._nl)
 
     def label(self, node, position):
+        def doil(node):
+            reference_host, internal_host, internal_path_prefix, suffix = self._internal_links
+            if internal_host not in node:
+                if reference_host in node:
+                    link = node.replace(reference_host, internal_host) + suffix
+                else:
+                    *stuff, _host, _path = node.split('/', 3)  # http://_host/_path
+                    if '#' in _path:
+                        _path = _path.replace('#', '%23')
+
+                    link = (
+                        'http://' +
+                        internal_host +
+                        '/' + internal_path_prefix + '/' +
+                        _host + '/' + _path + suffix
+                    )
+            else:
+                link = node + suffix
+
+            return link
+
         if node == RDF.nil:
             return '()'
         if position is VERB and node in self.keywords:
             return self.keywords[node]
         if isinstance(node, Literal):
+            def qcall(dt):
+                node = dt
+                if self._internal_links and isinstance(node, URIRef):
+                    link = doil(node)
+                else:
+                    link = node
+
+                self.atag(link, self.getQName(dt, gen_prefix=False), new_tab=True)
+
             return node._literal_n3(
                 use_plain=True,
-                qname_callback=lambda dt: self.atag(dt, self.getQName(
-                    dt, gen_prefix=False), new_tab=True))
+                qname_callback=qcall)
         else:
             node = self.relativize(node)
 
             out = self.getQName(node, position == VERB) or node.n3()
             out = out.replace('<', '&lt;').replace('>', '&gt;')
             label = self._labels[node] if node in self._labels else None
-            return self.atag(node, out, new_tab=True, title=label)
+            if self._internal_links and isinstance(node, URIRef):
+                link = doil(node)
+            else:
+                link = node
+
+            return self.atag(link, out, new_tab=True, title=label)
 
     def serialize(self, *args, **kwargs):
         """ Modified to allow additional labels to be passed in. """
         if 'labels' in kwargs:
             # populate labels from outside the local graph
             self._labels.update(kwargs['labels'])
+
+        if 'internal_links' in kwargs:
+            self._internal_links = kwargs['internal_links']
+
         super(HtmlTurtleSerializer, self).serialize(*args, **kwargs)
 
 
