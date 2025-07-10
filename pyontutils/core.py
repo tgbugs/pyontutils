@@ -1425,7 +1425,8 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
         # FIXME the core rdflib normalizeUri implementation is incorrect now ...
         try:
             return self.qname(iri)
-        except KeyError:
+        except (KeyError, ValueError) as e:
+            # ValueError: Can't split ...
             if isinstance(iri, rdflib.term.Variable):
                 return f'?{iri}'
             else:
