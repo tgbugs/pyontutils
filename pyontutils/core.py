@@ -753,8 +753,9 @@ class OntMetaIri(OntMeta, OntIdIri):
             # because it is probably evil
             start = b' owl:Ontology'  # FIXME this is not standard
             # FIXME snchn.IndexGraph etc ... need a more extensible way to mark the header ...
-            stop = b' \\.\n'  # FIXME can be fooled by strings
-            sentinel = b'\n### |\n[^@].+[^gy][^y] [;.]\n'  # FIXME has all sorts of false positives and misses tons of cases also ### case has to be included otherwise it breaks for our stuff
+            # the owl source file has a ' . \r\n' that requires \S* ... seriously ????
+            stop = b' \\.\s*\n'  # FIXME can be fooled by strings
+            sentinel = b'\n### |\n[^@].+[^gy][^y] [;.]\s*\n'  # FIXME has all sorts of false positives and misses tons of cases also ### case has to be included otherwise it breaks for our stuff
             #sentinel = b'^### '  # FIXME only works for ttlser
             #sentinel = b' a '  # FIXME if a |owl:Ontology has a chunk break on | this is incorrect
             # also needs to be a regex that ends in [^owl:Ontology]
