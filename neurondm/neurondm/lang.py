@@ -32,6 +32,7 @@ __all__ = [
     'OntId',
     'OntTerm',
     'ilxtr',  # FIXME
+    'URIRef',  # FIXME
     '_NEURON_CLASS',  # FIXME
     '_CUT_CLASS',
     '_EBM_CLASS',

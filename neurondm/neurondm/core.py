@@ -102,6 +102,7 @@ __all__ = [
     'OntTerm',
     'owl',  # FIXME
     'ilxtr',  # FIXME
+    'URIRef',  # FIXME
     '_NEURON_CLASS',
     '_CUT_CLASS',
     '_EBM_CLASS',
@@ -1946,8 +1947,15 @@ class graphBase:
             except (OSError, TypeError) as e:
                 return False
 
-        _subs = [inspect.getsource(c) for c in subclasses(Neuron)
-                 if c in all_types and getfe(c)
+        def getdyn(c):
+            parents = [p for p in c.mro() if p.__name__ in __all__ and p.__module__ == 'neurondm.core']  # XXX skips intervening, so be warned  FIXME not working
+            parent = f'({parents[0].__name__})' if parents else ''
+            oc = repr(c.owlClass).split('.', 2)[-1]  # rdflib.term.URIRef()
+            return f'class {c.__name__}{parent}:\n    owlClass = {oc}\n'
+
+        _subs = [inspect.getsource(c) if getfe(c) else getdyn(c)
+                 for c in subclasses(Neuron)
+                 if c in all_types
                  and c.__name__ not in __all__]
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
         #log.debug(str(all_types))
@@ -1957,9 +1965,9 @@ class graphBase:
         ind = '\n' + ' ' * len('config = Config(')
         _prefixes = {k:str(v) for k, v in cls.ng.namespaces.items()
                      if k not in uPREFIXES and k != 'xml' and k != 'xsd'}  # FIXME don't hardcode xml xsd
-        len_thing = len(f'config = Config({cls.ng.name!r}, prefixes={{')
+        len_thing = len(f'config = Config(prefixes={{')
         '}}'
-        prefixes = (f',{ind}prefixes={pformat(_prefixes, 0)}'.replace('\n', '\n' + ' ' * len_thing)
+        prefixes = ((f',{ind}' + f'prefixes={pformat(_prefixes, 0)}'.replace('\n', '\n' + ' ' * len_thing))
                     if _prefixes
                     else '')
 
@@ -4334,3 +4342,6 @@ OntologyGlobalConventions = _ogc = injective_dict(
     }
 _ogc['L2/3'] = LogicalPhenotype(OR, _ogc['L2'], _ogc['L3'])
 _ogc['L5/6'] = LogicalPhenotype(OR, _ogc['L5'], _ogc['L6'])
+
+# this is at the end so that we don't use it by accident within this file
+URIRef = rdflib.URIRef
