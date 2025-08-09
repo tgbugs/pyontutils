@@ -1,7 +1,7 @@
 import augpathlib as aug
 from pyontutils.core import OntGraph, OntResPath
 from pyontutils.config import auth
-from pyontutils.namespaces import makePrefixes, ilxtr
+from pyontutils.namespaces import makePrefixes, ilxtr, owl
 
 
 #import json
@@ -262,7 +262,10 @@ def main():
     ogp = config._written_graph.path  # XXX cannot trust config.out_graph_path() due to failover if path does not exist in graphBase >_< hooray
     og = OntGraph(path=ogp)
     og.parse()
-    ng = OntGraph().populate_from_triples((t for t in og if 'able' not in t[1] and 'abel' not in t[1]))
+    # remove equivalentClass axioms since they are only needed as a hack
+    exclude = set(t for s, o in og[:owl.equivalentClass:] for t in og.subject_triples(o))
+    ng = OntGraph().populate_from_triples((t for t in og if t not in exclude and t[1] != owl.equivalentClass
+                                           and 'able' not in t[1] and 'abel' not in t[1]))
     ng.populate_from(citations(neuron_classes.values(), neus))
     ng.namespace_manager.populate_from(og)
     ng.namespace_manager.populate_from(makePrefixes('PMID', 'doi', 'dc'))

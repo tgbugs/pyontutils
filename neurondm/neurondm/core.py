@@ -1392,7 +1392,13 @@ class OwlObject:
                 v = _v()
             else:
                 v = _v
+            if thing == 'pShortName' and v is None:
+                continue
+
             pls.append(qname(p.p) if v is None else v)
+
+        if thing == 'pShortName' and not pls:
+            return
 
         #print(pls)
         derp = join.join(pls)
@@ -1890,8 +1896,10 @@ class graphBase:
         if not hasattr(graphBase, '_sgv'):
             if scigraph is not None:
                 graphBase._sgv = Vocabulary(cache=True, basePath=scigraph)
+                graphBase._sgg = Graph(cache=True, basePath=scigraph)
             else:
                 graphBase._sgv = Vocabulary(cache=True)
+                graphBase._sgg = Graph(cache=True)
 
     @staticmethod
     def write():
@@ -2329,15 +2337,18 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         try:
             if hasattr(self, '_sgv'):
                 resp = self._sgv.findById(pn)
+                gresp = self._sgg.getNode(pn)
             else:
                 msg = ('no scigraph instance bound, graphBase.configGraphIO '
                        'probably has not been called')
                 log.warning(msg)
                 resp = None
+                gresp = None
         except ConnectionError as e:
             #print(tc.red('WARNING:'), f'Could not set label for {pn}. No SciGraph was instance found at', self._sgv._basePath)
             log.info(f'Could not set label for {pn}. No SciGraph was instance found at ' + self._sgv._basePath)
             resp = None
+            gresp = None
 
         if pn.startswith('TEMPIND'):
             return next(self.in_graph[self.p:skos.hiddenLabel])
@@ -2351,8 +2362,16 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if resp:  # DERP
             abvs = resp['abbreviations']
             if not abvs:
+                # we do not want related synonyms for short names
+                relsyn = 'http://www.geneontology.org/formats/oboInOwl#hasRelatedSynonym'
+                if (gresp and 'nodes' in gresp and gresp['nodes'] and
+                    gresp['nodes'][0] and relsyn in gresp['nodes'][0]['meta']):
+                    related = set(gresp['nodes'][0]['meta'][relsyn])
+                else:
+                    related = set()
+
                 abvs = sorted([s for s in resp['synonyms']
-                               if 1 < len(s) < 5], key=lambda s :(len(s), s))
+                               if 1 < len(s) < 5 and s not in related], key=lambda s :(len(s), s))
 
             # handle cases where a label is quite short
             if resp['labels'] and 1 < len(resp['labels'][0]) < 5:
@@ -2400,6 +2419,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             # FIXME hack for the fact that the rdflibLocal service
             # changes from config to config
             return self._cache_pLongName
+
+        if isinstance(self.p, OwlObject):
+            return self.p._for_thing(self, 'pLongName')
 
         p = OntId(self.p)
 
