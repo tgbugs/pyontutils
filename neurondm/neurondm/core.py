@@ -3129,7 +3129,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             if label is None:
                 try:
                     # FIXME this is a mess, I have too many ways to persist this stuff :/
-                    label =next(self.Class.graph[self.Class.identifier:ilxtr.origLabel:])
+                    label = next(self.Class.graph[self.Class.identifier:ilxtr.origLabel:])
                 except StopIteration:
                     try:
                         label, *_extra = self.Class.label
@@ -3846,7 +3846,7 @@ class Neuron(NeuronBase):
         #if ll != gl:
         graph.add((self.id_, ilxtr.localLabel, rdflib.Literal(ll)))
 
-        if ol and ol != gl:
+        if ol and ol != gl and not (hasattr(self, '_no_origLabel_hack') and self._no_origLabel_hack):
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
 
         if self.prefLabel:

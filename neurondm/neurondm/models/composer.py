@@ -21,9 +21,18 @@ def get_csv_sheet(path):
     ridx = _rows[0].index('Reference (pubmed ID, DOI or text)')
     derp_idx = _rows[0].index('Object')
     _rows[0][ridx] = 'literature citation'  # XXX HACK
-    for _r in _rows[1:]:  # FIXME EVEN BIGGER HACK
+    sigh = 'https://uri.interlex.org/'
+    sigh2 = 'https://scicrunch.org/scicrunch/interlex/view/'
+    for i, _r in enumerate(_rows[1:]):  # FIXME EVEN BIGGER HACK
         if (not (_r[idx] or _r[tidx])) and _r[derp_idx]:
             _r[tidx] = _r[derp_idx]
+        for j, c in enumerate(list(_r)):
+            if c.startswith(sigh):
+                _r[j] = _r[j].replace(sigh, 'http://uri.interlex.org/')
+                log.error(f'bad scheme for uri.interlex.org identifier at {i + 2} {j + 1}')
+            elif c.startswith(sigh2):
+                _r[j] = _r[j].replace(sigh2, 'http://uri.interlex.org/base/')
+                log.error(f'bad prefix for uri.interlex.org identifier at {i + 2} {j + 1}')
 
     rows = [[c if c != 'http://www.notspecified.info' else ''
              for c in r] for r in _rows if (r[idx] or r[tidx]) and r[sidx]]
@@ -115,9 +124,10 @@ def remlabs_write(config, keep=tuple()):
     config.write()
     labels = tuple(
         l for l in (#ilxtr.genLabel,
+            rdfs.label,
             ilxtr.origLabel,
             ilxtr.localLabel, ilxtr.simpleLabel,
-            ilxtr.simpleLocalLabel, rdfs.label, skos.prefLabel)
+            ilxtr.simpleLocalLabel, skos.prefLabel)
         if l not in keep)
     to_remove = [t for t in config._written_graph if t[1] in labels]
     [config._written_graph.remove(t) for t in to_remove]
@@ -131,12 +141,16 @@ def main():
     #exp = aug.LocalPath('~/downloads/export_2024-10-06_00-31-18.csv').expanduser()  # contains no data?
     #exp = aug.LocalPath('~/downloads/export_2024-12-20_23-40-50.csv').expanduser()
     #exp = aug.LocalPath('~/downloads/export_2025-01-27_15-14-55.csv').expanduser()
-    exp = aug.LocalPath('~/downloads/export_v3-2-1_2025-02-12_21-31-31.csv').expanduser()
+    #exp = aug.LocalPath('~/downloads/export_v3-2-1_2025-02-12_21-31-31.csv').expanduser()
     #exp = aug.LocalPath('~/downloads/export_v4-0-1_2025-03-13_15-31-17.csv').expanduser()
     # XXX FIXME the only time you can actually say that something has been exported is when you detect it on the next load from the ontology
+
     #exp = aug.LocalPath('~/downloads/export_v4-1-0_2025-04-11_19-22-42.csv').expanduser()  # wat
+    #exp = aug.LocalPath('~/downloads/export_v4-2-0_2025-05-05_22-39-12.csv').expanduser()
+    exp = aug.LocalPath('~/downloads/export_v5-1-1_2025-07-28_16-16-22(1).csv').expanduser()
     sht = get_csv_sheet(exp)
     cs = [sht]
+    uPREFIXES['gastint'] = 'http://uri.interlex.org/composer/uris/set/gastint/'
     config = Config('composer-and-roundtrip')
     nlp_main(cs=cs, config=config, neuron_class=Neuron)  # FIXME neuron_class is incorrect and changes per model
     nrns = config.neurons()
@@ -174,6 +188,8 @@ def main():
 
         return n
 
+    # skos no longer in rdflib default so not restored after cull_prefixes
+    config._written_graph.namespace_manager.bind('skos', str(skos))
     config_composer_only = Config('composer')
     cco_nrns = [
         anncop(NeuronComposer(

@@ -11,6 +11,7 @@ from neurondm import orders
 class NeuronSparcNlp(NeuronEBM):
     owlClass = ilxtr.NeuronSparcNlp
     shortname = 'sprcnlp'
+    _no_origLabel_hack = True
 
 
 class NLP1(Sheet):
@@ -84,7 +85,7 @@ def make_annotation_properties(prefix=ilxtr):
     return (
         prefix.hasComposerUri,
         prefix.alertNote,
-        rdflib.URIRef('https://uri.interlex.org/composer/uris/readable/hasComposerURI'),  # XXX needs to be http sadly i think
+        rdflib.URIRef('http://uri.interlex.org/composer/uris/readable/hasComposerURI'),
         rdflib.URIRef('http://uri.interlex.org/tgbugs/uris/readable/composerGenLabel'),
     )
 
@@ -202,7 +203,16 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
             # (e.g. OntId vs rdflib.URIRef)
             if split:
                 for _v in v.split(split):
-                    to_add.append((s.u, p, rdf_type(_v.strip())))
+                    v = _v.strip()
+                    if v.startswith('https:/doi.org') or v.startswith('http:/w') or v.startswith('https:/git'):
+                        log.error((s, p, v))
+                        v = v.replace(':/', '://', 1)
+                    try:
+                        o = rdf_type(v)
+                        to_add.append((s.u, p, o))
+                    except Exception as e:
+                        breakpoint()
+                        raise e
             else:
                 if as_kwarg:
                     if s not in extra_kwargs:
@@ -247,7 +257,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                     # extra trips
                     #print(repr(r.id()))
                     _id = (r.id().value if hasattr(r, 'id') else OntId(r.subject_uri().value))
-                    _prefix = nlpns.split('/')[-2] if hasattr(r, 'id') else 'comprt'
+                    _prefix = nlpns.split('/')[-2] if hasattr(r, 'id') else 'comprt'  # FIXME cmpsr
                     s = _id if isinstance(_id, OntId) else OntId(nlpns[_id])
                     #log.debug(s)
                     if hasattr(r, 'sentence_number'):
@@ -263,7 +273,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                     if hasattr(r, 'literature_citation'):
                         lcc = bind_lcc(r.literature_citation())
                         asdf(s, ilxtr.literatureCitation, r.literature_citation, split=',', rdf_type=lcc)
-                    #asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)  # will confuse since we use override
+                    asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)
                     asdf(s, skos.prefLabel, r.neuron_population_label_a_to_b_via_c)
                     if hasattr(r, 'subject') and r.subject().value.strip():
                         asdf(s, rdfs.label, r.subject, as_kwarg='label')
@@ -392,7 +402,9 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                 _o = IntersectionOf(OntId(_r).u, OntId(_l).u)
                 #_o = _r  # FIXME TODO handle region/layer
         elif p == ilxtr.hasForwardConnectionPhenotype:
-            if not isinstance(_o, OntId):
+            if _o.startswith('http'):
+                pass
+            elif not isinstance(_o, OntId):
                 _o = nlpns[_o]
 
         if isinstance(_o, IntersectionOf):
@@ -454,15 +466,23 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
     sigh_bind('comprt', nlp_ns('composer'))
 
     config.write()
+    # skos no longer in rdflib default so not restored after cull_prefixes
+    config._written_graph.namespace_manager.bind('skos', str(skos))
     labels = (
         #ilxtr.genLabel,
+        #rdfs.label,
         ilxtr.localLabel, ilxtr.simpleLabel,
-        ilxtr.simpleLocalLabel, rdfs.label, skos.prefLabel)
+        ilxtr.simpleLocalLabel, skos.prefLabel)
     to_remove = [t for t in config._written_graph if t[1] in labels]
     [config._written_graph.remove(t) for t in to_remove]
     [config._written_graph.add(t) for t in to_add]
     add_partial_orders(config._written_graph, snst)
     for _n in nrns:
+        if _n.id_ not in snst:
+            msg = f'missing partial order for {_n.id_}'
+            log.error(msg)
+            continue
+
         _n.partialOrder(nested=snst[_n.id_])
     # uncomment to debug type vs instance issues
     #sigh = sorted(set(s for s in config._written_graph.subjects() if isinstance(s, rdflib.URIRef)))
