@@ -15,6 +15,10 @@ def nst_to_adj(l):
     return tuple(first + second)
 
 
+def skey(ns):
+    return (isinstance(ns, rl) and ns.layer is not None), ns
+
+
 def assoc(k, ass):
     for a, b in ass:
         if a == k:
@@ -33,7 +37,7 @@ def inest(adj, start, seen, expect, starts):
     out = []
     maybe_out = []
     seen[start] += 1
-    for next_start in sorted(dvals(start, adj)):
+    for next_start in sorted(dvals(start, adj), key=skey):
         if next_start in seen and seen[next_start] > 0:
             # do not append if next_start already seen more than expected
             nl, snext = (next_start,), seen
@@ -73,7 +77,7 @@ def adj_to_nst(adj, start=None):
     expect = dict(Counter([a[1] for a in adj]))
     nl = None
     out = []
-    for start in sorted(starts):
+    for start in sorted(starts, key=skey):
         nl, snext = inest(adj, start, seen, expect, starts)
         seen = snext
         out.append(nl)
