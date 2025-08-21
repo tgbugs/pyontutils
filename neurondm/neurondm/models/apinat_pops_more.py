@@ -83,10 +83,10 @@ from neurondm.lang import Phenotype, Neuron, NeuronEBM, Config, OntId
 
 #pprint([i.values for i in insts])
 
-#para_pre =  'ilxtr:neuron-phenotype-para-pre'
-#para_post = 'ilxtr:neuron-phenotype-para-post'
-#sym_pre =   'ilxtr:neuron-phenotype-sym-pre'
-#sym_post =  'ilxtr:neuron-phenotype-sym-post'
+para_pre = Phenotype('ilxtr:neuron-phenotype-para-pre', 'ilxtr:hasAnatomicalSystemPhenotype')
+para_post = Phenotype('ilxtr:neuron-phenotype-para-post', 'ilxtr:hasAnatomicalSystemPhenotype')
+sym_pre = Phenotype('ilxtr:neuron-phenotype-sym-pre', 'ilxtr:hasAnatomicalSystemPhenotype')
+sym_post = Phenotype('ilxtr:neuron-phenotype-sym-post', 'ilxtr:hasAnatomicalSystemPhenotype')
 
 para = Phenotype('ilxtr:ParasympatheticPhenotype', 'ilxtr:hasAnatomicalSystemPhenotype')
 sym = Phenotype('ilxtr:SympatheticPhenotype', 'ilxtr:hasAnatomicalSystemPhenotype')
@@ -149,6 +149,17 @@ def normalize_type(string):
         return set()
     id_bits = set([mapping[b] if b in mapping else b for b in bits
                    if b in mapping])
+    if sym in id_bits:
+        if pre in id_bits:
+            id_bits = (id_bits - {sym, pre}) | {sym_pre}
+        elif post in id_bits:
+            id_bits = (id_bits - {sym, post}) | {sym_post}
+    elif para in id_bits:
+        if pre in id_bits:
+            id_bits = (id_bits - {para, pre}) | {para_pre}
+        elif post in id_bits:
+            id_bits = (id_bits - {para, post}) | {para_post}
+
     missed = [b for b in bits if b not in mapping]
     return id_bits, missed
 
