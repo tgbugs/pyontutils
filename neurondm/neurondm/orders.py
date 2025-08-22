@@ -63,7 +63,15 @@ def adj_to_nst(adj, start=None):
         return tuple()
 
     keys = set([a[0] for a in adj])
-    values = set([a[1] for a in adj])
+    values = set([
+        a[1] for a in adj
+        # filter reflexive cases so they can be correctly ided as starts
+        # if we have soma, dendrite, and axon all located in the same region
+        # then it looks like we have an a -> a case for the starting point
+        # therefore we ignore cycles of length zero when searching for starts
+        if a[0] != a[1]
+    ])
+
     #inverted = [(a[1], a[0]) for a in adj]  # unused
     starts = keys - values
     #ends = values - keys  # unused
@@ -71,6 +79,7 @@ def adj_to_nst(adj, start=None):
     if not starts:
         # the graph forms a full cycle with all potential starting points
         # involved in a cycle, therefore pick an arbitrary but stable start
+        # XXX WARNING this fails if there is a cycle length zero at a true start
         starts = {sorted(adj)[0][0]}
 
     seen = {thing: 0 for thing in (keys | values)}
@@ -579,6 +588,30 @@ def test():
     adj_to_nst([(4, 2), (1, 2), (2, 3), (3, 1), (3, 4)])  # includes all start node
     adj_to_nst([(1, 2), (2, 3), (3, 1)])  # includes all start node
     adj_to_nst([(1, 2), (2, 3), (1, 1)])  # includes all start nodes
+
+    # make sure reflexive nodes (cycle length zero) can still be used as a start
+    adj_wat = [
+        (rl('1'), rl('1')),
+        (rl('0', '2'), rl('0', '3')),
+        (rl('0', '2'), rl('1')),
+        (rl('d', 's'), rl('d', 's')),
+        (rl('d', 's'), rl('d', 's')),
+        (rl('d', 's'), rl('d', '4')),
+        (rl('d', '5'), rl('0', '2')),
+        (rl('0', '3'), rl('0', '6')),
+        (rl('O', 's'), rl('O', 's')),
+        (rl('O', 's'), rl('O', 's')),
+        (rl('O', 's'), rl('O', '4')),
+        (rl('O', '5'), rl('0', '2')),
+        (rl('d', '4'), rl('d', '5')),
+        (rl('O', '4'), rl('O', '5')),
+    ]
+    nst_wat = adj_to_nst(adj_wat)
+    adj_watn = nst_to_adj(nst_wat)
+    assert rl('O', 's') in set(e for es in adj_watn for e in es), f'rt failed'
+    snst_wat = adj_to_nst(sorted(adj_wat))
+    adj_watsn = nst_to_adj(snst_wat)
+    assert rl('O', 's') in set(e for es in adj_watn for e in es), f'rt failed'
 
 
 if __name__ == '__main__':
