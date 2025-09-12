@@ -4,7 +4,7 @@ from urllib.parse import quote as url_quote
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
-from neurondm.core import Config, NeuronEBM, Phenotype, NegPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf
+from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf
 from neurondm import orders
 
 
@@ -83,7 +83,7 @@ sheet_classes = [
 
 def make_annotation_properties(prefix=ilxtr):
     return (
-        prefix.hasComposerUri,
+        prefix.hasComposerURI,
         prefix.alertNote,
         rdflib.URIRef('http://uri.interlex.org/composer/uris/readable/hasComposerURI'),
         rdflib.URIRef('http://uri.interlex.org/tgbugs/uris/readable/composerGenLabel'),
@@ -94,6 +94,8 @@ def map_uris(sheet_uri, prefix=ilxtr):
     try:
         return {
             ilxtr.hasProjection: prefix.hasProjectionPhenotype,  # FIXME iri is not real
+            rdflib.URIRef('http://uri.interlex.org/tgbugs/uris/readable/neurdf/pred/ent/hasMolecularPhenotype'): prefix.hasMolecularPhenotype,
+
         }[sheet_uri]
     except KeyError as e:
         return sheet_uri
@@ -128,7 +130,7 @@ def map_predicates(sheet_pred, prefix=ilxtr):  # FIXME use the closed namespace
         'hasProjectionPhenotype': prefix.hasProjectionPhenotype,  # XXX check the semantics on this one
         'hasProjectionLaterality': prefix.hasProjectionLaterality,  # XXX check the semantics on this one because it expects contra/ipsi not left/right
         'hasSomaPhenotype': prefix.hasSomaPhenotype,  # XXX what is this being used for? I can't find any objects?
-        'hasComposerUri': prefix.hasComposerUri,  # annotation property
+        'hasComposerURI': prefix.hasComposerURI,  # annotation property
         'alertNote': prefix.alertNote,  # FIXME we have predicate uri in composer now
     }[sheet_pred]
     return p
@@ -154,7 +156,7 @@ def ind_to_adj(ind_uri, *, neuron_id=None):
     return sorted(sedges)
 
 
-def main(debug=False, cs=None, config=None, neuron_class=None):
+def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=None):
     def derp(v):
         class sigh:
             value = v
@@ -204,7 +206,12 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
             if split:
                 for _v in v.split(split):
                     v = _v.strip()
-                    if v.startswith('https:/doi.org') or v.startswith('http:/w') or v.startswith('https:/git'):
+                    if ' ' in v:
+                        log.error((s, p, v))
+                        v = v.replace(' ', '')
+
+                    if (v.startswith('https:/doi.org') or v.startswith('http:/w') or
+                        v.startswith('https:/git') or v.startswith('http:/uri.interlex.org')):
                         log.error((s, p, v))
                         v = v.replace(':/', '://', 1)
                     try:
@@ -273,6 +280,10 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                     if hasattr(r, 'literature_citation'):
                         lcc = bind_lcc(r.literature_citation())
                         asdf(s, ilxtr.literatureCitation, r.literature_citation, split=',', rdf_type=lcc)
+                    if hasattr(r, 'expert_consultant'):
+                        lcc = bind_lcc(r.expert_consultant())
+                        asdf(s, ilxtr.expertConsultant, r.expert_consultant, split=',', rdf_type=lcc)
+
                     asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)
                     asdf(s, skos.prefLabel, r.neuron_population_label_a_to_b_via_c)
                     if hasattr(r, 'subject') and r.subject().value.strip():
@@ -353,7 +364,19 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                 raise e
 
     if cfdd:
-        sadj = {k:sorted(v) for k, v in cfdd.items()}
+        no_self = True
+        if no_self:
+            def _sigh(v):
+                out = [ab for ab in v if ab[0] != ab[1]]
+                if not out:
+                    # interneurons basically
+                    return v
+                else:
+                    return out
+
+            sadj = {k:sorted(_sigh(v)) for k, v in cfdd.items()}
+        else:
+            sadj = {k:sorted(v) for k, v in cfdd.items()}
     elif dd:
         sorders = {k:sorted(v) for k, v in dd.items()}
         sadj = {k:ind_to_adj(v, neuron_id=k) for k, v in sorders.items()}
@@ -376,6 +399,8 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
                 msg = f'leading/trailing whitespace in {c} {_s!r} {_p!r} {_o!r}'
                 log.error(msg)
                 raise ValueError(msg)
+
+        do_entail = 'neurdf/pred/ent/' in _p
 
         s = _s if isinstance(_s, OntId) else OntId(nlpns[_s])
         #log.debug(s)
@@ -407,6 +432,10 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
             elif not isinstance(_o, OntId):
                 _o = nlpns[_o]
 
+        if p.endswith('hasComposerURI'):
+            _ksn = _o.rsplit('/', 1)[-1]
+            _o = f'https://composer.scicrunch.io/statement/{_ksn}'
+
         if isinstance(_o, IntersectionOf):
             o = _o
         else:
@@ -428,7 +457,21 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
             continue
 
         try:
-            dd[s].append(Phenotype(o, p))
+            if (do_entail or
+                p == ilxtr.hasInstanceInTaxon or
+                p == ilxtr.hasAnatomicalSystemPhenotype or
+                p == ilxtr.hasCircuitRolePhenotype or
+                p == ilxtr.hasFunctionalCircuitRolePhenotype or
+                (p == ilxtr.hasProjectionPhenotype and not ('sdcol-l' in s.u or 'sdcol-j' in s.u))  # XXX hardcoded workaround for composer
+                ):
+                # XXX ilxtr.hasBiologicalSex is another candidate for this treatment
+                # FIXME HACK, in order to be defining
+                # we need something stronger than hasInstanceInTaxon for necessary and sufficient
+                phen_class = EntailedPhenotype
+            else:
+                phen_class = Phenotype
+
+            dd[s].append(phen_class(o, p))
         except TypeError as e:
             log.error(f'bad data for {c} {s} {p} {o}')
             raise e
@@ -443,8 +486,9 @@ def main(debug=False, cs=None, config=None, neuron_class=None):
     nrns = []
     ed = {}
     for id, phenos in dd.items():
+        nc = neuron_class if neuron_class_fun is None else neuron_class_fun(id)
         kwargs = extra_kwargs[id] if id in extra_kwargs else ed
-        n = neuron_class(*phenos, id_=id, **kwargs)
+        n = nc(*phenos, id_=id, **kwargs)
         if False and eff(n):
             n._sigh()  # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX FIXME figure out why this is not getting called internally
             sigh.append(n)
