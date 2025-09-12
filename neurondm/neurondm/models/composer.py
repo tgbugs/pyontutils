@@ -2,12 +2,15 @@ import csv
 import rdflib
 import augpathlib as aug
 from pyontutils import sheets
-from pyontutils.namespaces import TEMP, ilxtr, rdfs, skos
+from pyontutils.namespaces import TEMP, ilxtr, rdfs, skos, interlex_namespace
 from neurondm.models.nlp import map_predicates, main as nlp_main, NeuronSparcNlp
+from neurondm.models.apinat_npo import NeuronApinatSimple
 from neurondm.core import log as _log, uPREFIXES, Config, Neuron
 
 log = _log.getChild('composer')
+anat_space_hack = 'http://purl.obolibrary.org/obo/UBERON_0000464'
 
+ilxcr = rdflib.Namespace(interlex_namespace('composer/uris/readable/'))
 
 def get_csv_sheet(path):
     with open(path, 'rt') as f:
@@ -15,10 +18,13 @@ def get_csv_sheet(path):
 
     # remove rows that are missing a value since the export doesn't do
     # that and we will get missing if not provided
+    # FIXME TODO take NLP-ID and promote to subject if missing
     idx = _rows[0].index('Object URI')
     sidx = _rows[0].index('Subject URI')
+    pidx = _rows[0].index('Predicate URI')
     tidx = _rows[0].index('Object Text')
     ridx = _rows[0].index('Reference (pubmed ID, DOI or text)')
+    cidx = _rows[0].index('Connected from uri')
     derp_idx = _rows[0].index('Object')
     _rows[0][ridx] = 'literature citation'  # XXX HACK
     sigh = 'https://uri.interlex.org/'
@@ -26,6 +32,19 @@ def get_csv_sheet(path):
     for i, _r in enumerate(_rows[1:]):  # FIXME EVEN BIGGER HACK
         if (not (_r[idx] or _r[tidx])) and _r[derp_idx]:
             _r[tidx] = _r[derp_idx]
+
+        if _r[cidx] == anat_space_hack:
+            _r[cidx] = ''
+
+        if _r[idx] == 'http://uri.interlex.org/tgbugs/uris/readable/HasProjection':
+            # something got mangled inside composer ...
+            _r[idx] = 'http://uri.interlex.org/tgbugs/uris/readable/ProjectionPhenotype'
+            log.error(f'bad object value for {i + 2}')
+
+        if _r[derp_idx] == 'not specified':
+            _r[sidx] = ''  # for skip the row to avoid bad triples with TEMP:MISSING
+            #_r[derp_idx] = ''
+
         for j, c in enumerate(list(_r)):
             if c.startswith(sigh):
                 _r[j] = _r[j].replace(sigh, 'http://uri.interlex.org/')
@@ -34,9 +53,47 @@ def get_csv_sheet(path):
                 _r[j] = _r[j].replace(sigh2, 'http://uri.interlex.org/base/')
                 log.error(f'bad prefix for uri.interlex.org identifier at {i + 2} {j + 1}')
 
+    # FIXME TODO maybe skip stuff flagged as invalid
     rows = [[c if c != 'http://www.notspecified.info' else ''
-             for c in r] for r in _rows if (r[idx] or r[tidx]) and r[sidx]]
+             for c in r] for r in _rows
+            if (r[idx] or r[tidx]) and r[sidx]
+            and r[idx] != anat_space_hack
+            ]
     assert len(rows) > 1
+
+    # missing due to issues with aacar-1 and pancr-2
+    aacar_11 = [''] * len(rows[0])
+    aacar_11[sidx], aacar_11[pidx], aacar_11[idx] = (
+        'ilxtr:neuron-type-aacar-11', 'ilxtr:hasForwardConnectionPhenotype', 'ilxtr:neuron-type-aacar-1')
+
+    pancr_1 = [''] * len(rows[0])
+    pancr_1[sidx], pancr_1[pidx], pancr_1[idx] = (
+        'ilxtr:neuron-type-pancr-1', 'ilxtr:hasForwardConnectionPhenotype', 'ilxtr:neuron-type-pancr-2')
+
+    sstom_11 = [''] * len(rows[0])
+    sstom_11[sidx], sstom_11[pidx], sstom_11[idx] = (
+        'ilxtr:neuron-type-sstom-11', 'ilxtr:hasFunctionalCircuitRolePhenotype', 'ILX:0105486')
+
+    sstom_12 = [''] * len(rows[0])
+    sstom_12[sidx], sstom_12[pidx], sstom_12[idx] = (
+        'ilxtr:neuron-type-sstom-12', 'ilxtr:hasFunctionalCircuitRolePhenotype', 'ILX:0104003')
+
+    sdcol_l = [''] * len(rows[0])
+    sdcol_l[sidx], sdcol_l[pidx], sdcol_l[idx] = (
+        'ilxtr:neuron-type-sdcol-l', 'neurdf.ent:hasMolecularPhenotype', 'TEMPIND:Nos1')
+
+    sdcol_lp = [''] * len(rows[0])
+    sdcol_lp[sidx], sdcol_lp[pidx], sdcol_lp[idx] = (
+        'ilxtr:neuron-type-sdcol-l-prime', 'neurdf.ent:hasMolecularPhenotype', 'TEMPIND:Nos1')
+
+    rows.extend((
+        aacar_11,
+        pancr_1,
+        sstom_11,
+        sstom_12,
+        sdcol_l,
+        sdcol_lp,
+    ))
 
     s = sheets.Sheet(fetch=False)
     s.sheet_name = 'comprt'
@@ -136,23 +193,23 @@ def remlabs_write(config, keep=tuple()):
     config._written_graph.write()
 
 
-def main():
-    #exp = aug.LocalPath('~/downloads/export_2024-09-17_15-03-20.csv').expanduser()
-    #exp = aug.LocalPath('~/downloads/export_2024-10-06_00-31-18.csv').expanduser()  # contains no data?
-    #exp = aug.LocalPath('~/downloads/export_2024-12-20_23-40-50.csv').expanduser()
-    #exp = aug.LocalPath('~/downloads/export_2025-01-27_15-14-55.csv').expanduser()
-    #exp = aug.LocalPath('~/downloads/export_v3-2-1_2025-02-12_21-31-31.csv').expanduser()
-    #exp = aug.LocalPath('~/downloads/export_v4-0-1_2025-03-13_15-31-17.csv').expanduser()
-    # XXX FIXME the only time you can actually say that something has been exported is when you detect it on the next load from the ontology
+def ncfun_roundtrip(id):
+    if '/neuron-type-' in id:
+        return NeuronApinatSimple
+    elif '/sparc-nlp/' in id:
+        return NeuronSparcNlp
+    else:
+        return Neuron
 
-    #exp = aug.LocalPath('~/downloads/export_v4-1-0_2025-04-11_19-22-42.csv').expanduser()  # wat
-    #exp = aug.LocalPath('~/downloads/export_v4-2-0_2025-05-05_22-39-12.csv').expanduser()
-    exp = aug.LocalPath('~/downloads/export_v5-1-1_2025-07-28_16-16-22(1).csv').expanduser()
+
+def main(report=True):
+    exp = aug.LocalPath('~/downloads/export_v5-1-1_2025-09-12_04-50-39.csv').expanduser()
+
     sht = get_csv_sheet(exp)
     cs = [sht]
     uPREFIXES['gastint'] = 'http://uri.interlex.org/composer/uris/set/gastint/'
     config = Config('composer-and-roundtrip')
-    nlp_main(cs=cs, config=config, neuron_class=Neuron)  # FIXME neuron_class is incorrect and changes per model
+    nlp_main(cs=cs, config=config, neuron_class=Neuron, neuron_class_fun=ncfun_roundtrip)  # FIXME neuron_class is incorrect and changes per model
     nrns = config.neurons()
     # FIXME partial order is lost when config changes it seems :/
     # but it sighed was called??? yes, but we add the partial orders
@@ -166,18 +223,21 @@ def main():
     # 3. existing from ontology
 
     acops = (
+        # composer only
+        ilxcr.hasComposerURI,
+
         # composer export derived
         skos.prefLabel,
-        ilxtr.curatorNote,
-        ilxtr.inNLPWorkingSet,
+        #ilxtr.curatorNote,
+        #ilxtr.inNLPWorkingSet,  # XXX there is no explicit field in the export for this right now?
         #ilxtr.reference,  # XXX this is not present from composer so leave out to reduce noise
-        ilxtr.reviewNote,
-        ilxtr.sentenceNumber,
+        #ilxtr.reviewNote,
+        #ilxtr.sentenceNumber,
 
         # ontology derived extra
-        ilxtr.alertNote,
-        ilxtr.hasOrganTarget,
-        ilxtr.literatureCitation,
+        #ilxtr.alertNote,
+        #ilxtr.hasOrganTarget,  # currently not ingested into composer
+        #ilxtr.literatureCitation,  # leave this out for now because it is composer only
 
              )
     def anncop(n, g):
@@ -188,12 +248,28 @@ def main():
 
         return n
 
+    from neurondm import orders as nord
+
+    def _key(v):
+        if isinstance(v, nord.rl):
+            return v
+        else:
+            return nord.rl(v)
+
+    def pos(nst):
+        # XXX temporary hack to normalize all edges for comparison
+        _adj = nord.nst_to_adj(nst)
+        adj = [tuple(sorted(ab, key=_key)) for ab in _adj]
+        return nord.adj_to_nst(adj)
+
+    def pos(nst): return nst
+
     # skos no longer in rdflib default so not restored after cull_prefixes
     config._written_graph.namespace_manager.bind('skos', str(skos))
     config_composer_only = Config('composer')
     cco_nrns = [
         anncop(NeuronComposer(
-            *n.pes, id_=n.id_, label=n._origLabel, override=True, partialOrder=n.partialOrder()),
+            *n.pes, id_=n.id_, label=n._origLabel, override=True, partialOrder=pos(n.partialOrder())),
                config._written_graph)
         for n in nrns if 'sparc-nlp/composer' in n.id_
         or 'composer/uris/set' in n.id_
@@ -205,8 +281,8 @@ def main():
     config_composer_roundtrip = Config('composer-roundtrip')
     # FIXME TODO use ex_nrns to create a lookup for these
     ccr_nrns = [
-        anncop((NeuronSparcNlp if 'sparc-nlp' in n.id_ else Neuron)(
-            *n.pes, id_=n.id_, label=n._origLabel, override=True, partialOrder=n.partialOrder()),
+        anncop((ncfun_roundtrip(n.id_))(
+            *n.pes, id_=n.id_, label=n._origLabel, override=True, partialOrder=pos(n.partialOrder())),
                config._written_graph)
         for n in nrns if 'sparc-nlp/composer' not in n.id_
         and 'composer/uris/set' not in n.id_
@@ -222,12 +298,76 @@ def main():
     config_existing = Config('composer-existing')
     cex_nrns = [
         anncop(n.__class__(
-            *n.pes, id_=n.id_, label=n._origLabel, override=True, partialOrder=n.partialOrder()),
+            *n.pes, id_=n.id_, label=n._origLabel, override=True, partialOrder=pos(n.partialOrder())),
                ex_g)
         for n in ex_nrns if n.id_ in rtids]
     remlabs_write(config_existing)
     config_existing.write_python()
 
+    if not report:
+        return
+
+    ok_for_reason = {
+        ilxtr['neuron-type-pancr-2']: 'apinat contains loops which composer cannot represent, also dendrite edges go in opposite order because composer cannot currently start distally and always starts at soma (see anat space hack)',
+        ilxtr['neuron-type-pancr-4']: 'apinat contains a loop which npo skips',
+        ilxtr['neuron-type-bolew-unbranched-24']: 'addition of fiber does not change overall order',
+    }
+
+    apinat_cases = [i for i in rtids if 'neuron-type' in i]
+    crin = {n.id_:n for n in ccr_nrns}
+    exin = {n.id_:n for n in cex_nrns}
+    todiff = []
+    for a in apinat_cases:
+        if a not in crin or a not in exin:
+            log.debug(f'one side missing {a}')
+            continue
+
+        t = crin[a], exin[a]
+        todiff.append(t)
+
+    report_both = {}
+    report_cm = {}
+    for c, e in todiff:
+        ca = tuple(tuple(e.region if e.layer is None else e for e in ab) for ab in nord.nst_to_adj(c.partialOrder()))
+        ea = nord.nst_to_adj(e.partialOrder())
+        sca, sea = set(ca), set(ea)
+        sca_only, sea_only = sca - sea, sea - sca
+        # loops
+        #sea_maybe_loops = set((b, a) for a, b in sea_only)
+        #sea_loops = sca & sea_maybe_loops
+        # node diff
+        nsca = set(e for es in ca for e in es)
+        nsea = set(e for es in ea for e in es)
+        nsca_only, nsea_only = nsca - nsea, nsea - nsca
+        if sea_only and sca_only:
+            msg = f'{c.id_} both different'
+            rep = c, e, sca, sea, sca_only, sea_only, nsca_only, nsea_only
+            #if len(sea_loops) == len(sea_maybe_loops):
+                #msg = f'{c.id_} all composer missing cases are loops so ok'
+                #log.debug(msg)
+                #continue
+
+            if c.id_ not in ok_for_reason:
+                report_both[c.id_] = rep
+        elif sea_only:
+            msg = f'{c.id_} composer missing'
+            rep = c, e, sca, sea, sca_only, sea_only, nsca_only, nsea_only
+            report_cm[c.id_] = rep
+        elif sca_only:
+            msg = f'{c.id_} only difference is new nodes in composer'
+        else:
+            msg = None
+
+        if msg:
+            log.debug(msg)
+
+    ({k:[sorted(_, key=_key) for _ in v[-2:]] for k, v in report_both.items()},
+     {k:[sorted(_, key=_key) for _ in v[-2:]] for k, v in report_cm.items()},)
+
+    ({k:[_ for _ in v[-4:-2]] for k, v in report_both.items()},
+     {k:[_ for _ in v[-4:-2]] for k, v in report_cm.items()},)
+
+    breakpoint()
     return config,
 
 
