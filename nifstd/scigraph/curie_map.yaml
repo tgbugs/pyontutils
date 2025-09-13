@@ -72,6 +72,7 @@ fsl.ats:     http://uri.interlex.org/fsl/uris/atlases/
 hcp.mmp.ver: http://uri.interlex.org/hcp/uris/mmp/versions/
 wax.sd.ver:  http://uri.interlex.org/waxholm/uris/sd/versions/
 NDA.CDE: http://uri.interlex.org/NDA/uris/datadictionary/elements/
+ilxcr: http://uri.interlex.org/composer/uris/readable/
 ilxtr: http://uri.interlex.org/tgbugs/uris/readable/
 ilxti: http://uri.interlex.org/tgbugs/uris/indexes/
 ilxtib: http://uri.interlex.org/tgbugs/uris/indexes/blank/
