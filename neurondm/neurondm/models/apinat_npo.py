@@ -7,7 +7,7 @@ from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, log, 
 
 class NeuronApinatSimple(NeuronEBM):
     owlClass = ilxtr.NeuronApinatSimple
-    shortname = 'apinat'
+    shortname = 'apnsmp'
 
 
 class AtN(Sheet):
@@ -68,6 +68,7 @@ def main(debug=False):
                 log.error(msg)
                 raise ValueError(msg)
 
+        _s = _s.replace('/neuron-type-', '/apinat-simple/neuron-type-')
         s = OntId(_s)
         try:
             p = map_predicates(_p)
@@ -121,6 +122,7 @@ def main(debug=False):
     to_remove = [t for t in config._written_graph if t[1] in labels]
     [config._written_graph.remove(t) for t in to_remove]
     [config._written_graph.add(t) for t in to_add]
+    config._written_graph.namespace_manager.bind('apnsmp', str(ilxtr['apinat-simple/']))
     config._written_graph.write()
     config.write_python()
     return config,

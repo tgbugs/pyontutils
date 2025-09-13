@@ -177,6 +177,11 @@ class NeuronComposer(Neuron):
     shortname = 'cmpsr'
 
 
+class NeuronApinatComplex(NeuronApinatSimple):
+    owlClass = ilxtr.NeuronApinatComplex
+    shortname = 'apinat'
+
+
 def remlabs_write(config, keep=tuple()):
     config.write()
     labels = tuple(
@@ -195,7 +200,7 @@ def remlabs_write(config, keep=tuple()):
 
 def ncfun_roundtrip(id):
     if '/neuron-type-' in id:
-        return NeuronApinatSimple
+        return NeuronApinatComplex
     elif '/sparc-nlp/' in id:
         return NeuronSparcNlp
     else:
@@ -290,8 +295,20 @@ def main(report=True):
     remlabs_write(config_composer_roundtrip)
     config_composer_roundtrip.write_python()
     rtids = set(n.id_ for n in ccr_nrns)
-    # TODO remove all the gen labels like we do in nlp
 
+    config_composer_apinat = Config('apinat-complex')
+    cca_nrns = [
+        anncop((ncfun_roundtrip(n.id_))(
+            *n.pes, id_=n.id_, label=n._origLabel, override=True,
+            #partialOrder=pos(n.partialOrder())
+        ),
+               config._written_graph)
+        for n in nrns if '/neuron-type-' in n.id_
+    ]
+    remlabs_write(config_composer_apinat)
+    config_composer_apinat.write_python()
+
+    # TODO remove all the gen labels like we do in nlp
     # TODO move ex before composer rt so we can look up the existing parent class
     ex_nrns, ex_config, ex_g = load_config(local=True)
     #ex_nrns = ex_config.neurons()
