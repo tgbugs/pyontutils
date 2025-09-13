@@ -1222,6 +1222,7 @@ def make_devel():
           'composer.ttl',
           'sparc-nlp.ttl',
           'apinat-simple-sheet.ttl',
+          'apinat-complex.ttl',
           )
     g = OntConjunctiveGraph()
     for fn in fns:
