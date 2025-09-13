@@ -475,7 +475,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                 p == ilxtr.hasInstanceInTaxon or
                 p == ilxtr.hasAnatomicalSystemPhenotype or
                 p == ilxtr.hasCircuitRolePhenotype or
-                p == ilxtr.hasFunctionalCircuitRolePhenotype or
+                (p == ilxtr.hasFunctionalCircuitRolePhenotype and not ('sstom-11' in s.u or 'sstom-12' in s.u)) or  # XXX hardcoded workaround for
                 (p == ilxtr.hasProjectionPhenotype and not ('sdcol-l' in s.u or 'sdcol-j' in s.u))  # XXX hardcoded workaround for composer
                 ):
                 # XXX ilxtr.hasBiologicalSex is another candidate for this treatment
