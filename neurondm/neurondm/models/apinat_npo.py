@@ -1,8 +1,10 @@
 import re
 from collections import defaultdict
+import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl
 from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, log, OntId
+from neurondm.models.apinat_pops_more import _genlabel
 
 
 class NeuronApinatSimple(NeuronEBM):
@@ -108,6 +110,9 @@ def main(debug=False):
     sigh = []
     nrns = []
     for id, phenos in dd.items():
+        l, x = _genlabel(id)
+        lab = 'simple ' + l
+        to_add.append((id.u, rdfs.label, rdflib.Literal(lab)))
         n = NeuronApinatSimple(*phenos, id_=id)
         if eff(n):
             n._sigh()  # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX FIXME figure out why this is not getting called internally
