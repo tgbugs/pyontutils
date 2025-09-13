@@ -85,6 +85,8 @@ def make_annotation_properties(prefix=ilxtr):
     return (
         prefix.hasComposerURI,
         prefix.alertNote,
+        prefix.curatorNote,
+        prefix.expertConsultant,
         rdflib.URIRef('http://uri.interlex.org/composer/uris/readable/hasComposerURI'),
         rdflib.URIRef('http://uri.interlex.org/tgbugs/uris/readable/composerGenLabel'),
     )
@@ -163,8 +165,11 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
         return sigh
 
     OntCuries({'ISBN13': 'https://uilx.org/tgbugs/u/r/isbn-13/',})
+    csin = cs
     if cs is None:
         cs = [c() for c in sheet_classes]
+
+    annotation_properties = make_annotation_properties()
 
     trips = [[cl] + [c if isinstance(c, OntId) else c.value for c in
                      ((r.id() if hasattr(r, 'id') else OntId(r.subject_uri().value)),
@@ -186,6 +191,9 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
              ]
 
     to_add = []
+    def to_add_append(t):
+        s, p, o = t
+        to_add.append(t)
 
     def vl(meth):
         c = meth()
@@ -199,12 +207,12 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
 
     extra_kwargs = {}
     def asdf(s, p, rm, split=False, rdf_type=rdflib.Literal, as_kwarg=None):
-        v = vl(rm)
-        if v:
+        vin = vl(rm)
+        if vin:
             # XXX watch out for non-homogenous subject types
             # (e.g. OntId vs rdflib.URIRef)
             if split:
-                for _v in v.split(split):
+                for _v in vin.split(split):
                     v = _v.strip()
                     if ' ' in v:
                         log.error((s, p, v))
@@ -216,7 +224,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                         v = v.replace(':/', '://', 1)
                     try:
                         o = rdf_type(v)
-                        to_add.append((s.u, p, o))
+                        to_add_append((s.u, p, o))
                     except Exception as e:
                         breakpoint()
                         raise e
@@ -225,9 +233,9 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                     if s not in extra_kwargs:
                         extra_kwargs[s] = {}
 
-                    extra_kwargs[s][as_kwarg] = v
+                    extra_kwargs[s][as_kwarg] = vin
                 else:
-                    to_add.append((s.u, p, v))
+                    to_add_append((s.u, p, vin))
 
     def bind_lcc(c):
         def lcc(uri_or_curie, _c=c):
@@ -271,7 +279,11 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                         asdf(s, ilxtr.sentenceNumber, r.sentence_number)
                     if hasattr(r, 'different_from_existing'):
                         asdf(s, ilxtr.curatorNote, r.different_from_existing)
-                    asdf(s, ilxtr.curatorNote, r.curation_notes)
+                    if csin is None:  # hack to avoid the mapping in composer
+                        asdf(s, ilxtr.curatorNote, r.curation_notes)
+                    else:
+                        asdf(s, ilxtr.systemNote, r.curation_notes)
+
                     asdf(s, ilxtr.reviewNote, r.review_notes)
                     if hasattr(r, 'reference_pubmed_id__doi_or_text'):
                         # meaning change in composer to literature_citation
@@ -306,7 +318,10 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                     if hasattr(r, 'object_text') and r.object_text().value.strip():
                         p = (OntId(r.predicate_uri().value) if hasattr(r, 'predicate_uri') else
                              (r.predicate() if hasattr(r, 'predicate') else r.relationship()))
-                        asdf(s, p, r.object_text)
+                        if p == ilxtr.expertConsultant:
+                            asdf(s, p, r.object_text, rdf_type=rdflib.URIRef, split=';')
+                        else:
+                            asdf(s, p, r.object_text)
 
                     yes_cfu = hasattr(r, 'connected_from_uri') and r.connected_from_uri().value
                     yes_acp = hasattr(r, 'axonal_course_poset') and r.axonal_course_poset().value
@@ -390,7 +405,6 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
     if config is None:
         config = Config('sparc-nlp')
 
-    annotation_properties = make_annotation_properties()
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
         _, nlpns, working_set = snames[c.sheet_name]
@@ -449,11 +463,11 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                     raise e
 
         if p == owl.equivalentClass:
-            to_add.append((s.u, p, o.u))
+            to_add_append((s.u, p, o.u))
             continue
 
         if p in annotation_properties:
-            to_add.append((s.u, p, o.u))
+            to_add_append((s.u, p, o.u))
             continue
 
         try:
