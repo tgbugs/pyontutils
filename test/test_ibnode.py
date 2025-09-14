@@ -1518,6 +1518,10 @@ class TestIBNode2(TestIBNodeLive):
     def test_pair_old(self):
         super().test_pair_old()
 
+    @pytest.mark.xfail(True, reason='version < 2.8 works differently')
+    def test_record_alt(self):
+        super().test_record_alt()
+
 
 class TestIBNodeGraphAlt2(TestIBNodeGraphAlt):
     IdentityBNode = IdentityBNodeBase2
@@ -1590,6 +1594,10 @@ class TestIBNode1(TestIBNodeLive):
     @pytest.mark.xfail(True, reason='just broken apparently')
     def test_pair_old(self):
         super().test_pair_old()
+
+    @pytest.mark.xfail(True, reason='version < 2.8 works differently')
+    def test_record_alt(self):
+        super().test_record_alt()
 
 
 class TestIBNodeGraphAlt1(TestIBNodeGraphAlt):
