@@ -27,6 +27,7 @@ Options:
 
     --curies-from=F parse using curies from file F
     --noreord       do not reorder lists when serializing
+    --id-swap       use consecutive integers for bnode ids
 
 """
 import os
@@ -226,13 +227,18 @@ def main():
     else:
         use_nsm = None
 
-    if args['--noreord']:
+    if args['--noreord'] or args['--id-swap']:
         from ttlser.serializers import CustomTurtleSerializer
+
+    if args['--noreord']:
         class AllPredicates:
             def __contains__(self, other):
                 return True
 
         CustomTurtleSerializer.no_reorder_list = AllPredicates()
+
+    if args['--id-swap']:
+        CustomTurtleSerializer._do_id_swap = True
 
     if not files:
         from ttlser.utils import readFromStdIn

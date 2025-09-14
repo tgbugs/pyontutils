@@ -16,6 +16,9 @@ Options:
     -s --slow       do not use a process pool
     -n --nowrite    parse the file and reserialize it but do not write changes
 
+    --noreord       do not reorder lists when serializing
+    --id-swap       use consecutive integers for bnode ids
+
 """
 
 import os
@@ -79,7 +82,20 @@ def main():
     global PREFIXES
     args = docopt(__doc__, version = "qnamefix 0")
     infmt = args['--format'] = 'turtle'
-    ttlser.ttlfmt.args = args
+
+    if args['--noreord'] or args['--id-swap']:
+        from ttlser.serializers import CustomTurtleSerializer
+
+    if args['--noreord']:
+        class AllPredicates:
+            def __contains__(self, other):
+                return True
+
+        CustomTurtleSerializer.no_reorder_list = AllPredicates()
+
+    if args['--id-swap']:
+        CustomTurtleSerializer._do_id_swap = True
+
     if args['--exclude'] == ['ALL']:
         for k in list(PREFIXES):
             PREFIXES.pop(k)
