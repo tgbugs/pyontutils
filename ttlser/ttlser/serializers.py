@@ -328,22 +328,18 @@ class CustomTurtleSerializer(TurtleSerializer):
         self._list_helpers = {n:p for p, lr in self.list_rankers.items() for n in lr.nodes}
         self.node_rank = self._BNodeRank()
         for s, p, o in sym_cases:
-            if self._globalSortKey(s) > self._globalSortKey(o):  # TODO verify that this does what we expect
+            rs, ro = self._globalSortKey(s), self._globalSortKey(o)
+            if rs > ro :  # TODO verify that this does what we expect
                 store.remove((s, p, o))
-            elif self._globalSortKey(s) < self._globalSortKey(o):  # TODO verify that this does what we expect
+            elif rs < ro:  # TODO verify that this does what we expect
                 store.remove((o, p, s))
             else:
                 # equivalent remove the o p s case
+                # FIXME TODO watch out for cases where o p s was in the source graph too
                 store.remove((o, p, s))
 
         if self._do_id_swap:
             _gen = (_ for _ in range(len(store) * 2))
-            # FIXME so hilariously ... sadly? symmetric predicates
-            # is unstable here because you have two consecutive bnodes
-            # that can invert at will, so we can't just go in order we have
-            # to go by the actual node rank since they will be equal and the
-            # bnodes are actually completely identical ... actually this
-            # might be a divergence between serialization order and bnode order ...
             lu = {s: (BNode(self._idswap[s].hex()) if hasattr(self, '_idswap') and s in self._idswap else BNode(next(_gen)))
                   for s, rank in sorted(
                           self.node_rank.items(),
@@ -405,14 +401,21 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     def _BNodeRank(self):
         empty = []
-        bnodes = {v:[[empty for _ in range(self.npreds)],
-                     [empty for _ in range(self.npreds)],
-                     [[], []]]
-                  for t in self.store
-                  for v in t
-                  if isinstance(v, BNode)
-                  # FIXME graph ranks ... wew
-                  or isinstance(v, QuotedGraph)}
+        bnodes = {}
+        rerank = {}
+        for t in self.store:
+            for i, v in enumerate(t):
+                if isinstance(v, BNode) or isinstance(v, QuotedGraph):
+                    if v not in bnodes:
+                        bnodes[v] = [[empty for _ in range(self.npreds)],
+                                     [empty for _ in range(self.npreds)],
+                                     [[], []]]
+                    if i == 2:
+                        if isinstance(t[0], URIRef):
+                            if v not in rerank:
+                                rerank[v] = []
+                            rerank[v].append(self.object_rank[t[0]])
+
         max_worst_case = len(bnodes) + self.max_or + 2
         mwc = [max_worst_case]
         mwcm1 = [max_worst_case - 1]
@@ -511,7 +514,24 @@ class CustomTurtleSerializer(TurtleSerializer):
                 irank = rank()
                 fixedpoint(irank)
 
-        out = {n:i + self.max_or for n, i in irank.items()}
+        pair_rank = {}
+        imax = [self.max_or + 1]
+        for n, i in irank.items():
+            if n in rerank:
+                pair_rank[n] = i, sorted(rerank[n])
+            else:
+                pair_rank[n] = i, imax
+
+        reirank = {}
+        ors = None
+        i = 0
+        for o, rs in sorted(pair_rank.items(), key=lambda t:t[1]):
+            if rs != ors:
+                i += 1
+            ors = rs
+            reirank[o] = i
+
+        out = {n:i + self.max_or for n, i in reirank.items()}
         def debug():
             [sys.stderr.write('\n{v:<4}{k}'.format(v=v, k=k))
              for k, v in sorted(self.object_rank.items(),
