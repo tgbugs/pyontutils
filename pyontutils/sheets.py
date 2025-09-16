@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import idlib
 import htmlfn as hfn
 from terminaltables3 import AsciiTable
-from pyontutils.utils import byCol, log as _log
+from pyontutils.utils_fast import byCol, chunk_list, log as _log
 from pyontutils.config import auth
 from pyontutils.clifun import python_identifier
 
@@ -1314,10 +1314,13 @@ class Sheet:
         #log.debug(f'commit count: {self.__class__.commit_count}')
         requests = list(self._commit_requests())
         if requests:
-            body = {'requests': requests}
-            resp = (self._spreadsheet_service
-                    .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
-                    .execute())
+            resps = []
+            for batch in chunk_list(requests, 100000):
+                body = {'requests': batch}
+                resp = (self._spreadsheet_service
+                        .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
+                        .execute())
+                resps.append(resp)
 
             self._uncommitted_extends = {}
             self._uncommitted_appends = {}
