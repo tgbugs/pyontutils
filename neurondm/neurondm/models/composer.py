@@ -109,7 +109,7 @@ from pyontutils.core import OntGraph, OntResIri, OntResPath
 from neurondm.core import graphBase, OntTerm, OntId, RDFL
 from . import apinat_npo  # populate Neuron subclasses
 from . import apinat_pops_more  # populate Neuron subclasses
-def load_config(gitref='neurons', local=False, restore=True):
+def load_config(gitref='neurons', local=False, restore=True, load_complex=True):
     # FIXME naming ... really load_config_neurons ...
     # FIXME from ../../docs/compoers.py
 
@@ -139,11 +139,18 @@ def load_config(gitref='neurons', local=False, restore=True):
         orr = f'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/{gitref}/'
         remote_base = orr + gen_neurons_path
 
+    imports = (
+        'apinat-partial-orders',
+        'apinat-pops-more',
+        'apinat-simple-sheet',
+        'sparc-nlp',
+    )
+
+    if load_complex:
+        imports += ('apinat-complex',)
+
     # full imports
-    for f in ('apinat-partial-orders',
-              'apinat-pops-more',
-              'apinat-simple-sheet',
-              'sparc-nlp'):
+    for f in imports:
         if local:
             ori = OntResPath(local_base / (f + suffix))
         else:
