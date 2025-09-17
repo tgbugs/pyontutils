@@ -1151,9 +1151,12 @@ class Config:
         # FIXME hack, will write other configs if call after graphbase has switched
         graphBase.write_python()
 
-    def load_existing(self, load_graph=None):
+    def load_existing(self, load_graph=None, force=False):
         """ advanced usage allows loading multiple sets of neurons and using a config
-            object to keep track of the different graphs """
+            object to keep track of the different graphs
+
+            force=True can be used to force importing when there are additional
+            python subclasses of Neuron """
         # bag existing
 
         try:
@@ -1205,9 +1208,13 @@ class Config:
                 graphBase.load_graph = self.load_graph
                 # FIXME memory inefficiency here ...
                 _ = [graphBase.in_graph.add(t) for t in graphBase.load_graph]  # FIXME use conjuctive ...
-                if len(graphBase.python_subclasses) == 2:  # FIXME magic number for Neuron and NeuronCUT
+                def tsco(o, graph):
+                    for s in graph[:rdfs.subClassOf:o]:
+                        yield s
+                all_ebm_classes = set(graphBase.load_graph.transitiveClosure(tsco, NeuronEBM.owlClass))
+                if len(graphBase.python_subclasses) == 2 or force:  # FIXME magic number for Neuron and NeuronCUT
                     ebms = [type(OntId(s).suffix, (NeuronCUT,), dict(owlClass=s))
-                            for s in self.load_graph[:rdfs.subClassOf:NeuronEBM.owlClass]
+                            for s in all_ebm_classes
                             if not graphBase.knownClasses.append(s)]
                 else:
                     ebms = []
@@ -1215,7 +1222,9 @@ class Config:
                 graphBase._nested = orders.from_rdf(self.load_graph, _partial_order_linker)
 
                 class_types = [(type, s) for s in self.load_graph[:rdf.type:owl.Class]
-                               for type in mostDerived(getClassType(s, self.load_graph)) if type]
+                               for type in mostDerived(getClassType(s, self.load_graph))
+                               if type and s not in all_ebm_classes]
+
                 sc = None
                 for sc in chain(graphBase.python_subclasses, ebms):
                     sc.owlClass
