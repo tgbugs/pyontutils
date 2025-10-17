@@ -1,12 +1,16 @@
+import pytest
+import importlib
 from pyontutils.core import OntConjunctiveGraph
 from .common import skipif_no_net, log, testing_base, _TestNeuronsBase
 
 
 class TestNeurdf(_TestNeuronsBase):
 
+    @pytest.mark.skipif(not importlib.find_loader('neurondm.compiled'), reason='no compiled sources')
     def test_models(self, debug=False):
         # XXX FIXME this test requires compiled to already have been populated
         # e.g. by running python -m neurondm.build models
+        from neurondm.models import composer  # ensure composer curies are loaded
         from neurondm.core import uPREFIXES
         from neurondm.build import make_models
         configs = make_models(source='compiled')

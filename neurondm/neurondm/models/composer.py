@@ -9,6 +9,7 @@ from neurondm.core import log as _log, uPREFIXES, Config, Neuron
 
 log = _log.getChild('composer')
 anat_space_hack = 'http://purl.obolibrary.org/obo/UBERON_0000464'
+uPREFIXES['gastint'] = 'http://uri.interlex.org/composer/uris/set/gastint/'  # run at top level to ensure is registered
 
 ilxcr = rdflib.Namespace(interlex_namespace('composer/uris/readable/'))
 
@@ -219,7 +220,6 @@ def main(report=True):
 
     sht = get_csv_sheet(exp)
     cs = [sht]
-    uPREFIXES['gastint'] = 'http://uri.interlex.org/composer/uris/set/gastint/'
     config = Config('composer-and-roundtrip')
     nlp_main(cs=cs, config=config, neuron_class=Neuron, neuron_class_fun=ncfun_roundtrip)  # FIXME neuron_class is incorrect and changes per model
     nrns = config.neurons()

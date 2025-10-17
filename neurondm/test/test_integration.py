@@ -32,6 +32,15 @@ skip = (
     'phenotype_direct',  # unknown predicate
 )
 
+try:
+    import sparcur
+except ModuleNotFoundError:
+    skip +=  (
+        'apinat_npo',
+        'apinat_pops_more',
+        'composer',
+    )
+
 olr = auth.get_path('ontology-local-repo')
 if olr.exists():
     ont_repo = Repo(olr)
