@@ -18,7 +18,7 @@ config = Config('basic-neurons',
                 prefixes={'swanr':swanr,
                           'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
                           'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),},
-                source_file=relative_path(__file__))
+                source_file=relative_path(__file__, no_wd_value='neurondm/models/basic_neurons.py'))
 
 class NeuronSWAN(NeuronEBM):
     owlClass = ilxtr.NeuronSWAN
