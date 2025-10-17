@@ -1970,9 +1970,12 @@ class graphBase:
             oc = repr(c.owlClass).split('.', 2)[-1]  # rdflib.term.URIRef()
             return f'class {c.__name__}{parent}:\n    owlClass = {oc}\n'
 
+        nrncls = set(subclasses(Neuron))
+        allmro = set(p for c in all_types for p in c.mro())
+        _parents = nrncls & allmro
         _subs = [inspect.getsource(c) if getfe(c) else getdyn(c)
-                 for c in subclasses(Neuron)
-                 if c in all_types
+                 for c in nrncls
+                 if (c in all_types or c in _parents)
                  and c.__name__ not in __all__]
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
         #log.debug(str(all_types))
