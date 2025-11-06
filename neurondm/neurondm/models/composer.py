@@ -307,7 +307,7 @@ def main(report=True):
     cca_nrns = [
         anncop((ncfun_roundtrip(n.id_))(
             *n.pes, id_=n.id_, label=n._origLabel, override=True,
-            #partialOrder=pos(n.partialOrder())
+            partialOrder=pos(n.partialOrder())
         ),
                config._written_graph)
         for n in nrns if '/neuron-type-' in n.id_
