@@ -193,7 +193,8 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
     to_add = []
     def to_add_append(t):
         s, p, o = t
-        to_add.append(t)
+        _t = tuple([e.u if isinstance(e, OntId) else e for e in t])
+        to_add.append(_t)
 
     def vl(meth):
         c = meth()

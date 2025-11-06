@@ -229,10 +229,11 @@ def main(report=True):
 
     # TODO
     # use the ids from nrns
-    # to create 3 files
-    # 1. composer only
-    # 2. composer existing only
-    # 3. existing from ontology
+    # to create 4 files
+    # 1. composer only                -> composer.ttl
+    # 2. composer existing only       -> composer-roundtrip.ttl
+    # 3. composer existing NOT apinat -> composer-nlp.ttl
+    # 4. existing from ontology       -> composer-existing.ttl
 
     acops = (
         # composer only
@@ -252,9 +253,9 @@ def main(report=True):
         #ilxtr.literatureCitation,  # leave this out for now because it is composer only
 
              )
-    def anncop(n, g):
+    def anncop(n, g, include=tuple()):
         s = n.id_
-        for p in acops:
+        for p in acops + include:
             for o in g[s:p]:
                 graphBase.out_graph.add((s, p, o))
 
@@ -314,6 +315,20 @@ def main(report=True):
     ]
     remlabs_write(config_composer_apinat)
     config_composer_apinat.write_python()
+
+    # roundtrip without apinat-complex
+    config_composer_sheet = Config('composer-nlp')
+    ccs_nrns = [
+        anncop((ncfun_roundtrip(n.id_))(
+            *n.pes, id_=n.id_, label=n._origLabel, override=True, partialOrder=pos(n.partialOrder())),
+               config._written_graph, (ilxtr.alertNote,))
+        for n in nrns if 'sparc-nlp/composer' not in n.id_
+        and 'composer/uris/set' not in n.id_
+        and '/neuron-type-' not in n.id_
+    ]
+    remlabs_write(config_composer_sheet)
+    config_composer_sheet.write_python()
+    # TODO diff this against sparc-nlp.ttl
 
     # TODO remove all the gen labels like we do in nlp
     # TODO move ex before composer rt so we can look up the existing parent class

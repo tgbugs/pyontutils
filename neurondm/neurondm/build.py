@@ -1206,23 +1206,24 @@ def make_devel():
 
     olr = auth.get_path('ontology-local-repo')
     n = (olr / 'ttl/generated/neurons')
-    fns =('allen-cell-types.ttl',
-          'cut-development.ttl',
-          'common-usage-types.ttl',
-          #'cut-roundtrip.ttl',
-          'huang-2017.ttl',
-          'markram-2015.ttl',
+    fns = ('allen-cell-types.ttl',
+           'cut-development.ttl',
+           'common-usage-types.ttl',
+           #'cut-roundtrip.ttl',
+           'huang-2017.ttl',
+           'markram-2015.ttl',
 
-          #'bolser-lewis.ttl',
-          'keast-2020.ttl',
-          'apinatomy-neuron-populations.ttl',
-          'apinat-partial-orders.ttl',
-          #'apinatomy-locations.ttl',
-          #'nerves.ttl',
-          'composer.ttl',
-          'sparc-nlp.ttl',
-          'apinat-simple-sheet.ttl',
-          'apinat-complex.ttl',
+           #'bolser-lewis.ttl',
+           'keast-2020.ttl',
+           'apinatomy-neuron-populations.ttl',
+           #'apinat-partial-orders.ttl',  # now in apinat-complex
+           #'apinatomy-locations.ttl',
+           #'nerves.ttl',
+           'composer.ttl',
+           #'composer-nlp.ttl',
+           'sparc-nlp.ttl',
+           'apinat-simple-sheet.ttl',
+           'apinat-complex.ttl',
           )
     g = OntConjunctiveGraph()
     for fn in fns:
