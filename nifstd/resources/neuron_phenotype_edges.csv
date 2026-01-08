@@ -81,6 +81,8 @@ hasDevelopmentalStage,,,Expresses a relationship between a neuron type and a dev
 ,,,,,,,,
 phenotypeObservedInBrainRegion,,Located in?,Expresses a relationship between a phenotype and a brain region. This should be used when a neuron phenotype is observed in specific brain regions.,,existential not universal,,,
 phenotypeCooccuresWith,,,Expresses a relationship between a phenotype and a phenotype. This should be used when two phenotypes commonly cooccure.,,"this is not the right way to pull this off, need something akin to disjointness",,,
+,,,,,,,,
+isMemberOfCircuit,,,Expresses a relationship between a neuron type and a circuit type that the neuron type is a member of. Implies that individual neurons of that type each have at least one forward or reverse connection with some other member of that circuit type.,,,RO:0002350,,"asymmetric, irreflexive"
 #references,,,,,,,,
 in taxon,,http://purl.obolibrary.org/obo/RO_0002162,,,,,,
 never in taxon,,http://purl.obolibrary.org/obo/RO_0002161,,,,,,
