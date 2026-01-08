@@ -358,6 +358,19 @@ def main(report=True):
         ilxtr['neuron-type-bolew-unbranched-24']: 'addition of fiber does not change overall order',
     }
 
+    _cnlp_cases = {n.id_: n for n in ccs_nrns}
+    _snlp_cases = {n.id_: n for n in ex_nrns if '/sparc-nlp/' in n.id_}
+    cnlp_cases = list(_cnlp_cases)
+    snlp_cases = list(_snlp_cases)
+    ssnlp, scnlp = set(snlp_cases), set(cnlp_cases)
+    nlp_miss_cmp = ssnlp - scnlp
+    nlp_miss_sht = scnlp - ssnlp
+    nlp_cases = list(ssnlp & scnlp)
+    nlp_todiff = []
+    for c in nlp_cases:
+        t = _cnlp_cases[c], _snlp_cases[c]
+        nlp_todiff.append(t)
+
     apinat_cases = [i for i in rtids if 'neuron-type' in i]
     crin = {n.id_:n for n in ccr_nrns}
     exin = {n.id_:n for n in cex_nrns}
@@ -370,47 +383,62 @@ def main(report=True):
         t = crin[a], exin[a]
         todiff.append(t)
 
-    report_both = {}
-    report_cm = {}
-    for c, e in todiff:
-        ca = tuple(tuple(e.region if e.layer is None else e for e in ab) for ab in nord.nst_to_adj(c.partialOrder()))
-        ea = nord.nst_to_adj(e.partialOrder())
-        sca, sea = set(ca), set(ea)
-        sca_only, sea_only = sca - sea, sea - sca
-        # loops
-        #sea_maybe_loops = set((b, a) for a, b in sea_only)
-        #sea_loops = sca & sea_maybe_loops
-        # node diff
-        nsca = set(e for es in ca for e in es)
-        nsea = set(e for es in ea for e in es)
-        nsca_only, nsea_only = nsca - nsea, nsea - nsca
-        if sea_only and sca_only:
-            msg = f'{c.id_} both different'
-            rep = c, e, sca, sea, sca_only, sea_only, nsca_only, nsea_only
-            #if len(sea_loops) == len(sea_maybe_loops):
-                #msg = f'{c.id_} all composer missing cases are loops so ok'
-                #log.debug(msg)
-                #continue
+    apn_todiff = todiff
 
-            if c.id_ not in ok_for_reason:
-                report_both[c.id_] = rep
-        elif sea_only:
-            msg = f'{c.id_} composer missing'
-            rep = c, e, sca, sea, sca_only, sea_only, nsca_only, nsea_only
-            report_cm[c.id_] = rep
-        elif sca_only:
-            msg = f'{c.id_} only difference is new nodes in composer'
-        else:
-            msg = None
+    for i, todiff in enumerate((apn_todiff, nlp_todiff)):
+        report_both = {}
+        report_cm = {}
+        for c, e in todiff:
+            _ca = tuple(tuple(e.region if e.layer is None else e for e in ab) for ab in nord.nst_to_adj(c.partialOrder()))
+            _ea = nord.nst_to_adj(e.partialOrder())
+            ca = tuple(tuple(sorted(p, key=_key)) for p in _ca)
+            ea = tuple(tuple(sorted(p, key=_key)) for p in _ea)
+            sca, sea = set(ca), set(ea)
+            sca_only, sea_only = sca - sea, sea - sca
+            # loops
+            #sea_maybe_loops = set((b, a) for a, b in sea_only)
+            #sea_loops = sca & sea_maybe_loops
+            # node diff
+            nsca = set(e for es in ca for e in es)
+            nsea = set(e for es in ea for e in es)
+            nsca_only, nsea_only = nsca - nsea, nsea - nsca
+            if sea_only and sca_only:
+                msg = f'{c.id_} both different'
+                rep = c, e, sca, sea, sca_only, sea_only, nsca_only, nsea_only
+                #if len(sea_loops) == len(sea_maybe_loops):
+                    #msg = f'{c.id_} all composer missing cases are loops so ok'
+                    #log.debug(msg)
+                    #continue
 
-        if msg:
-            log.debug(msg)
+                if c.id_ not in ok_for_reason:
+                    report_both[c.id_] = rep
+            elif sea_only:
+                msg = f'{c.id_} composer missing'
+                rep = c, e, sca, sea, sca_only, sea_only, nsca_only, nsea_only
+                report_cm[c.id_] = rep
+            elif sca_only:
+                msg = f'{c.id_} only difference is new nodes in composer'
+            else:
+                msg = None
+
+            if msg:
+                log.debug(msg)
+
+        if i == 0:
+            apn_report_both = report_both
+            apn_report_cm = report_cm
+        elif i == 1:
+            nlp_report_both = report_both
+            nlp_report_cm = report_cm
 
     ({k:[sorted(_, key=_key) for _ in v[-2:]] for k, v in report_both.items()},
      {k:[sorted(_, key=_key) for _ in v[-2:]] for k, v in report_cm.items()},)
 
     ({k:[_ for _ in v[-4:-2]] for k, v in report_both.items()},
      {k:[_ for _ in v[-4:-2]] for k, v in report_cm.items()},)
+
+    {k:[_ for _ in v[-4:-2]] for k, v in nlp_report_both.items()}
+    {k:[sorted(_, key=_key) for _ in v[-2:]] for k, v in nlp_report_both.items() if v[-2] or v[-1]}
 
     breakpoint()
     return config,
