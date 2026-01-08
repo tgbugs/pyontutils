@@ -9,7 +9,10 @@ from neurondm.core import log as _log, uPREFIXES, Config, Neuron
 
 log = _log.getChild('composer')
 anat_space_hack = 'http://purl.obolibrary.org/obo/UBERON_0000464'
-uPREFIXES['gastint'] = 'http://uri.interlex.org/composer/uris/set/gastint/'  # run at top level to ensure is registered
+# run at top level to ensure these are registered
+uPREFIXES['gastint'] = 'http://uri.interlex.org/composer/uris/set/gastint/'
+uPREFIXES['pain1'] = 'http://uri.interlex.org/composer/uris/set/pain1/'
+uPREFIXES['portal'] = 'http://uri.interlex.org/composer/uris/set/portal/'
 
 ilxcr = rdflib.Namespace(interlex_namespace('composer/uris/readable/'))
 
@@ -26,6 +29,7 @@ def get_csv_sheet(path):
     tidx = _rows[0].index('Object Text')
     ridx = _rows[0].index('Reference (pubmed ID, DOI or text)')
     cidx = _rows[0].index('Connected from uri')
+    state_idx = _rows[0].index('Statement State')
     derp_idx = _rows[0].index('Object')
     _rows[0][ridx] = 'literature citation'  # XXX HACK
     sigh = 'https://uri.interlex.org/'
@@ -58,7 +62,7 @@ def get_csv_sheet(path):
     rows = [[c if c != 'http://www.notspecified.info' else ''
              for c in r] for r in _rows
             if (r[idx] or r[tidx]) and r[sidx]
-            and r[idx] != anat_space_hack
+            and r[idx] != anat_space_hack and r[state_idx] != 'rejected'
             ]
     assert len(rows) > 1
 
@@ -345,6 +349,8 @@ def main(report=True):
 
     if not report:
         return
+
+    exids = set(n.id_ for n in ex_nrns if '/apinat-simple/' not in n.id_)
 
     ok_for_reason = {
         ilxtr['neuron-type-pancr-2']: 'apinat contains loops which composer cannot represent, also dendrite edges go in opposite order because composer cannot currently start distally and always starts at soma (see anat space hack)',

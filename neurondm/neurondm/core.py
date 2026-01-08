@@ -1894,7 +1894,8 @@ class graphBase:
 
         proot = graphBase.core_graph.qname(PHENO_ROOT)
         mroot = graphBase.core_graph.qname(MOD_ROOT)
-        preds, pred_supers = getPhenotypePredicates(graphBase.core_graph, proot, mroot)
+        member_root = 'RO:0002350'
+        preds, pred_supers = getPhenotypePredicates(graphBase.core_graph, proot, mroot, member_root)
         graphBase._predicates, graphBase._predicate_supers = preds, pred_supers
         lp, lps = getPhenotypePredicates(graphBase.core_graph, 'ilxtr:hasLocationPhenotype')
         graphBase._location_predicates, graphBase._location_predicate_supers = lp, lps

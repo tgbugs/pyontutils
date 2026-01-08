@@ -99,6 +99,7 @@ PREFIXES = {**makePrefixes('ilxtr',
                            'owl',
                            'dc',
                            'nsu',
+                           'RO',
                            'CHEBI',
                            'NCBIGene',
                            'NCBITaxon',
@@ -317,7 +318,10 @@ def make_phenotypes():
         if row[6]:
             supers = row[6].split(',')
             for sup in supers:
-                graph.add_trip(id_, rdflib.RDFS.subPropertyOf, 'ilxtr:' + sup)
+                obj = 'ilxtr:' + sup if ':' not in sup else graph.g.namespace_manager.expand(sup)
+                if 'BFO' in sup:
+                    breakpoint()
+                graph.add_trip(id_, rdflib.RDFS.subPropertyOf, obj)
         if row[7]:
             graph.add_trip(id_, rdflib.OWL.inverseOf, 'ilxtr:' + row[7])
         if row[8]:
