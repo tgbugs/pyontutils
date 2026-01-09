@@ -28,12 +28,21 @@ def get_csv_sheet(path):
     pidx = _rows[0].index('Predicate URI')
     tidx = _rows[0].index('Object Text')
     ridx = _rows[0].index('Reference (pubmed ID, DOI or text)')
+    eidx = _rows[0].index('Expert Consultant')
     cidx = _rows[0].index('Connected from uri')
     state_idx = _rows[0].index('Statement State')
     derp_idx = _rows[0].index('Object')
     _rows[0][ridx] = 'literature citation'  # XXX HACK
     sigh = 'https://uri.interlex.org/'
     sigh2 = 'https://scicrunch.org/scicrunch/interlex/view/'
+    bad = 'https://rrid.site/data/record/nlx_144509-1/RRID:SCR_018709/resolver?q=SAWG&i=rrid:scr_018709'
+    doibad = 'http://dx.doi.org/'
+    doibads = (
+        ('https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/10.1002/jemt.10225', 'https://doi.org/10.1002/jemt.10225'),
+        ('https://onlinelibrary.wiley.com/doi/abs/10.1002/cphy.c140032', 'https://doi.org/10.1002/cphy.c140032'),
+        ('https://physoc.onlinelibrary.wiley.com/doi/abs/10.1113/JP271869','https://doi.org/10.1113/JP271869'),
+    )
+    nogitl = 'https://github.com/open-physiology/apinatomy-models'
     for i, _r in enumerate(_rows[1:]):  # FIXME EVEN BIGGER HACK
         if (not (_r[idx] or _r[tidx])) and _r[derp_idx]:
             _r[tidx] = _r[derp_idx]
@@ -49,6 +58,28 @@ def get_csv_sheet(path):
         if _r[derp_idx] == 'not specified':
             _r[sidx] = ''  # for skip the row to avoid bad triples with TEMP:MISSING
             #_r[derp_idx] = ''
+
+        if doibad in _r[ridx]:
+            log.error(f'bad DOI for {i + 2}')
+            _r[ridx] = _r[ridx].replace(doibad, 'https://doi.org/')
+
+        for db, rep in doibads:
+            if db in _r[ridx]:
+                log.error(f'bad citation for {i + 2}')
+                _r[ridx] = _r[ridx].replace(db, rep)
+
+        if nogitl in _r[ridx]:
+            _coll = []
+            for _v in _r[ridx].split(','):
+                v = _v.strip()
+                if v and nogitl not in v:
+                    _coll.append(v)
+
+            _r[ridx] = ','.join(_coll)
+
+        if bad in _r[eidx]:
+            log.error(f'bad RRID for {i + 2}')
+            _r[eidx] = _r[eidx].replace(bad, 'RRID:018709')  # FIXME hack
 
         for j, c in enumerate(list(_r)):
             if c.startswith(sigh):
@@ -245,16 +276,17 @@ def main(report=True):
 
         # composer export derived
         skos.prefLabel,
-        #ilxtr.curatorNote,
+        #ilxtr.curatorNote,  # XXX mapped to system notes column which we don't want to export right now, but is ALSO provided as a row
         #ilxtr.inNLPWorkingSet,  # XXX there is no explicit field in the export for this right now?
         #ilxtr.reference,  # XXX this is not present from composer so leave out to reduce noise
-        #ilxtr.reviewNote,
+        #ilxtr.reviewNote,  # these cannot be exported right now because the field contains conversations
         #ilxtr.sentenceNumber,
+        ilxtr.expertConsultant,
 
         # ontology derived extra
         #ilxtr.alertNote,
         #ilxtr.hasOrganTarget,  # currently not ingested into composer
-        #ilxtr.literatureCitation,  # leave this out for now because it is composer only
+        ilxtr.literatureCitation,  # leave this out for now because it is composer only
 
              )
     def anncop(n, g, include=tuple()):
