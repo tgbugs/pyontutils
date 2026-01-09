@@ -715,13 +715,15 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
 def loadall(git_local, repo_name, local=False, dobig=False):
     local_base = jpth(git_local, repo_name)
     lb_ttl = os.path.realpath(jpth(local_base, 'ttl'))
-
+    
     #match = (rdflib.term.URIRef('http://purl.org/dc/elements/1.1/member'),  # iao.owl
              #rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
              #rdflib.term.URIRef('http://www.w3.org/2002/07/owl#AnnotationProperty'))
 
     done = []
-    filenames = [f for g in ('*', '*/*', '*/*/*') for f in glob(lb_ttl + '/' + g + '.ttl')]
+    git_path = '/home/tmsincomb/Dropbox/git/'
+    hardcoded_files = [repo_name + '/' + 'extra.ttl'] + [git_path+'sparc-view.ttl', git_path+'fma_slim.ttl', git_path+'emapa.ttl', git_path+'uberon.ttl', git_path+'mondo.ttl']
+    filenames = hardcoded_files + [f for g in ('*', '*/*', '*/*/*') for f in glob(lb_ttl + '/' + g + '.ttl')]
     graph = OntGraph()
     for f in filenames:
         print(f)
@@ -734,12 +736,17 @@ def loadall(git_local, repo_name, local=False, dobig=False):
         for s, o in graph.subject_objects(owl.imports):
             if os.path.basename(o) not in done and o not in done:
             #if (o, rdf.type, owl.Ontology) not in graph:
+                if not o.startswith('/home/tmsincomb'):
+                    continue
                 print(o)
                 done.append(o)
                 ext = os.path.splitext(o)[1]
                 fmt = 'turtle' if ext == '.ttl' else 'xml'
                 if noneMembers(o, *bigleaves) or dobig:
-                    graph.parse(o, format=fmt)
+                    try:
+                        graph.parse(o, format=fmt)
+                    except:
+                        print('FAILED:', o)
                     #if match in graph:
                         #raise BaseException('Evil file found %s' % o)
 
@@ -810,7 +817,7 @@ def for_burak(graph):
 
     records = {c:[l, s, p] for c, l, s, p in inner(graph) if l or s}
     with open(os.path.expanduser('~/files/ontology-classes-with-labels-synonyms-parents.json'), 'wt') as f:
-              json.dump(records, f, sort_keys=True, indent=2)
+        json.dump(records, f, sort_keys=True, indent=2)
 
 
 def make_post_clone(git_local, repo_name, remote_base):
