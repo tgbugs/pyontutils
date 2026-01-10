@@ -298,7 +298,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                         asdf(s, ilxtr.expertConsultant, r.expert_consultant, split=',', rdf_type=lcc)
 
                     asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)
-                    asdf(s, skos.prefLabel, r.neuron_population_label_a_to_b_via_c)
+                    #asdf(s, skos.prefLabel, r.neuron_population_label_a_to_b_via_c)  # the current form of these start with "from" is bad, the prefLabel in triples is way better
                     if hasattr(r, 'subject') and r.subject().value.strip():
                         asdf(s, rdfs.label, r.subject, as_kwarg='label')
                         extra_kwargs[s]['override'] = True

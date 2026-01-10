@@ -275,6 +275,7 @@ def main(report=True):
         ilxcr.hasComposerURI,
 
         # composer export derived
+        rdfs.label,  # also need remlabs_write keep= for it to propagate
         skos.prefLabel,
         #ilxtr.curatorNote,  # XXX mapped to system notes column which we don't want to export right now, but is ALSO provided as a row
         #ilxtr.inNLPWorkingSet,  # XXX there is no explicit field in the export for this right now?
@@ -349,7 +350,7 @@ def main(report=True):
                config._written_graph)
         for n in nrns if '/neuron-type-' in n.id_
     ]
-    remlabs_write(config_composer_apinat)
+    remlabs_write(config_composer_apinat, keep=(rdfs.label, skos.prefLabel))
     config_composer_apinat.write_python()
 
     # roundtrip without apinat-complex
@@ -362,7 +363,7 @@ def main(report=True):
         and 'composer/uris/set' not in n.id_
         and '/neuron-type-' not in n.id_
     ]
-    remlabs_write(config_composer_sheet)
+    remlabs_write(config_composer_sheet, keep=(rdfs.label, skos.prefLabel))
     config_composer_sheet.write_python()
     # TODO diff this against sparc-nlp.ttl
 
