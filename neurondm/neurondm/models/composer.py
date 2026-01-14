@@ -109,22 +109,27 @@ def get_csv_sheet(path):
 
     # missing due to issues with aacar-1 and pancr-2
     aacar_11 = [''] * len(rows[0])
+    aacar_11[0] = 'neuron type aacar 11'
     aacar_11[sidx], aacar_11[pidx], aacar_11[idx] = (
         'ilxtr:neuron-type-aacar-11', 'ilxtr:hasForwardConnectionPhenotype', 'ilxtr:neuron-type-aacar-1')
 
     sstom_11 = [''] * len(rows[0])
+    sstom_11[0] = 'neuron type sstom 11'
     sstom_11[sidx], sstom_11[pidx], sstom_11[idx] = (
         'ilxtr:neuron-type-sstom-11', 'ilxtr:hasFunctionalCircuitRolePhenotype', 'ILX:0105486')
 
     sstom_12 = [''] * len(rows[0])
+    sstom_12[0] = 'neuron type sstom 12'
     sstom_12[sidx], sstom_12[pidx], sstom_12[idx] = (
         'ilxtr:neuron-type-sstom-12', 'ilxtr:hasFunctionalCircuitRolePhenotype', 'ILX:0104003')
 
     sdcol_l = [''] * len(rows[0])
+    sdcol_l[0] = 'neuron type sdcol l'
     sdcol_l[sidx], sdcol_l[pidx], sdcol_l[idx] = (
         'ilxtr:neuron-type-sdcol-l', 'neurdf.ent:hasMolecularPhenotype', 'TEMPIND:Nos1')
 
     sdcol_lp = [''] * len(rows[0])
+    sdcol_lp[0] = "neuron type sdcol l'"
     sdcol_lp[sidx], sdcol_lp[pidx], sdcol_lp[idx] = (
         'ilxtr:neuron-type-sdcol-l-prime', 'neurdf.ent:hasMolecularPhenotype', 'TEMPIND:Nos1')
 
