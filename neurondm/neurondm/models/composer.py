@@ -36,6 +36,7 @@ def get_csv_sheet(path):
     sigh = 'https://uri.interlex.org/'
     sigh2 = 'https://scicrunch.org/scicrunch/interlex/view/'
     bad = 'https://rrid.site/data/record/nlx_144509-1/RRID:SCR_018709/resolver?q=SAWG&i=rrid:scr_018709'
+    bad2 = 'https://rrid.site/resolver/SCR_018709'
     doibad = 'http://dx.doi.org/'
     doibads = (
         ('https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/10.1002/jemt.10225', 'https://doi.org/10.1002/jemt.10225'),
@@ -86,6 +87,9 @@ def get_csv_sheet(path):
         if bad in _r[eidx]:
             log.error(f'bad RRID for {i + 2}')
             _r[eidx] = _r[eidx].replace(bad, 'RRID:018709')  # FIXME hack
+        elif bad2 in _r[eidx]:
+            log.error(f'bad RRID for {i + 2}')
+            _r[eidx] = _r[eidx].replace(bad2, 'RRID:018709')  # FIXME hack
 
         for j, c in enumerate(list(_r)):
             if c.startswith(sigh):
