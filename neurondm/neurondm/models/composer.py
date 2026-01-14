@@ -43,6 +43,7 @@ def get_csv_sheet(path):
         ('https://physoc.onlinelibrary.wiley.com/doi/abs/10.1113/JP271869','https://doi.org/10.1113/JP271869'),
     )
     nogitl = 'https://github.com/open-physiology/apinatomy-models'
+    aacar_1_5_issue = 'https://uri.interlex.org/composer/uris/set/aacar/5'
     for i, _r in enumerate(_rows[1:]):  # FIXME EVEN BIGGER HACK
         if (not (_r[idx] or _r[tidx])) and _r[derp_idx]:
             _r[tidx] = _r[derp_idx]
@@ -54,6 +55,11 @@ def get_csv_sheet(path):
             # something got mangled inside composer ...
             _r[idx] = 'http://uri.interlex.org/tgbugs/uris/readable/ProjectionPhenotype'
             log.error(f'bad object value for {i + 2}')
+
+        if _r[sidx] == aacar_1_5_issue:  # XXX fix for bad working set interaction
+            _r[sidx] = 'http://uri.interlex.org/tgbugs/uris/readable/neuron-type-aacar-1'
+            _r[0] = 'neuron type aacar 1'
+            _r[state_idx] = 'wat'
 
         if _r[derp_idx] == 'not specified':
             _r[sidx] = ''  # for skip the row to avoid bad triples with TEMP:MISSING
@@ -93,7 +99,7 @@ def get_csv_sheet(path):
     rows = [[c if c != 'http://www.notspecified.info' else ''
              for c in r] for r in _rows
             if (r[idx] or r[tidx]) and r[sidx]
-            and r[idx] != anat_space_hack and r[state_idx] != 'rejected'
+            and r[idx] != anat_space_hack and r[state_idx] != 'rejected' and r[state_idx] != 'in_progress'
             ]
     assert len(rows) > 1
 
@@ -101,10 +107,6 @@ def get_csv_sheet(path):
     aacar_11 = [''] * len(rows[0])
     aacar_11[sidx], aacar_11[pidx], aacar_11[idx] = (
         'ilxtr:neuron-type-aacar-11', 'ilxtr:hasForwardConnectionPhenotype', 'ilxtr:neuron-type-aacar-1')
-
-    pancr_1 = [''] * len(rows[0])
-    pancr_1[sidx], pancr_1[pidx], pancr_1[idx] = (
-        'ilxtr:neuron-type-pancr-1', 'ilxtr:hasForwardConnectionPhenotype', 'ilxtr:neuron-type-pancr-2')
 
     sstom_11 = [''] * len(rows[0])
     sstom_11[sidx], sstom_11[pidx], sstom_11[idx] = (
@@ -124,7 +126,6 @@ def get_csv_sheet(path):
 
     rows.extend((
         aacar_11,
-        pancr_1,
         sstom_11,
         sstom_12,
         sdcol_l,
