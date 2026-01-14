@@ -113,16 +113,6 @@ def get_csv_sheet(path):
     aacar_11[sidx], aacar_11[pidx], aacar_11[idx] = (
         'ilxtr:neuron-type-aacar-11', 'ilxtr:hasForwardConnectionPhenotype', 'ilxtr:neuron-type-aacar-1')
 
-    sstom_11 = [''] * len(rows[0])
-    sstom_11[0] = 'neuron type sstom 11'
-    sstom_11[sidx], sstom_11[pidx], sstom_11[idx] = (
-        'ilxtr:neuron-type-sstom-11', 'ilxtr:hasFunctionalCircuitRolePhenotype', 'ILX:0105486')
-
-    sstom_12 = [''] * len(rows[0])
-    sstom_12[0] = 'neuron type sstom 12'
-    sstom_12[sidx], sstom_12[pidx], sstom_12[idx] = (
-        'ilxtr:neuron-type-sstom-12', 'ilxtr:hasFunctionalCircuitRolePhenotype', 'ILX:0104003')
-
     sdcol_l = [''] * len(rows[0])
     sdcol_l[0] = 'neuron type sdcol l'
     sdcol_l[sidx], sdcol_l[pidx], sdcol_l[idx] = (
@@ -135,8 +125,6 @@ def get_csv_sheet(path):
 
     rows.extend((
         aacar_11,
-        sstom_11,
-        sstom_12,
         sdcol_l,
         sdcol_lp,
     ))
