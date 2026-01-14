@@ -1,7 +1,7 @@
 import augpathlib as aug
 from pyontutils.core import OntGraph, OntResPath
 from pyontutils.config import auth
-from pyontutils.namespaces import makePrefixes, ilxtr, owl
+from pyontutils.namespaces import makePrefixes, ilxtr, owl, rdf, rdfs
 
 
 #import json
@@ -82,6 +82,16 @@ from neurondm.lang import Phenotype, Neuron, NeuronEBM, Config, OntId
 #pprint(dir(i.row_object(0)))
 
 #pprint([i.values for i in insts])
+
+class NeuronApinatSimple(NeuronEBM):
+    owlClass = ilxtr.NeuronApinatSimple
+    shortname = 'apnsmp'
+
+
+class NeuronApinatComplex(NeuronApinatSimple):
+    owlClass = ilxtr.NeuronApinatComplex
+    shortname = 'apinat'
+
 
 para_pre = Phenotype('ilxtr:neuron-phenotype-para-pre', 'ilxtr:hasAnatomicalSystemPhenotype')
 para_post = Phenotype('ilxtr:neuron-phenotype-para-post', 'ilxtr:hasAnatomicalSystemPhenotype')
@@ -196,7 +206,7 @@ lcnv = {i.name: {r.prefix().value if hasattr(r, 'prefix') else 'AAAA':  # r.name
                  for r in i.rows()[1:]} for i in lcnv_insts if hasattr(i, '_values') or i.fetch()}
 
 neuron_classes = {
-    sn: type(f'Neuron{sn.capitalize()}', (NeuronEBM,),
+    sn: type(f'Neuron{sn.capitalize()}', (NeuronApinatComplex,),
              {'owlClass': ilxtr[f'Neuron{sn.capitalize()}'],
               '_model_refs': mrefs[sn_id[sn]],
               '_model_id': sn_id[sn],
@@ -257,9 +267,14 @@ def citations(ncs, neus):
                 yield s, p, o
 
 
-def main():
+def main(make_manual=True):
     # XXX TODO need to ensure that the type phenotype axioms so that the model superclass is included
-    config = Config('apinat-pops-more')
+    if make_manual:
+        name = 'apinat-manual'
+    else:
+        name = 'apinat-pops-more'
+
+    config = Config(name)
     neus = [dophen(oid, bag, refs) for bag, _, oid, _, refs in bagged]
     #test = list(citations(neuron_classes.values(), neus))
     pprint(neus)
@@ -275,8 +290,19 @@ def main():
     og.parse()
     # remove equivalentClass axioms since they are only needed as a hack
     exclude = set(t for s, o in og[:owl.equivalentClass:] for t in og.subject_triples(o))
-    ng = OntGraph().populate_from_triples((t for t in og if t not in exclude and t[1] != owl.equivalentClass
-                                           and 'able' not in t[1] and 'abel' not in t[1]))
+    ng = OntGraph()
+    if make_manual:
+        to_sco = [([s2 for s1, _ in og.subject_predicates(s) for s2, _ in og.subject_predicates(s1)][0],
+                   rdfs.subClassOf,
+                   o) for s, p, o in exclude if p == rdf.first and '/Neuron' in o]
+        ng.populate_from_triples(to_sco)
+        ng.populate_from_triples(((s, p, NeuronApinatComplex.owlClass) for s, p, o in og if p == rdfs.subClassOf and '/Neuron' in s))
+        ng.add((NeuronApinatSimple.owlClass, rdfs.subClassOf, NeuronEBM.owlClass))
+        ng.add((NeuronApinatComplex.owlClass, rdfs.subClassOf, NeuronApinatSimple.owlClass))
+    else:
+        ng.populate_from_triples((t for t in og if t not in exclude and t[1] != owl.equivalentClass
+                                  and 'able' not in t[1] and 'abel' not in t[1]))
+
     ng.populate_from(citations(neuron_classes.values(), neus))
     ng.namespace_manager.populate_from(og)
     ng.namespace_manager.populate_from(makePrefixes('PMID', 'doi', 'dc'))

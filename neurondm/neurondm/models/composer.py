@@ -4,7 +4,7 @@ import augpathlib as aug
 from pyontutils import sheets
 from pyontutils.namespaces import TEMP, ilxtr, rdfs, skos, interlex_namespace
 from neurondm.models.nlp import map_predicates, main as nlp_main, NeuronSparcNlp
-from neurondm.models.apinat_npo import NeuronApinatSimple
+from neurondm.models.apinat_npo import NeuronApinatSimple, NeuronApinatComplex
 from neurondm.core import log as _log, uPREFIXES, Config, Neuron
 
 log = _log.getChild('composer')
@@ -216,11 +216,6 @@ def load_config(gitref='neurons', local=False, restore=True, load_complex=True):
 class NeuronComposer(Neuron):
     owlClass = ilxtr.NeuronComposer
     shortname = 'cmpsr'
-
-
-class NeuronApinatComplex(NeuronApinatSimple):
-    owlClass = ilxtr.NeuronApinatComplex
-    shortname = 'apinat'
 
 
 def remlabs_write(config, keep=tuple()):

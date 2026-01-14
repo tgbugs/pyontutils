@@ -4,12 +4,7 @@ import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl
 from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, log, OntId
-from neurondm.models.apinat_pops_more import _genlabel
-
-
-class NeuronApinatSimple(NeuronEBM):
-    owlClass = ilxtr.NeuronApinatSimple
-    shortname = 'apnsmp'
+from neurondm.models.apinat_pops_more import _genlabel, NeuronApinatSimple, NeuronApinatComplex
 
 
 class AtN(Sheet):
