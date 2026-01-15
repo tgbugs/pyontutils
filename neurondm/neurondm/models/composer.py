@@ -270,7 +270,7 @@ def main(report=True):
         # composer export derived
         rdfs.label,  # also need remlabs_write keep= for it to propagate
         skos.prefLabel,
-        #ilxtr.curatorNote,  # XXX mapped to system notes column which we don't want to export right now, but is ALSO provided as a row
+        ilxtr.curatorNote,
         #ilxtr.inNLPWorkingSet,  # XXX there is no explicit field in the export for this right now?
         #ilxtr.reference,  # XXX this is not present from composer so leave out to reduce noise
         #ilxtr.reviewNote,  # these cannot be exported right now because the field contains conversations
