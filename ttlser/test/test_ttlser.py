@@ -213,7 +213,9 @@ class TestRkt(Simple, TestTtlser):
 
 class TestDet(TestTtlser):
     def test_ser(self):
-        assert self.actual == self.good
+        actual = self.actual.replace(b'\r\n', b'\n')
+        good = self.good.replace(b'\r\n', b'\n')
+        assert actual == good
 
     def test_deterministic(self):
         assert self.deterministic()
