@@ -1199,6 +1199,33 @@ def make_bridge():
     nb, *_ = build(neuronBridge, n_jobs=1)
     #log.critical(f'{nb.imports} {models_imports}')
 
+
+def get_files_from_bridge(path, exclude):
+    # FIXME TODO an approach that doesn't use local_imports
+    import augpathlib as aug
+    from pyontutils.ontload import local_imports
+    asdf = local_imports(
+        'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/neurons/',
+        aug.RepoPath(path).working_dir.as_posix() + '/',
+        (path.as_posix(),), readonly=True)
+    qq = []
+    for s, p, o in asdf:
+        do_cont = False
+        if p == owl.sameAs:
+            for e in exclude:
+                if e in o:
+                    do_cont = True
+                    break
+
+            if do_cont:
+                continue
+
+            pa = Path(o)
+            qq.append(pa)
+
+    return qq
+
+
 def make_devel():
     from ttlser import CustomTurtleSerializer
     from pyontutils import combinators as cmb
@@ -1224,14 +1251,29 @@ def make_devel():
            #'apinatomy-locations.ttl',
            #'nerves.ttl',
            'composer.ttl',
-           #'composer-nlp.ttl',
-           'sparc-nlp.ttl',
+           'composer-nlp.ttl',
+           #'sparc-nlp.ttl',
            'apinat-simple-sheet.ttl',
            'apinat-complex.ttl',
+           'apinat-manual.ttl',
           )
+
+    nb = (olr / 'ttl/bridge/neuron-bridge.ttl')
+    exclude = (
+        'neuron-bridge',
+        'allen-transgenic-lines',
+        'part-of-self',
+        'uberon-parcellation-mappings',
+        'phenotype-core',
+        'phenotype-indicators',
+        'phenotypes',
+        #'apinat-simple-sheet',  # exclude for external users that primarily need partial orders
+    )
+    fps = get_files_from_bridge(nb, exclude)
     g = OntConjunctiveGraph()
-    for fn in fns:
-        fp = n / fn
+    #for fn in fns:
+        #fp = n / fn
+    for fp in fps:
         g.parse(fp.as_posix(), format='ttl')
 
     _pi = (olr / 'ttl/phenotype-indicators.ttl')
