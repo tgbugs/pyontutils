@@ -49,6 +49,7 @@ def map_predicates(sheet_pred):
 
 
 def main(debug=False):
+    Config('blank')  # XXX needed to avoid core_graph mixup with neurondm.core._g
     cs = [c() for c in sheet_classes]
     trips = [[cl] + [c.value for c in
                      (r.neuron_id(), r.exact_location(), r.location_id())]
@@ -81,6 +82,7 @@ def main(debug=False):
             else:
                 raise ValueError(msg)
 
+        _o = _o.replace('/neuron-type-', '/apinat-simple/neuron-type-')  # needed at least for sstom-13 and sstom-14
         o = OntId(_o)
 
         if p == owl.equivalentClass or p == ilxtr.hasOrganTarget:
@@ -102,6 +104,9 @@ def main(debug=False):
                      if x in n.id_ and '20' not in n.id_])
 
     config = Config('apinat-simple-sheet')
+    #import neurondm  # XXX alternate fix for core_graph _g mixup due to creating Phenotypes when Config has not been called
+    #neurondm.core._g.namespace_manager.bind('apnsmp', str(ilxtr['apinat-simple/']))
+    Phenotype.in_graph.namespace_manager.bind('apnsmp', str(ilxtr['apinat-simple/']))  # XXX needed along with Config('blank') above
     sigh = []
     nrns = []
     for id, phenos in dd.items():
