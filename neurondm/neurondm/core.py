@@ -407,7 +407,9 @@ class LabelMaker:
             else:  # logical phenotypes aren't phenotypes confusingly enough
                 prefix = ''
 
-            yield prefix + next(self._default((phenotype,)))
+            for default in self._default((phenotype,)):
+                yield prefix + default
+                break
 
     def _molecular(self, phenotypes):
         if self.local_conventions:
@@ -2364,7 +2366,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             gresp = None
 
         if pn.startswith('TEMPIND'):
-            return next(self.in_graph[self.p:skos.hiddenLabel])
+            for hl in self.in_graph[self.p:skos.hiddenLabel]:
+                return hl
+            else:
+                log.warning(f'no label for {pn}')
+                return pn.split(':')[-1]
 
         if hasattr(self, '_label'):
             return self._label
