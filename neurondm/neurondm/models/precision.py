@@ -58,7 +58,7 @@ def main():
     cs = [PRE()]
     nlp_main(cs=cs, config=config, neuron_class=NeuronPrecision)
     nrns = config.neurons()
-    breakpoint()
+    return config,
 
 
 if __name__ == '__main__':

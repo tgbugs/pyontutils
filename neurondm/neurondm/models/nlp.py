@@ -71,6 +71,7 @@ snames = {
     'All KIDNEY connections': (NLPKidney, nlp_ns('kidney'), 'kidney'),
     'Sheet1': (NLPSwglnd, nlp_ns('swglnd'), 'sweat glands'),
     'comprt': (type('ComposerRT', (object,), dict()), None, 'composer round trip'),
+    'NPO-Template (Individual cell types/species)': (type('Precision', (object,), dict()), None, 'precision'),
 }
 
 
@@ -164,6 +165,15 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
             value = v
         return sigh
 
+    def procobju(text):
+        if ' ' not in text:
+            return OntId(text)
+        else:
+            log.debug(repr(text))
+            uri, level = text.split(' ')
+            log.warning(level)
+            return OntId(uri)
+
     OntCuries({'ISBN13': 'https://uilx.org/tgbugs/u/r/isbn-13/',})
     csin = cs
     if cs is None:
@@ -178,7 +188,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                       ((r.identifier() if r.identifier().value.strip()
                         else derp(TEMP['MISSING_' + r.structure().value.replace(' ', '-')]))
                        if hasattr(r, 'identifier') else
-                       (OntId(r.object_uri().value) if r.object_uri().value.strip()  # FIXME need to fill object text case, likely below
+                       (procobju(r.object_uri().value) if r.object_uri().value.strip()  # FIXME need to fill object text case, likely below
                         else derp(TEMP['MISSING_' + r.object().value.replace(' ', '-')]))
                        ))]
              for cl in cs for r in cl.rows()
@@ -188,6 +198,8 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
              # FIXME we handle annotation properties separately right now
              # all this code is a mess so just roll with it for now
              and not (hasattr(r, 'object_text') and r.object_text().value.strip())
+             and (not hasattr(r, 'npo_property') or r.npo_property().value not in ('rdfs:label', 'skos:prefLabel', 'ilxtr:literatureCitation'))
+             #and not log.debug(r.neuron_id())
              ]
 
     to_add = []
@@ -283,9 +295,13 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                     if csin is None:  # hack to avoid the mapping in composer
                         asdf(s, ilxtr.curatorNote, r.curation_notes)
                     else:
-                        asdf(s, ilxtr.systemNote, r.curation_notes)
+                        # FIXME bad assumption that csin is always composer
+                        if hasattr(r, 'curation_notes'):
+                            asdf(s, ilxtr.systemNote, r.curation_notes)
 
-                    asdf(s, ilxtr.reviewNote, r.review_notes)
+                    if hasattr(r, 'review_notes'):
+                        asdf(s, ilxtr.reviewNote, r.review_notes)
+
                     if hasattr(r, 'reference_pubmed_id__doi_or_text'):
                         # meaning change in composer to literature_citation
                         # XXX TODO but that means literature_citation must handle freetext
@@ -297,8 +313,11 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                         lcc = bind_lcc(r.expert_consultant())
                         asdf(s, ilxtr.expertConsultant, r.expert_consultant, split=',', rdf_type=lcc)
 
-                    asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)
-                    #asdf(s, skos.prefLabel, r.neuron_population_label_a_to_b_via_c)  # the current form of these start with "from" is bad, the prefLabel in triples is way better
+                    if hasattr(r, 'neuron_population_label_a_to_b_via_c'):
+                        asdf(s, ilxtr.origLabel, r.neuron_population_label_a_to_b_via_c)
+                        if csin is None:
+                            asdf(s, skos.prefLabel, r.neuron_population_label_a_to_b_via_c)
+
                     if hasattr(r, 'subject') and r.subject().value.strip():
                         asdf(s, rdfs.label, r.subject, as_kwarg='label')
                         extra_kwargs[s]['override'] = True
