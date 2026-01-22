@@ -172,7 +172,7 @@ def make_mutually_disjoint(graph, members):
 def type_check(tup, types):
     return all([type(t) is ty for t, ty in zip(tup, types)])
 
-def add_types(graph, phenotypes):  # TODO missing expression phenotypes! also basket type somehow :(
+def add_types_gp(graph, phenotypes):  # TODO missing expression phenotypes! also basket type somehow :(
     """ Add disjoint union classes so that it is possible to see the invariants
         associated with individual phenotypes """
 
@@ -254,7 +254,7 @@ class OntId(OntId_):
         return rdflib.URIRef(self)
 
 
-def add_types(ng):
+def add_types_g(ng):
     graph = ng.g
     triples = (
         (ilxtr.NeuronCUT, rdf.type, owl.Class),
@@ -502,7 +502,7 @@ def make_phenotypes():
     #graph.add_trip(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
     #graph.g.commit()
     #get_defined_classes(graph)  # oops...
-    add_types(graph)
+    add_types_g(graph)
     [graph.g.add(t) for t in phenotype_core_triples()]
     graph.write()  # moved below to incorporate uwotm8
 
@@ -1076,7 +1076,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
 
     graph.g.commit()
 
-    phenotype_dju_dict = add_types(graph, phenotypes)
+    phenotype_dju_dict = add_types_gp(graph, phenotypes)
     for pheno, disjoints in phenotype_dju_dict.items():
         name = ' '.join(re.findall(r'[A-Z][a-z]*', pheno.split(':')[1])[:-1])  #-1: drops Phenotype
         ilx_start += 1# = make_defined(graph, ilx_start, name + ' neuron type', pheno, 'ilxtr:hasPhenotype')
