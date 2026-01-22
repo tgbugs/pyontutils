@@ -262,8 +262,13 @@ class LabelMaker:
                     self._do_ent = False
                 entailed += elabels
 
+        if entailed and render_entailed:
+            ent_labels = '(implies ' + self.field_separator.join(entailed) + ')'
+            labels += [ent_labels]
+
         if (isinstance(neuron, Neuron) and  # is also used to render LogicalPhenotype collections
-            self.predicate_namespace['hasCircuitRolePhenotype'] not in neuron._pesDict):
+            (self.predicate_namespace['hasCircuitRolePhenotype'] not in neuron._pesDict
+             or all(isinstance(p, EntailedPhenotype) for p in neuron._pesDict[self.predicate_namespace['hasCircuitRolePhenotype']]))):
             labels += ['neuron']
 
         if isinstance(neuron, NeuronEBM):
@@ -271,10 +276,6 @@ class LabelMaker:
                 labels += [neuron._shortname]
 
         label = self.field_separator.join(labels)
-
-        if entailed and render_entailed:
-            ent_labels = '(implies ' + self.field_separator.join(entailed) + ')'
-            label += ' ' + ent_labels
 
         return label
 
@@ -394,7 +395,13 @@ class LabelMaker:
     def hasSomaPhenotype(self, phenotypes):  # FIXME probably hasSomaMorpohologicalPhenotype
         yield from self._default(phenotypes)
     @od
+    def hasAxonPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
     def hasElectrophysiologicalPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasAdaptationPhenotype(self, phenotypes):
         yield from self._default(phenotypes)
     #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
     #def hasSpikingPhenotype(self, phenotypes)  # legacy support
@@ -471,6 +478,12 @@ class LabelMaker:
     def hasExperimentalPhenotype(self, phenotypes):
         yield from self._default(phenotypes)
     @od
+    def hasFunctionalPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasThresholdPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
     def hasAnatomicalSystemPhenotype(self, phenotypes):
         yield from self._default(phenotypes)
     @od
@@ -514,7 +527,7 @@ class LabelMaker:
 
         if phenotypes:  # and not self.local_conventions:
             suffix = suffix()
-            if suffix:
+            if suffix and not self._do_ent:
                 yield suffix
 
 
