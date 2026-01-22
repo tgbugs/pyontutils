@@ -218,7 +218,7 @@ class NeuronComposer(Neuron):
     shortname = 'cmpsr'
 
 
-def remlabs_write(config, keep=tuple()):
+def remlabs_write(config, keep=tuple(), extra_trips=tuple()):
     config.write()
     labels = tuple(
         l for l in (#ilxtr.genLabel,
@@ -229,6 +229,8 @@ def remlabs_write(config, keep=tuple()):
         if l not in keep)
     to_remove = [t for t in config._written_graph if t[1] in labels]
     [config._written_graph.remove(t) for t in to_remove]
+    for t in extra_trips:
+        config._written_graph.add(t)
     #[config._written_graph.add(t) for t in to_add]
     # TODO figure out about partial orders being roundtripped or not?
     config._written_graph.write()
@@ -356,7 +358,8 @@ def main(report=True):
         and 'composer/uris/set' not in n.id_
         and '/neuron-type-' not in n.id_
     ]
-    remlabs_write(config_composer_sheet, keep=(rdfs.label, skos.prefLabel))
+    et = ((NeuronSparcNlp.owlClass, rdfs.subClassOf, NeuronComposer.owlClass),)
+    remlabs_write(config_composer_sheet, keep=(rdfs.label, skos.prefLabel), extra_trips=et)
     config_composer_sheet.write_python()
     # TODO diff this against sparc-nlp.ttl
 
