@@ -4,7 +4,7 @@ from urllib.parse import quote as url_quote
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
-from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf
+from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, LogicalPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf, AND
 from neurondm import orders
 
 
@@ -71,7 +71,7 @@ snames = {
     'All KIDNEY connections': (NLPKidney, nlp_ns('kidney'), 'kidney'),
     'Sheet1': (NLPSwglnd, nlp_ns('swglnd'), 'sweat glands'),
     'comprt': (type('ComposerRT', (object,), dict()), None, 'composer round trip'),
-    'NPO-Template (Individual cell types/species)': (type('Precision', (object,), dict()), None, 'precision'),
+    'NPO-Template (Individual cell types/species)': (type('Bhuiyan2024', (object,), dict()), None, None),
 }
 
 
@@ -88,6 +88,7 @@ def make_annotation_properties(prefix=ilxtr):
         prefix.alertNote,
         prefix.curatorNote,
         prefix.expertConsultant,
+        prefix.literatureCitation,
         rdflib.URIRef('http://uri.interlex.org/composer/uris/readable/hasComposerURI'),
         rdflib.URIRef('http://uri.interlex.org/tgbugs/uris/readable/composerGenLabel'),
     )
@@ -165,14 +166,26 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
             value = v
         return sigh
 
-    def procobju(text):
+    def procobju(text, predicate=None):
+        # TODO consider whether we can handle predicate here ...
+        # despite that this is all a horrible hack
         if ' ' not in text:
             return OntId(text)
         else:
             log.debug(repr(text))
             uri, level = text.split(' ')
-            log.warning(level)
-            return OntId(uri)
+            if level == 'low':
+                qual = ilxtr.LowerExpression
+            elif level == 'high':
+                qual = ilxtr.HigherExpression
+            else:
+                raise NotImplementedError(level)
+
+            # FIXME hardcoded and assumes predicate
+            return LogicalPhenotype(AND,
+                                    Phenotype(OntId(uri),
+                                              ilxtr.hasExpressionPhenotype),
+                                    Phenotype(qual, ilxtr.hasPhenotypeModifier))
 
     OntCuries({'ISBN13': 'https://uilx.org/tgbugs/u/r/isbn-13/',})
     csin = cs
@@ -181,7 +194,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
 
     annotation_properties = make_annotation_properties()
 
-    trips = [[cl] + [c if isinstance(c, OntId) else c.value for c in
+    trips = [[cl] + [c if isinstance(c, OntId) or isinstance(c, LogicalPhenotype) else c.value for c in
                      ((r.id() if hasattr(r, 'id') else OntId(r.subject_uri().value)),
                       (OntId(r.predicate_uri().value) if hasattr(r, 'predicate_uri') else
                        (r.predicate() if hasattr(r, 'predicate') else r.relationship())),
@@ -198,7 +211,6 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
              # FIXME we handle annotation properties separately right now
              # all this code is a mess so just roll with it for now
              and not (hasattr(r, 'object_text') and r.object_text().value.strip())
-             and (not hasattr(r, 'npo_property') or r.npo_property().value not in ('rdfs:label', 'skos:prefLabel', 'ilxtr:literatureCitation'))
              #and not log.debug(r.neuron_id())
              ]
 
@@ -321,7 +333,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                     if hasattr(r, 'subject') and r.subject().value.strip():
                         asdf(s, rdfs.label, r.subject, as_kwarg='label')
                         extra_kwargs[s]['override'] = True
-                    else:
+                    elif working_set is not None:
                         asdf(s, rdfs.label, wrap(f'neuron type {_prefix} {_id}'), as_kwarg='label')
                         extra_kwargs[s]['override'] = True
 
@@ -340,6 +352,9 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                              (r.predicate() if hasattr(r, 'predicate') else r.relationship()))
                         if p == ilxtr.expertConsultant:
                             asdf(s, p, r.object_text, rdf_type=rdflib.URIRef, split=';')
+                        elif p == rdfs.label:
+                            asdf(s, rdfs.label, r.object_text, as_kwarg='label')
+                            extra_kwargs[s]['override'] = True
                         else:
                             asdf(s, p, r.object_text)
 
@@ -428,6 +443,14 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
     dd = defaultdict(list)
     for c, _s, _p, _o in trips:
         _, nlpns, working_set = snames[c.sheet_name]
+        if isinstance(_o, LogicalPhenotype):
+            olp = True
+            real_o = _o
+            _o = ''
+        else:
+            olp = False
+            real_o = None
+
         for x in (_s, _p, _o):
             if re.match(r'(^[\s]+[^\s].*|.*[^\s][\s]+$)', x):
                 msg = f'leading/trailing whitespace in {c} {_s!r} {_p!r} {_o!r}'
@@ -447,7 +470,8 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                 log.error(f'sigh {s}')
                 raise e
 
-        if not _o:  # handle empty cell case
+
+        if not _o and not olp:  # handle empty cell case
             msg = f'missing object? {s.curie} {OntId(p).curie} ???'
             log.error(msg)
             if not debug:
@@ -470,7 +494,11 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
             _ksn = _o.rsplit('/', 1)[-1]
             _o = f'https://composer.scicrunch.io/statement/{_ksn}'
 
-        if isinstance(_o, IntersectionOf):
+        if olp:
+            # TODO check pheno match
+            dd[s].append(real_o)
+            continue
+        elif isinstance(_o, IntersectionOf):
             o = _o
         else:
             try:
