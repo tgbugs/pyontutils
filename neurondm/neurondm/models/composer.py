@@ -24,6 +24,7 @@ def get_csv_sheet(path):
     # that and we will get missing if not provided
     # FIXME TODO take NLP-ID and promote to subject if missing
     idx = _rows[0].index('Object URI')
+    oidx = _rows[0].index('Object')
     sidx = _rows[0].index('Subject URI')
     pidx = _rows[0].index('Predicate URI')
     tidx = _rows[0].index('Object Text')
@@ -37,6 +38,7 @@ def get_csv_sheet(path):
     sigh2 = 'https://scicrunch.org/scicrunch/interlex/view/'
     bad = 'https://rrid.site/data/record/nlx_144509-1/RRID:SCR_018709/resolver?q=SAWG&i=rrid:scr_018709'
     bad2 = 'https://rrid.site/resolver/SCR_018709'
+    expcon = 'http://uri.interlex.org/tgbugs/uris/readable/expertConsultant'
     doibad = 'http://dx.doi.org/'
     doibads = (
         ('https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/10.1002/jemt.10225', 'https://doi.org/10.1002/jemt.10225'),
@@ -104,6 +106,7 @@ def get_csv_sheet(path):
              for c in r] for r in _rows
             if (r[idx] or r[tidx]) and r[sidx]
             and r[idx] != anat_space_hack and r[state_idx] != 'rejected' and r[state_idx] != 'in_progress'
+            and r[idx] != expcon and r[oidx] != expcon
             ]
     assert len(rows) > 1
 
@@ -246,7 +249,7 @@ def ncfun_roundtrip(id):
 
 
 def main(report=True):
-    exp = aug.LocalPath('~/downloads/export_v5-1-1_2025-09-12_04-50-39.csv').expanduser()
+    exp = aug.LocalPath('~/downloads/export_v6-0-0_2026-01-14_00-57-35.csv').expanduser()
 
     sht = get_csv_sheet(exp)
     cs = [sht]
