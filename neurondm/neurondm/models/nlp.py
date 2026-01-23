@@ -4,7 +4,7 @@ from urllib.parse import quote as url_quote
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
-from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, LogicalPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf, AND
+from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, LogicalPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf, AND, OR
 from neurondm import orders
 
 
@@ -194,16 +194,16 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
 
     annotation_properties = make_annotation_properties()
 
-    trips = [[cl] + [c if isinstance(c, OntId) or isinstance(c, LogicalPhenotype) else c.value for c in
-                     ((r.id() if hasattr(r, 'id') else OntId(r.subject_uri().value)),
-                      (OntId(r.predicate_uri().value) if hasattr(r, 'predicate_uri') else
-                       (r.predicate() if hasattr(r, 'predicate') else r.relationship())),
-                      ((r.identifier() if r.identifier().value.strip()
-                        else derp(TEMP['MISSING_' + r.structure().value.replace(' ', '-')]))
-                       if hasattr(r, 'identifier') else
-                       (procobju(r.object_uri().value) if r.object_uri().value.strip()  # FIXME need to fill object text case, likely below
-                        else derp(TEMP['MISSING_' + r.object().value.replace(' ', '-')]))
-                       ))]
+    trips = [[cl, (r.union_set().value.strip() if hasattr(r, 'union_set') else None)] + [
+        c if isinstance(c, OntId) or isinstance(c, LogicalPhenotype) else c.value for c in
+        ((r.id() if hasattr(r, 'id') else OntId(r.subject_uri().value)),
+         (OntId(r.predicate_uri().value) if hasattr(r, 'predicate_uri') else
+          (r.predicate() if hasattr(r, 'predicate') else r.relationship())),
+         ((r.identifier() if r.identifier().value.strip()
+           else derp(TEMP['MISSING_' + r.structure().value.replace(' ', '-')]))
+          if hasattr(r, 'identifier') else
+          (procobju(r.object_uri().value) if r.object_uri().value.strip()  # FIXME need to fill object text case, likely below
+           else derp(TEMP['MISSING_' + r.object().value.replace(' ', '-')]))))]
              for cl in cs for r in cl.rows()
              if r.row_index > 0 and (r.id().value if hasattr(r, 'id') else r.subject_uri().value)
              #and (not hasattr(r, 'exclude') or not r.exclude().value)
@@ -441,7 +441,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
         config = Config('sparc-nlp')
 
     dd = defaultdict(list)
-    for c, _s, _p, _o in trips:
+    for c, us, _s, _p, _o in trips:
         _, nlpns, working_set = snames[c.sheet_name]
         if isinstance(_o, LogicalPhenotype):
             olp = True
@@ -496,7 +496,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
 
         if olp:
             # TODO check pheno match
-            dd[s].append(real_o)
+            dd[s, us].append(real_o)
             continue
         elif isinstance(_o, IntersectionOf):
             o = _o
@@ -533,21 +533,30 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
             else:
                 phen_class = Phenotype
 
-            dd[s].append(phen_class(o, p))
+            dd[s, us].append(phen_class(o, p))
         except TypeError as e:
             log.error(f'bad data for {c} {s} {p} {o}')
             raise e
 
         if ec and (s, p) in ec:
-            dd[s].append(NegPhenotype(ec[(s, p)], p))
+            dd[s, us].append(NegPhenotype(ec[(s, p)], p))
 
+
+    # condense union sets
+    dd2 = defaultdict(list)
+    for (id, us), phenos in dd.items():
+        if us is not None and us and len(phenos) > 1:
+            phenos = LogicalPhenotype(OR, *phenos),
+
+        dd2[id].extend(phenos)
 
     if neuron_class is None:
         neuron_class = NeuronSparcNlp
+
     sigh = []
     nrns = []
     ed = {}
-    for id, phenos in dd.items():
+    for id, phenos in dd2.items():
         nc = neuron_class if neuron_class_fun is None else neuron_class_fun(id)
         kwargs = extra_kwargs[id] if id in extra_kwargs else ed
         n = nc(*phenos, id_=id, **kwargs)
