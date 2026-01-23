@@ -26,6 +26,7 @@ class PRE(Sheet):
 from pyontutils.sheets import Row
 
 def _subject_uri(self, nocite=True):
+    gp = 'guinea pig'
     nid = self.neuron_id()
     if nocite and self.predicate_uri().value == 'ilxtr:literatureCitation':
         nid.value = ''
@@ -33,6 +34,8 @@ def _subject_uri(self, nocite=True):
         v = nid.value
         if v and not v.startswith('http://'):
             pref = 'http://uri.interlex.org/tgbugs/uris/readable/neurons/bhuiyan/'
+            if gp in v:
+                v = v.replace(gp, 'guinea-pig')
             nid.value =  pref + v.lower().replace(' ', '/')
 
     return nid
@@ -59,6 +62,8 @@ def _object_text(self):
     else:
         return type('temp_cell', tuple(), {'value': ''})()
 
+def _union_set(self):
+    return self.union_set_number()
 
 Row.subject_uri = _subject_uri
 Row.proposed_action = _proposed_action
@@ -66,6 +71,7 @@ Row.predicate_uri = _predicate_uri
 Row.object_uri = _object_uri
 Row.object_text = _object_text
 Row.object = _object
+Row.union_set = _union_set
 
 
 def ncbigene(nrns):
