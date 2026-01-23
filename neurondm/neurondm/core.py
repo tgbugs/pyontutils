@@ -223,12 +223,32 @@ class LabelMaker:
         render_entailed = self.render_entailed and (render_entailed is None or render_entailed)
         labels = []
         entailed = []
+        done = set()
+        donephen = set()
+        fsp = {k: v for k, v in neuron._pesDict.items() if isinstance(k, frozenset)}
+        if fsp:
+            extra = set(e for k in fsp for e in k)
+        else:
+            extra = set()
+
         for function_name, predicate in zip(self._order, self.predicates):
-            if predicate in neuron._pesDict:
-                #phenotypes = sorted(neuron._pesDict[predicate], key=self._key)
-                phenotypes = neuron._pesDict[predicate]
-                if not phenotypes:
-                    log.warning('wat: {neuron}')
+            if predicate in neuron._pesDict or predicate in extra:  # FIXME does not properly handled nested logical cases
+                was_already_done = False
+                if predicate in extra:
+                    phenotypes = set(v for k, vs in fsp.items()
+                                      if predicate in k and not done.add(k)
+                                      for v in vs if v not in donephen)
+                    if not phenotypes:
+                        was_already_done = True
+                    donephen.update(phenotypes)
+                else:
+                    phenotypes = set()
+
+                if predicate in neuron._pesDict:
+                    phenotypes.update(neuron._pesDict[predicate])
+
+                if not phenotypes and not was_already_done:
+                    log.warning(f'wat: {neuron}')
                     continue
 
                 function = getattr(self, function_name)
@@ -261,6 +281,11 @@ class LabelMaker:
                 finally:
                     self._do_ent = False
                 entailed += elabels
+                done.add(predicate)
+
+        diff = set(neuron._pesDict) - done
+        if diff:
+            log.error(f'the following dimensions were not included in the label {diff}')
 
         if entailed and render_entailed:
             ent_labels = '(implies ' + self.field_separator.join(entailed) + ')'
@@ -2852,11 +2877,8 @@ class LogicalPhenotype(graphBase):
 
     @property
     def e(self):
-        out = tuple((e for pe in self.pes for e in
-                     (pe.e if isinstance(pe, LogicalPhenotype) else (pe.e,))))
-        out = tuple(set(out))
+        out = frozenset((pe.e for pe in self.pes))
         return out
-        #return tuple((pe.e for pe in self.pes))
 
     @property
     def _pClass(self):
@@ -3223,19 +3245,18 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 if len(dimensions) == 1:
                     dimension = next(iter(dimensions))
                 else:
-                    _key = lambda d: ((not isinstance(d, tuple)), d)
-                    dimension = tuple(sorted(dimensions, key=_key))
+                    dimension = frozenset(dimensions)
 
                 if dimension not in self._pesDict:
-                    self._pesDict[dimension] = []
+                    self._pesDict[dimension] = set()
 
-                self._pesDict[dimension].append(pe)
+                self._pesDict[dimension].add(pe)
 
             else:
                 if pe.e not in self._pesDict:
-                    self._pesDict[pe.e] = []
+                    self._pesDict[pe.e] = set()
 
-                self._pesDict[pe.e].append(pe)  # don't have to check for dupes here
+                self._pesDict[pe.e].add(pe)  # don't have to check for dupes here
 
         self._origLabel = label
         self._override = override
