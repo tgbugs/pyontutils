@@ -65,15 +65,6 @@ def _object_text(self):
 def _union_set(self):
     return self.union_set_number()
 
-Row.subject_uri = _subject_uri
-Row.proposed_action = _proposed_action
-Row.predicate_uri = _predicate_uri
-Row.object_uri = _object_uri
-Row.object_text = _object_text
-Row.object = _object
-Row.union_set = _union_set
-
-
 def ncbigene(nrns):
     pref = 'http://www.ncbi.nlm.nih.gov/gene/'
     c = nrns[0].out_graph.namespace_manager.curie
@@ -82,6 +73,24 @@ def ncbigene(nrns):
 
 
 def main():
+    attrs = (
+        'subject_uri',
+        'proposed_action',
+        'predicate_uri',
+        'object_uri',
+        'object_text',
+        'object',
+        'union_set',
+    )
+    saved = {a: getattr(Row, a) for a in attrs if hasattr(Row, a)}
+    Row.subject_uri = _subject_uri
+    Row.proposed_action = _proposed_action
+    Row.predicate_uri = _predicate_uri
+    Row.object_uri = _object_uri
+    Row.object_text = _object_text
+    Row.object = _object
+    Row.union_set = _union_set
+
     config = Config('bhuiyan-2024')
     NeuronEBM.out_graph.add(
         (NeuronBhuiyan2024.owlClass,
@@ -92,6 +101,13 @@ def main():
     nlp_main(cs=cs, config=config, neuron_class=NeuronBhuiyan2024)
     nrns = config.neurons()
     #ncbigene(nrns)
+
+    for a in attrs:  # restore old row state
+        if a in saved:
+            setattr(Row, saved[a])
+        else:
+            delattr(Row, a)
+
     return config,
 
 
