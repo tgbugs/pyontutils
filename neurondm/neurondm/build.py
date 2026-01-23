@@ -1491,7 +1491,7 @@ def make_devel():
             if not terms:
                 raise BaseException('WHAT')
 
-            skip = 'TEMPIND', 'npokb', 'mmset', 'liver', 'kidney', 'femrep', 'prostate', 'semves', 'senmot', 'swglnd'
+            skip = 'TEMPIND', 'npokb', 'mmset', 'liver', 'kidney', 'femrep', 'prostate', 'semves', 'senmot', 'swglnd', 'gastint'
             while terms:
                 next_terms = []
                 for term in terms:
