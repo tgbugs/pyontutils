@@ -602,7 +602,11 @@ class OntTerm(bOntTerm, OntId):
             for ind in sco:
                 if ind.URIRef == ilxtr.PhenotypeIndicator:
                     continue
-                elif ind.predicates and ind.predicates['rdfs:subClassOf']:
+
+                if not ind.predicates:
+                    ind(rdfs.subClassOf)
+
+                if ind.predicates and ind.predicates['rdfs:subClassOf']:
                     for _sco in ind.predicates['rdfs:subClassOf']:
                         if _sco.URIRef == ilxtr.PhenotypeIndicator:
                             done = True
