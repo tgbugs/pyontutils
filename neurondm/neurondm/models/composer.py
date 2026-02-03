@@ -88,10 +88,10 @@ def get_csv_sheet(path):
 
         if bad in _r[eidx]:
             log.error(f'bad RRID for {i + 2}')
-            _r[eidx] = _r[eidx].replace(bad, 'RRID:018709')  # FIXME hack
+            _r[eidx] = _r[eidx].replace(bad, 'RRID:SCR_018709')  # FIXME hack
         elif bad2 in _r[eidx]:
             log.error(f'bad RRID for {i + 2}')
-            _r[eidx] = _r[eidx].replace(bad2, 'RRID:018709')  # FIXME hack
+            _r[eidx] = _r[eidx].replace(bad2, 'RRID:SCR_018709')  # FIXME hack
 
         for j, c in enumerate(list(_r)):
             if c.startswith(sigh):
