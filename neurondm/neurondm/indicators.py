@@ -52,6 +52,10 @@ class PhenotypeIndicators(Sheet):
                      'hiddenLabel': hl,
                      'synonyms': lex['synonyms'],
                      'members': members,}
+
+            if str(mol) in ('Sst', 'Pvalb'):
+                continue
+
             yield thing
         
     def indicator(self, thing):
