@@ -23,13 +23,16 @@ setup(
     	'progressbar2',
     	'aiohttp',
     	'asyncio',
+        'mysql-connector-python',
+        'elasticsearch',
     	'sqlalchemy',
         'pathlib',
+        'networkx',
     ],
     # TODO: add a get functionality thats more specific query
-    # entry_points={
-    #     'console_scripts': [
-    #         'ilxutils = ilxutils.cli: main',
-    #     ],
-    # },
+    entry_points={
+        'console_scripts': [
+            'backup_ilx = ilxutils.backup_ilx:main',
+        ],
+    },
 )
