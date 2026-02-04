@@ -1,6 +1,7 @@
 import unittest
 import rdflib
-from neurondm.core import (LabelMaker,
+from neurondm.core import (Config,
+                           LabelMaker,
                            Phenotype,
                            NegPhenotype,
                            Neuron,
@@ -12,6 +13,7 @@ from neurondm.core import (LabelMaker,
 class TestLabelMaker(unittest.TestCase):
 
     def setUp(self):
+        Config()
         self.lm = LabelMaker()
 
         def ns(suffix):
@@ -44,7 +46,7 @@ class TestLabelMaker(unittest.TestCase):
         bads = []
         for op in (AND, OR):
             hrm = ls(a, b, c, p=hmp, op=op)
-            test = hrm.label
+            test = hrm.label  # XXX WARNING mutates graphBase.core_graph !!!
             if not ('+PV' in test and '-VIP' in test):
                 bads.append(test)
 
