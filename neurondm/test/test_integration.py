@@ -38,6 +38,7 @@ except ModuleNotFoundError:
     skip +=  (
         'apinat_npo',
         'apinat_pops_more',
+        'bhuiyan2024',
         'composer',
     )
 
