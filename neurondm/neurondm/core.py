@@ -375,23 +375,24 @@ class LabelMaker:
     @od
     def hasAxonLocatedIn(self, phenotypes):
         yield from self._with_thing_located_in('with-axon{}-in', phenotypes)  # FIXME terminating too early
-
+    @od
+    def hasAxonLeadingToSensorySubcellularElementIn(self, phenotypes):
+        yield from self._with_thing_located_in('with-axon-leading-to-sensory-subcellular-element-in', phenotypes)
     @od
     def hasPresynapticElementIn(self, phenotypes):
         yield from self._with_thing_located_in('with-presynaptic-element-in', phenotypes)
-
     @od
     def hasAxonPresynapticElementIn(self, phenotypes):
         yield from self._with_thing_located_in('with-axon-presynaptic-element-in', phenotypes)
-
     @od
     def hasPresynapticTerminalsIn(self, phenotypes):
         yield from self._with_thing_located_in('with-presynaptic-terminals-in', phenotypes)
-
+    @od
+    def hasAxonSensorySubcellularElementIn(self, phenotypes):
+        yield from self._with_thing_located_in('with-axon-sensory-subcellular-element-in', phenotypes)
     @od
     def hasSensorySubcellularElementIn(self, phenotypes):
         yield from self._with_thing_located_in('with-sensory-subcellular-element-in', phenotypes)
-
     @od
     def hasDendriteSensorySubcellularElementIn(self, phenotypes):
         yield from self._with_thing_located_in('with-dendrite-sensory-subcellular-element-in', phenotypes)
@@ -525,6 +526,9 @@ class LabelMaker:
         yield from self._default(phenotypes)
     @od
     def hasPhenotypeModifier(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasFunctionalCircuitRolePhenotype(self, phenotypes):
         yield from self._default(phenotypes)
     @od
     def hasCircuitRolePhenotype(self, phenotypes):

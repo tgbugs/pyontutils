@@ -12,6 +12,7 @@ anat_space_hack = 'http://purl.obolibrary.org/obo/UBERON_0000464'
 # run at top level to ensure these are registered
 uPREFIXES['gastint'] = 'http://uri.interlex.org/composer/uris/set/gastint/'
 uPREFIXES['pain1'] = 'http://uri.interlex.org/composer/uris/set/pain1/'
+uPREFIXES['pain2'] = 'http://uri.interlex.org/composer/uris/set/pain2/'
 uPREFIXES['portal'] = 'http://uri.interlex.org/composer/uris/set/portal/'
 
 ilxcr = rdflib.Namespace(interlex_namespace('composer/uris/readable/'))
@@ -58,6 +59,8 @@ def get_csv_sheet(path):
             # something got mangled inside composer ...
             _r[idx] = 'http://uri.interlex.org/tgbugs/uris/readable/ProjectionPhenotype'
             log.error(f'bad object value for {i + 2}')
+        elif _r[idx] == 'http://id.nlm.nih.gov/mesh/C000589132':
+            _r[idx] = 'http://purl.obolibrary.org/obo/PR_000032708'
 
         if _r[sidx] == aacar_1_5_issue:  # XXX fix for bad working set interaction
             _r[sidx] = 'http://uri.interlex.org/tgbugs/uris/readable/neuron-type-aacar-1'
@@ -67,6 +70,9 @@ def get_csv_sheet(path):
         if _r[derp_idx] == 'not specified':
             _r[sidx] = ''  # for skip the row to avoid bad triples with TEMP:MISSING
             #_r[derp_idx] = ''
+
+        if _r[pidx] == 'http://uri.interlex.org/tgbugs/uris/readable/TEMP:hasEndingType':
+            _r[pidx] = 'http://uri.interlex.org/tgbugs/uris/readable/hasAxonSensorySubcellularStructure'
 
         if doibad in _r[ridx]:
             log.error(f'bad DOI for {i + 2}')
@@ -249,7 +255,7 @@ def ncfun_roundtrip(id):
 
 
 def main(report=True):
-    exp = aug.LocalPath('~/downloads/export_v6-0-0_2026-01-14_00-57-35.csv').expanduser()
+    exp = aug.LocalPath('~/downloads/export_v6-0-0_2026-03-17_21-13-04.csv').expanduser()
 
     sht = get_csv_sheet(exp)
     cs = [sht]
