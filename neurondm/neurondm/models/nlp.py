@@ -72,6 +72,7 @@ snames = {
     'Sheet1': (NLPSwglnd, nlp_ns('swglnd'), 'sweat glands'),
     'comprt': (type('ComposerRT', (object,), dict()), None, 'composer round trip'),
     'NPO-Template (Individual cell types/species)': (type('Bhuiyan2024', (object,), dict()), None, None),
+    'with localLabel and atlasAnnotation': (type('Precision', (object,), dict()), None, None),
 }
 
 
@@ -89,6 +90,9 @@ def make_annotation_properties(prefix=ilxtr):
         prefix.curatorNote,
         prefix.expertConsultant,
         prefix.literatureCitation,
+        prefix.dataCitation,
+        prefix.atlasAnnotation,
+        TEMP.mapsTo,
         rdflib.URIRef('http://uri.interlex.org/composer/uris/readable/hasComposerURI'),
         rdflib.URIRef('http://uri.interlex.org/tgbugs/uris/readable/composerGenLabel'),
     )
@@ -176,10 +180,12 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
             uri, level = text.split(' ')
             if level == 'low':
                 qual = ilxtr.LowerExpression
+            elif level == 'moderate':
+                qual = ilxtr.ModerateExpression
             elif level == 'high':
                 qual = ilxtr.HigherExpression
             else:
-                raise NotImplementedError(level)
+                raise NotImplementedError(repr(level))
 
             # FIXME hardcoded and assumes predicate
             return LogicalPhenotype(AND,

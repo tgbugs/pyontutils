@@ -10,22 +10,30 @@ from neurondm import orders
 from neurondm.models.nlp import map_predicates, main as nlp_main
 
 
-class NeuronBhuiyan2024(NeuronEBM):
-    owlClass = ilxtr.NeuronBhuiyan2024
-    shortname = 'Bhuiyan2024'
+class NeuronPrecision(NeuronEBM):
+    owlClass = ilxtr.NeuronPrecision
+    shortname = 'Precision'
     _no_origLabel_hack = True
 
 
 from sparcur.sheets import Sheet
+class PREOld(Sheet):
+    _do_cache = True
+    _re_cache = True
+    name = 'npo-precision-old'
+    sheet_name = 'NPO-Template (Individual cell types/species)'
+
+
 class PRE(Sheet):
     _do_cache = True
     _re_cache = True
     name = 'npo-precision'
-    sheet_name = 'NPO-Template (Individual cell types/species)'
+    sheet_name = 'with localLabel and atlasAnnotation'
+
 
 from pyontutils.sheets import Row
 
-def _subject_uri(self, nocite=True):
+def _subject_uri(self, nocite=False):
     gp = 'guinea pig'
     nid = self.neuron_id()
     if nocite and self.predicate_uri().value == 'ilxtr:literatureCitation':
@@ -33,15 +41,15 @@ def _subject_uri(self, nocite=True):
     else:
         v = nid.value
         if v and not v.startswith('http://'):
-            pref = 'http://uri.interlex.org/tgbugs/uris/readable/neurons/bhuiyan/'
+            pref = 'http://uri.interlex.org/tgbugs/uris/readable/neurons/precision/'
             if gp in v:
                 v = v.replace(gp, 'guinea-pig')
             nid.value =  pref + v.lower().replace(' ', '/')
 
     return nid
 
-def _proposed_action(self):
-    return self.neuron_id()
+#def _proposed_action(self):
+    #return self.neuron_id()
 
 def _predicate_uri(self):
     #return self.relation_type()
@@ -75,7 +83,7 @@ def ncbigene(nrns):
 def main():
     attrs = (
         'subject_uri',
-        'proposed_action',
+        #'proposed_action',
         'predicate_uri',
         'object_uri',
         'object_text',
@@ -84,21 +92,22 @@ def main():
     )
     saved = {a: getattr(Row, a) for a in attrs if hasattr(Row, a)}
     Row.subject_uri = _subject_uri
-    Row.proposed_action = _proposed_action
+    #Row.proposed_action = _proposed_action
     Row.predicate_uri = _predicate_uri
     Row.object_uri = _object_uri
     Row.object_text = _object_text
     Row.object = _object
     Row.union_set = _union_set
 
-    config = Config('bhuiyan-2024')
+    #config = Config('bhuiyan-2024')
+    config = Config('precision')
     NeuronEBM.out_graph.add(
-        (NeuronBhuiyan2024.owlClass,
+        (NeuronPrecision.owlClass,
          ilxtr.modelSource,
          OntId('https://doi.org/10.1126/sciadv.adj9173').u))
 
     cs = [PRE()]
-    nlp_main(cs=cs, config=config, neuron_class=NeuronBhuiyan2024)
+    nlp_main(cs=cs, config=config, neuron_class=NeuronPrecision)
     nrns = config.neurons()
     #ncbigene(nrns)
 

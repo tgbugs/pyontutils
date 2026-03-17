@@ -458,6 +458,12 @@ class LabelMaker:
     def hasExpressionPhenotype(self, phenotypes):
         yield from self._molecular(phenotypes)
     @od
+    def hasNucleicAcidExpressionPhenotype(self, phenotypes):
+        yield from self._molecular(phenotypes)
+    @od
+    def hasProteinExpressionPhenotype(self, phenotypes):
+        yield from self._molecular(phenotypes)
+    @od
     def hasDriverExpressionPhenotype(self, phenotypes):
         yield from self._molecular(phenotypes)
     @od
