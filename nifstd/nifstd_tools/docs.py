@@ -49,7 +49,6 @@ import yaml
 import htmlfn as hfn
 import nbformat
 from git import Repo
-from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
 from augpathlib import exceptions as aexc
 from pyontutils import clifun as clif
@@ -941,6 +940,7 @@ def render_docs(wd_docs_kwargs, out_path, titles=None, n_jobs=9, debug=False):
                        debug=debug, **kwargs))
             for wd, doc, kwargs in wd_docs_kwargs]
     else:
+        from joblib import Parallel, delayed
         outname_rendered = Parallel(n_jobs=n_jobs)(
             delayed(run_all)(doc, wd, out_path, titles=titles,
                              debug=debug, logfix=not i, **kwargs)
