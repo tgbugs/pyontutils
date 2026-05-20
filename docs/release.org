@@ -156,6 +156,9 @@ build-release () {
 
     cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
 
+    VENV_BASE="${BASE_PATH}/venvs"
+    [ -d "${VENV_BASE}" ] || mkdir -p "${VENV_BASE}"
+
     TEST_PATH="${BASE_PATH}/release-testing/${PYTHON_VERSION}-${packagename}"  # allow multiple builds at the same time
 
     if [ -d ${repo} ]; then
@@ -245,28 +248,25 @@ build-release () {
         fi
         pushd ${packagename}-${version}
 
-        # pipenv --rm swears no venv exists, if no Pipfile
-        # exists even if adding a Pipfile will magically
-        # reveal that there was in fact a venv and thus that
-        # every other pipenv command knows about it but
-        # naieve little rm is kept in the dark, so we yell
-        # into the 'void' just to make sure
-        touch Pipfile
-        # FIXME need a way to do concurrent builds on different python versions
-        # running pipenv --rm breaks that
-        pipenv --rm  # clean any existing env
-        pipenv --python $PYTHON_VERSION  # for some reason 3.6 lingers in some envs
+        local CODE VENV_FOLDER PYTHON_EXE
+        VENV_FOLDER=$(mktemp -p "${VENV_BASE}" -d venv-release-XXXXX)
+        if [[ ${PYTHON_VERSION} = pypy* ]]; then
+            PYTHON_EXE=${PYTHON_VERSION};
+        elif [[ ${PYTHON_VERSION} = python* ]]; then
+            PYTHON_EXE=${PYTHON_VERSION};
+        else
+            PYTHON_EXE=python${PYTHON_VERSION};
+        fi
+        ${PYTHON_EXE} -m venv ${VENV_FOLDER}
+        source ${VENV_FOLDER}/bin/activate
         if [[ -n ${DEBUG} ]]; then
-            pipenv run pip install pudb ipdb  # install both for simplicity
+            pip install pudb ipdb  # install both for simplicity
             NOCAP='-s'
         fi
 
         # local package server
         local maybe_eiu=()
         if [[ -n ${ARTIFACT_FOLDER} ]]; then
-            #pipenv run pip install requests-file || return $?  # sadly this does not work
-            #--extra-index-url "file://$(realpath ${ARTIFACT_FOLDER})" \
-
             # run a local pip package server for integration testing
 
             # it would be great to be able to pass 0 for the port to http.server
@@ -286,20 +286,21 @@ build-release () {
 
         if [[ -n ${INTEGRATION_PACKAGES} ]]; then
             echo $(color yellow)installing integration packages$(color off) ${INTEGRATION_PACKAGES[@]}
-            pipenv run pip install \
+            pip install \
                 "${maybe_eiu[@]}" \
-                ${INTEGRATION_PACKAGES[@]} || return $?
+                ${INTEGRATION_PACKAGES[@]} || { CODE=$?; deactivate; return $CODE; }
         fi
 
         echo $(color yellow)installing$(color off) ${packagename}
-        pipenv run pip install \
+        pip install \
             "${maybe_eiu[@]}" \
-                -e .[test] || local CODE=$?
+                -e .[test] || CODE=$?
 
         [[ -n $TOKILL ]] && kill $TOKILL
-        [[ -n $CODE && $CODE -ne 0 ]] && return $CODE
+        [[ -n $CODE && $CODE -ne 0 ]] && { deactivate; return $CODE; }
 
-        pipenv run pytest ${NOCAP} || local FAILURE=$?
+        pytest ${NOCAP} || local FAILURE=$?
+        deactivate
         # FIXME popd on failure ... can't && because we loose the next popd instead of exiting
         # everything should pass if not, keep going until it does
         popd  # from ${packagename}-${version}
