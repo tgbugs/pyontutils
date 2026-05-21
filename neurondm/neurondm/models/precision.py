@@ -28,7 +28,7 @@ class PRE(Sheet):
     _do_cache = True
     _re_cache = True
     name = 'npo-precision'
-    sheet_name = 'with localLabel and atlasAnnotation'
+    sheet_name = 'PNS Cells to NPO'
 
 
 from pyontutils.sheets import Row
