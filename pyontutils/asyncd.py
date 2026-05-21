@@ -40,19 +40,35 @@ except Exception as e:
     log.exception(e)
 
 
-def Async(rate=None, debug=False, collector=None):  # ah conclib
+def Async(rate=None, debug=False, collector=None, override_workers=None, n_jobs=None):  # ah conclib
+    """ rate=0 or rate=False uses ThreadPoolExecutor defaults """
+
+    if rate is None:
+        # it turns out that rate=None being infinite causes massive issues
+        # because it results in calling loop.run_in_executor for every single
+        # element of a list, which it turns out has staggeringly large overhead
+        # therefore we set the rate to True here and then calculate the rate to
+        # be 100x the batch size so that best case possible time will always be
+        # 10ms, this prevents the overhead
+        rate = True
+
+    if n_jobs and override_workers is None:
+        override_workers = n_jobs
 
     # FIXME can't break this with C-c
     if rate:
         workers = math.ceil(rate) if rate < 40 else 40
         # 40 comes from the TPE default 5 * cpu cores, this has not been tuned
         executor = ThreadPoolExecutor(max_workers=workers)
+    elif override_workers is not None:
+        executor = ThreadPoolExecutor(max_workers=override_workers)
+        workers = override_workers
     else:
         executor = ThreadPoolExecutor()
         workers = executor._max_workers
 
     if debug:
-        print(rate, workers)
+        log.debug((rate, workers))
 
     def inner(generator):
         #Async(rate=rate/2, debug)(funclist[])
@@ -63,10 +79,25 @@ def Async(rate=None, debug=False, collector=None):  # ah conclib
         # pushing the set rate higher does seem to max out around 400Hz if
         # the min time_per_job < our trouble threshold which is ping dependent
         #Parallel(generator)
+        nonlocal rate
+        nonlocal workers
+        nonlocal executor
         if rate:
             funclist = list(generator)
             if not funclist:
                 return tuple()  # make sure the result is always iterable
+            elif isinstance(rate, bool):
+                #rate = 10 # 10 * len(funclist)
+                _lfu = len(funclist)
+                # it seems that having less than 10k workers avoids some
+                # nasty mega cpu blowup
+                workers = 10_000 if _lfu > 10_000 else _lfu
+                if override_workers is not None and override_workers < workers:
+                    workers = override_workers
+
+                rate = _lfu
+                jobs_per_worker = _lfu / workers
+                executor = ThreadPoolExecutor(max_workers=workers)
 
             # divide by workers not rate, time_per_job will compensate
             size = math.ceil(len(funclist) / workers) if rate >= 1 else 1
