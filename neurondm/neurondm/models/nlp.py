@@ -72,7 +72,7 @@ snames = {
     'Sheet1': (NLPSwglnd, nlp_ns('swglnd'), 'sweat glands'),
     'comprt': (type('ComposerRT', (object,), dict()), None, 'composer round trip'),
     'NPO-Template (Individual cell types/species)': (type('Bhuiyan2024', (object,), dict()), None, None),
-    'with localLabel and atlasAnnotation': (type('Precision', (object,), dict()), None, None),
+    'PNS Cells to NPO': (type('Precision', (object,), dict()), None, None),
 }
 
 
@@ -92,6 +92,8 @@ def make_annotation_properties(prefix=ilxtr):
         prefix.literatureCitation,
         prefix.dataCitation,
         prefix.atlasAnnotation,
+        TEMP.subClassOf,  # FIXME asco
+        TEMP.assertedSubClassOf,
         TEMP.mapsTo,
         rdflib.URIRef('http://uri.interlex.org/composer/uris/readable/hasComposerURI'),
         rdflib.URIRef('http://uri.interlex.org/tgbugs/uris/readable/composerGenLabel'),
