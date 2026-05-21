@@ -76,7 +76,6 @@ def standard_checks(graph):
 
 def build(*onts, fail=False, n_jobs=9, write=True):
     """ Set n_jobs=1 for debug or embed() will crash. """
-    from joblib import Parallel, delayed  # importing in here saves 150ms
     tail = lambda:tuple()
     lonts = len(onts)
     if lonts > 1:
@@ -93,6 +92,8 @@ def build(*onts, fail=False, n_jobs=9, write=True):
         return tuple(ont.make(fail=fail, write=write) for ont in
                      tuple(ont.setup() for ont in onts) + tail())
 
+
+    from joblib import Parallel, delayed  # importing in here saves 150ms
     # have to use a listcomp so that all calls to setup()
     # finish before parallel goes to work
     return Parallel(n_jobs=n_jobs)(delayed(o.make)(fail=fail, write=write)
