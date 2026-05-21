@@ -309,6 +309,9 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                     _prefix = nlpns.split('/')[-2] if hasattr(r, 'id') else 'comprt'  # FIXME cmpsr
                     s = _id if isinstance(_id, OntId) else OntId(nlpns[_id])
                     #log.debug(s)
+                    if hasattr(r, 'npokb_id'):
+                        lcc = bind_lcc(r.npokb_id())
+                        asdf(s, ilxtr.hasNpoKbId, r.npokb_id, split=' ', rdf_type=lcc)
                     if hasattr(r, 'sentence_number'):
                         asdf(s, ilxtr.sentenceNumber, r.sentence_number)
                     if hasattr(r, 'different_from_existing'):
@@ -598,8 +601,33 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
         ilxtr.localLabel, ilxtr.simpleLabel,
         ilxtr.simpleLocalLabel, skos.prefLabel)
     to_remove = [t for t in config._written_graph if t[1] in labels]
-    [config._written_graph.remove(t) for t in to_remove]
+
     [config._written_graph.add(t) for t in to_add]
+
+    to_add2 = []
+    npokbso = list(config._written_graph[:ilxtr.hasNpoKbId:])
+    if npokbso:
+        # rewrite triples to use npokb id if available
+        _nps = {}
+        for s, o in npokbso:
+            if s in _nps and _nps[s] != o:
+                breakpoint()
+                raise Exception(f'oops {o} != _nps[s]')
+
+            _nps[s] = o
+            to_remove.append((s, ilxtr.hasNpoKbId, o))
+            to_add2.append((o, ilxtr.hasTemporaryId, s))
+        for _s, _o in _nps.items():
+            for _p2, _o2 in config._written_graph[_s::]:
+                if _p2 != ilxtr.hasNpoKbId:
+                    if _p2 not in labels:
+                        to_add2.append((_o, _p2, _o2))
+
+                    to_remove.append((_s, _p2, _o2))
+
+    [config._written_graph.remove(t) for t in to_remove]
+    [config._written_graph.add(t) for t in to_add2]
+
     add_partial_orders(config._written_graph, snst)
     for _n in nrns:
         if _n.id_ not in snst:
