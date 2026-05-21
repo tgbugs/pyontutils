@@ -127,6 +127,7 @@ def map_predicates(sheet_pred, prefix=ilxtr):  # FIXME use the closed namespace
         'hasForwardConnectionPhenotype': prefix.hasForwardConnectionPhenotype,  # FIXME this needs to be unionOf
         'Axon-Leading-To-Sensory-Terminal': prefix.hasAxonLeadingToSensorySubcellularElementIn,
         'hasAxonLeadingToSensorySubcellularElementIn': prefix.hasAxonLeadingToSensorySubcellularElementIn,
+        'hasProteinExpressionPhenotype': prefix.hasProteinExpressionPhenotype,
 
         # from composer
         'hasSomaLocatedIn': prefix.hasSomaLocatedIn,
