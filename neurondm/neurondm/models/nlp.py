@@ -191,6 +191,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                 raise NotImplementedError(repr(level))
 
             # FIXME hardcoded and assumes predicate
+            return Phenotype(IntersectionOf(OntId(uri).u, qual), ilxtr.hasExpressionPhenotype)
             return LogicalPhenotype(AND,
                                     Phenotype(OntId(uri),
                                               ilxtr.hasExpressionPhenotype),
@@ -214,7 +215,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                 (r.predicate() if hasattr(r, 'predicate') else r.relationship()))
 
     trips = [[cl, (r.union_set().value.strip() if hasattr(r, 'union_set') else None)] + [
-        c if isinstance(c, OntId) or isinstance(c, LogicalPhenotype) else c.value for c in
+        c if isinstance(c, OntId) or isinstance(c, LogicalPhenotype) or isinstance(c, Phenotype) else c.value for c in
         ((r.id() if hasattr(r, 'id') else OntId(r.subject_uri().value)),
          (_predicate(r)),
          ((r.identifier() if r.identifier().value.strip()
@@ -464,7 +465,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
     dd = defaultdict(list)
     for c, us, _s, _p, _o in trips:
         _, nlpns, working_set = snames[c.sheet_name]
-        if isinstance(_o, LogicalPhenotype):
+        if isinstance(_o, LogicalPhenotype) or isinstance(_o, Phenotype):
             olp = True
             real_o = _o
             _o = ''

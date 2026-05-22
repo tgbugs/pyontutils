@@ -2224,6 +2224,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             self.in_graph.add((self.p, rdfs.label, rdflib.Literal(label)))
 
     def asIndicator(self):
+        if isinstance(self.p, OwlObject):
+            log.debug('FIXME TODO')
+            return self
+
         t = OntTerm(self.p)
         it = t.asIndicator()
         if t != it:
