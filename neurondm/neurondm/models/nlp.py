@@ -203,11 +203,20 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
 
     annotation_properties = make_annotation_properties()
 
+    def _predicate(r, _do_detby=False):
+        if _do_detby and hasattr(r, 'determinedbymethod') and r.determinedbymethod().value:
+            suffix = 'DeterminedBy' + r.determinedbymethod().value
+        else:
+            suffix = ''
+
+        return (OntId(r.predicate_uri().value + suffix)
+                if hasattr(r, 'predicate_uri') else
+                (r.predicate() if hasattr(r, 'predicate') else r.relationship()))
+
     trips = [[cl, (r.union_set().value.strip() if hasattr(r, 'union_set') else None)] + [
         c if isinstance(c, OntId) or isinstance(c, LogicalPhenotype) else c.value for c in
         ((r.id() if hasattr(r, 'id') else OntId(r.subject_uri().value)),
-         (OntId(r.predicate_uri().value) if hasattr(r, 'predicate_uri') else
-          (r.predicate() if hasattr(r, 'predicate') else r.relationship())),
+         (_predicate(r)),
          ((r.identifier() if r.identifier().value.strip()
            else derp(TEMP['MISSING_' + r.structure().value.replace(' ', '-')]))
           if hasattr(r, 'identifier') else
