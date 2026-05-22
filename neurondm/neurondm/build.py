@@ -4,7 +4,7 @@ Usage:
     neurondm-build release [options]
     neurondm-build all [options]
     neurondm-build [indicators phenotypes] [options]
-    neurondm-build [models bridge old dep dev] [options]
+    neurondm-build [models bridge old dep dev neurdf] [options]
     neurondm-build [sheets] [options]
 
 Options:
@@ -1226,15 +1226,7 @@ def get_files_from_bridge(path, exclude):
     return qq
 
 
-def make_devel():
-    from ttlser import CustomTurtleSerializer
-    from pyontutils import combinators as cmb
-    from pyontutils.core import Ont, build
-    from pyontutils.utils import Async, deferred
-
-    # inefficient but thorough way to populate the subset of objects we need.
-    terms = set()
-
+def get_files():
     olr = auth.get_path('ontology-local-repo')
     n = (olr / 'ttl/generated/neurons')
     fns = ('allen-cell-types.ttl',
@@ -1243,6 +1235,8 @@ def make_devel():
            #'cut-roundtrip.ttl',
            'huang-2017.ttl',
            'markram-2015.ttl',
+
+           'precision.ttl',
 
            #'bolser-lewis.ttl',
            'keast-2020.ttl',
@@ -1270,6 +1264,19 @@ def make_devel():
         #'apinat-simple-sheet',  # exclude for external users that primarily need partial orders
     )
     fps = get_files_from_bridge(nb, exclude)
+    return olr, n, fns, nb, exclude, fps
+
+
+def make_devel():
+    from ttlser import CustomTurtleSerializer
+    from pyontutils import combinators as cmb
+    from pyontutils.core import Ont, build
+    from pyontutils.utils import Async, deferred
+
+    olr, n, fns, nb, exclude, fps = get_files()
+
+    # inefficient but thorough way to populate the subset of objects we need.
+    terms = set()
     g = OntConjunctiveGraph()
     #for fn in fns:
         #fp = n / fn
@@ -1590,6 +1597,30 @@ def make_devel():
     CustomTurtleSerializer.roundtrip_prefixes = True
 
 
+def make_neurdf():
+    from pyontutils.core import OntGraph
+    from neurondm.lang import Config
+    olr, n, fns, nb, exclude, fps = get_files()
+    nf = n / 'neurdf'
+    if not nf.exists():
+        nf.mkdir()
+
+    configs = []
+    all_neurons = []
+    graphs = []
+    for path in fps:
+        neufp = nf / path.name
+        c = Config(name=path.stem, ignore_existing=False)
+        configs.append(c)
+        nlg = OntGraph(path=path).parse()
+        c.load_existing(load_graph=nlg, force=True)
+        neurons = c.neurons()
+        all_neurons.append(neurons)
+        g = c.neurdf_graph()
+        graphs.append(g)
+        g.write(path=neufp)
+
+
 def main():
     from docopt import docopt
     args = docopt(__doc__)
@@ -1603,6 +1634,7 @@ def main():
     dev = args['dev']               or all or release
     indicators = args['indicators'] or all or release
     sheets = args['sheets']         or all or release
+    neurdf = args['neurdf']         or all or release
 
     if dep:
         from neurondm.lang import Config
@@ -1640,6 +1672,9 @@ def main():
 
     if bridge:
         make_bridge()
+
+    if neurdf:
+        make_neurdf()
 
     if __name__ == '__main__':
         #breakpoint()
