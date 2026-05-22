@@ -1616,7 +1616,7 @@ def make_neurdf():
         c.load_existing(load_graph=nlg, force=True)
         neurons = c.neurons()
         all_neurons.append(neurons)
-        g = c.neurdf_graph()
+        g = c.neurdf_graph(continue_on_error=True)
         graphs.append(g)
         g.write(path=neufp)
 

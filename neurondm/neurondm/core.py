@@ -1139,19 +1139,27 @@ class Config:
         # FIXME do this correctly
         return graphBase.ttl()
 
-    def neurdf_graph(self, graph=None):
+    def neurdf_graph(self, graph=None, continue_on_error=False):
         if graph is None:
             graph = OntConjunctiveGraph()
             graph.namespace_manager.populate_from(uPREFIXES)
 
         for n in self.neurons():
-            for t in n._instance_neurdf():
-                try:
-                    graph.add(t)
-                except Exception as e:
-                    msg = f'problem with instance neurdf for\n{neuron}\n{t}'
-                    log.error(msg)
-                    #log.exception(e)
+            try:
+                for t in n._instance_neurdf():
+                    try:
+                        graph.add(t)
+                    except Exception as e:
+                        msg = f'problem with instance neurdf for\n{neuron}\n{t}'
+                        log.error(msg)
+                        #log.exception(e)
+                        raise e
+
+            except NotImplementedError as e:
+                if continue_on_error:
+                    log.exception(e)
+                    graph.add((n.id_, ilxtr.error, ilxtr.NeurdfConversionFailure))
+                else:
                     raise e
 
         return graph
@@ -2676,10 +2684,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             # neurdf will cause the grouping via AND to be dropped and
             # UnionOf will parse back to UnionOf not LogicalPhenotype(OR, ...)
             if self.op == AND:
-                # this is safe becase we don't support nesting and AND is thus redundant
+                # XXX the following is false: this is safe becase we don't support nesting and AND is thus redundant
                 for phenotype in self.pes:
                     yield from phenotype._instance_neurdf(subject, parent_logical=self.op, neuron=neuron)
 
+                yield subject, ilxtr.error, ilxtr.NeurdfLogicalFlattened
                 msg = ('LogicalPhenotype(AND, ...) flattened! '
                        f'roundtrip through neurdf will fail!\n{self}')
                 #log.warning(msg)  # XXX TOO VERBOSE and doesn't flag the neuron
