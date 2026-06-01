@@ -58,6 +58,7 @@ def nlp_ns(name):
     return rdflib.Namespace(interlex_namespace(f'tgbugs/uris/readable/sparc-nlp/{name}/'))
 
 
+prcsn = rdflib.Namespace('http://uri.interlex.org/tgbugs/uris/readable/neurons/precision/')
 snames = {
     'MM Set 1': (NLP1, nlp_ns('mmset1'), None),
     'MM Set 2 Cranial Nerves': (NLP1, nlp_ns('mmset2cn'), 'cranial nerves'),
@@ -72,7 +73,7 @@ snames = {
     'Sheet1': (NLPSwglnd, nlp_ns('swglnd'), 'sweat glands'),
     'comprt': (type('ComposerRT', (object,), dict()), None, 'composer round trip'),
     'NPO-Template (Individual cell types/species)': (type('Bhuiyan2024', (object,), dict()), None, None),
-    'PNS Cells to NPO': (type('Precision', (object,), dict()), None, None),
+    'PNS Cells to NPO': (type('Precision', (object,), dict()), prcsn, None),
 }
 
 
@@ -601,12 +602,14 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
     sigh_bind('liver', snames['ALL Liver_Human_Rat_Mouse'][1])
     sigh_bind('swglnd', snames['Sheet1'][1])
     sigh_bind('comprt', nlp_ns('composer'))
+    sigh_bind('prcsn', snames['PNS Cells to NPO'][1])
     sigh_bind('npokb', npokb)
 
     config.write()
     # skos no longer in rdflib default so not restored after cull_prefixes
     config._written_graph.namespace_manager.bind('skos', str(skos))
     config._written_graph.namespace_manager.bind('npokb', str(npokb))
+    config._written_graph.namespace_manager.bind('prcsn', str(prcsn))
     labels = (
         #ilxtr.genLabel,
         #rdfs.label,
