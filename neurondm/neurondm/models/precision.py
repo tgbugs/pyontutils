@@ -44,7 +44,7 @@ def _subject_uri(self, nocite=False):
             pref = 'http://uri.interlex.org/tgbugs/uris/readable/neurons/precision/'
             if gp in v:
                 v = v.replace(gp, 'guinea-pig')
-            nid.value =  pref + v.lower().replace(' ', '/')
+            nid.value =  pref + v.lower().replace(' ', '-')
 
     return nid
 
