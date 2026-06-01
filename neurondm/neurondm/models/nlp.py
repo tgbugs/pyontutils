@@ -3,7 +3,7 @@ from collections import defaultdict
 from urllib.parse import quote as url_quote
 import rdflib
 from pyontutils.sheets import Sheet
-from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
+from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace, npokb
 from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, LogicalPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf, AND, OR
 from neurondm import orders
 
@@ -601,10 +601,12 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
     sigh_bind('liver', snames['ALL Liver_Human_Rat_Mouse'][1])
     sigh_bind('swglnd', snames['Sheet1'][1])
     sigh_bind('comprt', nlp_ns('composer'))
+    sigh_bind('npokb', npokb)
 
     config.write()
     # skos no longer in rdflib default so not restored after cull_prefixes
     config._written_graph.namespace_manager.bind('skos', str(skos))
+    config._written_graph.namespace_manager.bind('npokb', str(npokb))
     labels = (
         #ilxtr.genLabel,
         #rdfs.label,
