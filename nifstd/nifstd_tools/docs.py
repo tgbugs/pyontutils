@@ -47,9 +47,7 @@ from urllib.parse import urlparse
 from importlib import import_module
 import yaml
 import htmlfn as hfn
-import nbformat
 from git import Repo
-from nbconvert import HTMLExporter
 from augpathlib import exceptions as aexc
 from pyontutils import clifun as clif
 from pyontutils.utils import TODAY, noneMembers, makeSimpleLogger, isoformat
@@ -871,6 +869,8 @@ def renderMarkdown(path, title=None, authors=None, date=None, theme=None,
 
 @suffix('ipynb')
 def renderNotebook(path, **kwargs):
+    import nbformat
+    from nbconvert import HTMLExporter
     nbfile = path.as_posix()
     with open(nbfile, 'rt') as f:
         notebook = nbformat.read(f, as_version=4)
