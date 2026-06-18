@@ -43,10 +43,12 @@ class OntoPandas:
     def __init__(self,
                  obj: Union[rdflib.graph.Graph, str],
                  query:str=defaultquery,
+                 curie:bool=True,
                  qnamed:bool=False,
                  str_vals:bool=False,) -> None:
         self.query = query
         self.qnamed = qnamed
+        self.curie = curie
         self.str_vals = str_vals
         self.g = obj  # could be path
         self.path = obj  # could be graph
@@ -270,6 +272,10 @@ class OntoPandas:
 
         df = df.where((pd.notnull(df)), None) # default Null is fricken Float NaN
         df = df.reset_index().rename(columns={'index':'iri'})
+
+        if self.curie:
+            df['curie'] = df.apply(lambda row: self.qname(row.iri), axis = 1)
+
         return df
 
 
