@@ -224,13 +224,14 @@ build-release () {
     fi
 
     # build the wheel from the sdist NOT from the repo
+    sdistname=${packagename//-/_}
     pushd dist/
-    tar xvzf ${packagename}-${version}.tar.gz
-    pushd ./${packagename}-${version}/
+    tar xvzf ${sdistname}-${version}.tar.gz
+    pushd ./${sdistname}-${version}/
     python setup.py bdist_wheel $@  # this should NOT be $REST, because we don't call it with --release (among other things)
     mv dist/*.whl ../
-    popd  # from ./${packagename}-${version}/
-    rm -r ./${packagename}-${version}/
+    popd  # from ./${sdistname}-${version}/
+    rm -r ./${sdistname}-${version}/
     popd  # from dist/
 
     ## testing
@@ -239,14 +240,14 @@ build-release () {
         cp dist/${packagename//-/*}-${version}* "${TEST_PATH}"
 
         pushd "${TEST_PATH}"
-        tar xvzf ${packagename}-${version}.tar.gz
+        tar xvzf ${sdistname}-${version}.tar.gz
         if [ $? -ne 0 ]; then
             echo "tar failed, probably due to a version mismatch"
             popd > /dev/null
             popd > /dev/null
             return 1
         fi
-        pushd ${packagename}-${version}
+        pushd ${sdistname}-${version}
 
         local CODE VENV_FOLDER PYTHON_EXE
         VENV_FOLDER=$(mktemp -p "${VENV_BASE}" -d venv-release-XXXXX)
