@@ -312,7 +312,7 @@ def make_phenotypes():
         graph.add_trip(id_, rdflib.RDFS.label, row[0])  # FIXME
         graph.add_trip(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if row[3]:
-            graph.add_trip(id_, rdflib.namespace.SKOS.definition, row[3])
+            graph.add_trip(id_, definition, row[3])
         if row[5]:
             graph.add_trip(id_, 'rdfs:comment', row[5])
         if row[6]:
@@ -328,6 +328,10 @@ def make_phenotypes():
             for t in row[8].split(','):
                 t = t.strip()
                 graph.add_trip(id_, rdflib.RDF.type, lookup[t])
+        if len(row) >= 10 and row[9]:
+            graph.add_trip(id_, ilxtr.displayLabel, row[9])
+        if len(row) >= 11 and row[9]:
+            graph.add_trip(id_, ilxtr.shortDefinition, row[10])
 
     with open((resources / 'neuron_phenotype.csv').as_posix(), 'rt') as f:
         rows = [r for r in csv.reader(f) if any(r) and not r[0].startswith('#')]
