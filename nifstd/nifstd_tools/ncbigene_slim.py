@@ -12,6 +12,7 @@ from pyontutils.utils import chunk_list, dictParse
 from pyontutils.config import auth
 from pyontutils.namespaces import SO, makePrefixes
 from pyontutils.namespaces import rdf, rdfs, owl
+from nifstd_tools.utils import log
 
 #ncbi_map = {
     #'name':,
