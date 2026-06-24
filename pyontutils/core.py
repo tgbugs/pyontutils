@@ -901,12 +901,6 @@ class OntMetaIri(OntMeta, OntIdIri):
                     return
 
                 else:  # I LOVE CODE DUPLICATION DON'T YOU?
-                    # FIXME TODO need a sentinel value where there isn't a header
-                    # so that we can infer that there is no header, or at least
-                    # no headerish data at the head of the file
-                    if yield_response_gen:
-                        header_data += chunk
-
                     # we yield here because pre-header chunks count as header chunks
                     # this is because any information prior to the header stop pattern
                     # is either header or local conventions that will be needed to
@@ -917,6 +911,14 @@ class OntMetaIri(OntMeta, OntIdIri):
                     # which is impossible, thus the logic is a bit different than for stop
                     prev_chunk_tail = chunk[-prev_chunk_tail_len_start_sent:]
                     chunk = chunk[:-prev_chunk_tail_len_start_sent]
+                    # FIXME TODO need a sentinel value where there isn't a header
+                    # so that we can infer that there is no header, or at least
+                    # no headerish data at the head of the file
+                    if yield_response_gen:
+                        # this must be the chunk after prev_chunk_tail adjustment
+                        # otherwise prev_chunk_tail is included twice in header_data
+                        header_data += chunk
+
                     yield chunk
 
         else:
