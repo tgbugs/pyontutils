@@ -81,7 +81,7 @@ sheet_classes = [
     type(f'{base.__name__}{sname.replace(" ", "_")}',
          (base,), dict(sheet_name=sname))
     for sname, (base, ns, working_set) in snames.items()
-    if ns is not None]
+    if ns is not None and ns not in (prcsn,)]
 
 
 def make_annotation_properties(prefix=ilxtr):
@@ -174,12 +174,15 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
             value = v
         return sigh
 
-    def procobju(text, predicate=None):
+    def procobju(text, modifier, predicate=None):
         # TODO consider whether we can handle predicate here ...
         # despite that this is all a horrible hack
-        if ' ' not in text:
+        if not modifier and ' ' not in text:
             return OntId(text)
         else:
+            if modifier:
+                text = text + ' ' + modifier
+
             log.debug(repr(text))
             uri, level = text.split(' ')
             if level == 'low':
@@ -222,8 +225,9 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
          ((r.identifier() if r.identifier().value.strip()
            else derp(TEMP['MISSING_' + r.structure().value.replace(' ', '-')]))
           if hasattr(r, 'identifier') else
-          (procobju(r.object_uri().value) if r.object_uri().value.strip()  # FIXME need to fill object text case, likely below
-           else derp(TEMP['MISSING_' + r.object().value.replace(' ', '-')]))))]
+          (procobju(r.object_uri().value, (r.modifier().value if hasattr(r, 'modifier') else None))
+           if r.object_uri().value.strip() else  # FIXME need to fill object text case, likely below
+           derp(TEMP['MISSING_' + r.object().value.replace(' ', '-')]))))]
              for cl in cs for r in cl.rows()
              if r.row_index > 0 and (r.id().value if hasattr(r, 'id') else r.subject_uri().value)
              #and (not hasattr(r, 'exclude') or not r.exclude().value)
