@@ -2,19 +2,20 @@ import ontquery as oq
 from pyontutils.core import OntTerm
 import os
 
-TEST = 'https://test3.scicrunch.org/api/1/'
-PRODUCTION = 'https://scicrunch.org/api/1/'
+def remote(server=''):
 
-InterLexRemote = oq.plugin.get('InterLex')
-interlex_remote_production = InterLexRemote(
-    # When ready, should be changed to 'https://scicrunch.org/api/1/' for production
-    apiEndpoint = PRODUCTION
-)
-interlex_remote_production.setup(instrumented=OntTerm)
+    # Request interlex remote (scigraph is also an option for plugins)
+    InterLexRemote = oq.plugin.get('InterLex')
 
-# InterLexRemote = oq.plugin.get('InterLex')
-# interlex_remote_test = InterLexRemote(
-#     # When ready, should be changed to 'https://scicrunch.org/api/1/' for production
-#     apiEndpoint = TEST
-# )
-# interlex_remote_test.setup(instrumented=OntTerm)
+    if server:
+        server = server if server.endswith('.') else server + '.'
+    endpoint = f'https://{server}scicrunch.org/api/1/'
+
+    #
+    interlex_remote = InterLexRemote()
+
+    # setup inheritance classes
+    interlex_remote.apiEndpoint = endpoint
+    interlex_remote.setup(instrumented=OntTerm)
+
+    return interlex_remote
