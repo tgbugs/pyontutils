@@ -111,7 +111,7 @@ def get_csv_sheet(path):
     rows = [[c if c != 'http://www.notspecified.info' else ''
              for c in r] for r in _rows
             if (r[idx] or r[tidx]) and r[sidx]
-            and r[idx] != anat_space_hack and r[state_idx] != 'rejected' and r[state_idx] != 'in_progress'
+            and r[idx] != anat_space_hack and r[state_idx] != 'rejected' and r[state_idx] != 'in_progress' and r[state_idx] != 'compose_now'
             and r[idx] != expcon and r[oidx] != expcon
             ]
     assert len(rows) > 1
