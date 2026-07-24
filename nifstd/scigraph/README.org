@@ -721,8 +721,7 @@ cat "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" | \
     <<&path-build-sparc-data-dev()>>/sparc-data-dev.ttl
     # TODO consider an option to exclude npo, curation-export, and protcur
 
-curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl | \
-     ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-data-dev()>>/curation-export.owl
+curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl -O
 
 pushd <<&path-build-sparc-data-dev()>>
 if [ ! -f urinary-omega-tree-test.ttl ]; then
@@ -795,7 +794,6 @@ sed 's/ilxtr:imports-\(big\|rel\)/owl:imports/g' | \
 sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-sckan()>>/,g' | \
 sed 's,https://cassava.ucsd.edu/sparc/ontologies/,file://<<&path-build-sparc-sckan()>>/,g' | \
 sed 's,https://cassava.ucsd.edu/sparc/preview/exports/,file://<<&path-build-sparc-sckan()>>/,g' | \
-sed 's,protcur.ttl,protcur.owl,g' | \
 sed 's,sparc-data,sparc-sckan,g' > \
 <<&path-build-sparc-sckan()>>/sparc-sckan.ttl
 
@@ -831,15 +829,8 @@ cp -a data/*.ttl <<&path-build-sparc-sckan()>>/
 popd
 
 pushd <<&path-build-sparc-sckan()>>
-cat curation-export-published.ttl | sed 's,\x00,^@,g' | \
-${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export-published.owl || exit 1
-cat protcur.ttl | \
-${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/protcur.owl || exit 2
 ${PY_X} -m pyontutils.ontload prov scigraph prov-record.ttl prov-record.ttl || exit 3 # overwrite to change type
 popd
-
-#curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export-published.ttl | \
-#     ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-sckan()>>/curation-export-published.owl
 
 load-graph \
 --path-build <<&path-build-sparc-sckan()>> \
@@ -1260,8 +1251,7 @@ function load-graph () {
 
     pushd "${PATH_BUILD}" || return $?
     # mv prevents accidentally deploying the same graph twice
-    # but use cp -r for development to avoid continual rebuild
-    cp -r ${FOLDER_NAME_GRAPH} ${STAMPED} || return $?
+    mv ${FOLDER_NAME_GRAPH} ${STAMPED} || return $?
     zip -r ${FILE_NAME_ZIP} ${STAMPED} || return $?
     unlink "${LATEST}" > /dev/null 2>&1
     ln -sT "${FILE_NAME_ZIP}" "${LATEST}" || return $?
@@ -1408,7 +1398,7 @@ case $key in
     --path-runtime)        local PATH_RUNTIME="${2}"; shift; shift ;;
     --folder-name-runtime) local FOLDER_NAME_RUNTIME="${2}"; shift; shift ;;
     --path-zip)            local PATH_ZIP="${2}"; shift; shift ;;
-    *)                     POSITIONAL+=("$1"); shift ;;
+    ,*)                     POSITIONAL+=("$1"); shift ;;
 esac
 done
 
