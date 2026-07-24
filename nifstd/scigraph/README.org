@@ -600,8 +600,7 @@ mkdir -p <<&path-build-sparc-data()>>
 cp "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" <<&path-build-sparc-data()>>
 sed -i 's/ilxtr:imports-dev/owl:imports/g' <<&path-build-sparc-data()>>/sparc-data.ttl
 
-curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl | \
-     pypy3 -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-data()>>/curation-export.owl
+curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl -o <<&path-build-sparc-data()>>/curation-export.ttl
 
 load-graph \
 --path-build <<&path-build-sparc-data()>> \
@@ -721,7 +720,7 @@ cat "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" | \
     <<&path-build-sparc-data-dev()>>/sparc-data-dev.ttl
     # TODO consider an option to exclude npo, curation-export, and protcur
 
-curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl -O
+curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl -o <<&path-build-sparc-data-dev()>>/curation-export.ttl
 
 pushd <<&path-build-sparc-data-dev()>>
 if [ ! -f urinary-omega-tree-test.ttl ]; then
