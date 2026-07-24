@@ -962,6 +962,16 @@ Set =folder-name-runtime-sparc-data-local= here
 Set =file-stem-sparc-data-local= here
 #+name: file-stem-sparc-data-local
 : services-sparc
+** dev local sparc-sckan
+*** deploy
+#+name: run-deploy-graph-sparc-sckan-local
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc-sckan-local
+<<&source-scigraph-functions>>
+deploy-graph \
+--path-build <<&path-build-sparc-sckan()>>
+#+end_src
+
 * Components
 :PROPERTIES:
 :header-args: :mkdirp yes
