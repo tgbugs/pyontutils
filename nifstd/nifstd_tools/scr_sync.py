@@ -6,10 +6,10 @@ Usage:
     registry-sync [options]
 
 Options:
-    -u --user=USER                  [default: nif_eelg_secure]
-    -h --host=HOST                  [default: nif-mysql.crbs.ucsd.edu]
+    -u --user=USER                  [default: rin_reader]
+    -h --host=HOST                  [default: localhost]
     -p --port=PORT                  [default: 3306]
-    -d --database=DB                [default: nif_eelg]
+    -d --database=DB                [default: scicrunch_portal]
 
     -g --git-remote=GBASE           remote git hosting                          [default: {auth.get('git-remote-base')}]
     -l --git-local=LBASE            local path to look for ontology <repo>      [default: {auth.get_path('git-local-base')}]
