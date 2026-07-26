@@ -113,10 +113,10 @@ class BermanSrc(resSource):
                         bytes_text, err = p.communicate()
                         raw_text += bytes_text.decode() + '\n'
 
-                    with open(text_file, 'wt') as f:
+                    with open(text_file, 'wt', encoding='utf-8') as f:
                         f.write(raw_text)
                 else:
-                    with open(text_file, 'rt') as f:
+                    with open(text_file, 'rt', encoding='utf-8') as f:
                         raw_text = f.read()
 
                 legends = get_legends(raw_text)
@@ -125,7 +125,7 @@ class BermanSrc(resSource):
         elif cls.source.exists():
             for text_file in cls.source.glob('*.txt'):
                 plate_num = int(text_file.stem)
-                with open(text_file, 'rt') as f:
+                with open(text_file, 'rt', encoding='utf-8') as f:
                     raw_text = f.read()
 
                 legends = get_legends(raw_text)
