@@ -88,10 +88,10 @@ class FreeSurferSrc(Source):
         number_name = []
         for row in cls.raw:
             row = row.strip()
-            if not row or row.startswith('#'):  # no blanks and comments
+            if not row or row.startswith('#') or 'undefined' in row:  # no blanks and comments
                 continue
 
-            number, name, *rgba = (c for c in row.split(' ') if c)
+            number, name, *rgba = (c for c in row.split() if c)
             number_name.append((number, name))
 
         return number_name,
