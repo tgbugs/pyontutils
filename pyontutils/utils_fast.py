@@ -407,7 +407,7 @@ def mysql_conn_helper(host, db, user, port=3306):
         'password':None,  # no you may NOT pass it in
     }
     port = int(port)
-    with open(os.path.expanduser('~/.mypass'), 'rt') as f:
+    with open(Path('~/.mypass').expanduser(), 'rt') as f:
         entries = [l.strip().split(':', 4) for l in f.readlines()]
     for e_host, e_port, e_db, e_user, e_pass in entries:
         e_port = int(e_port)
