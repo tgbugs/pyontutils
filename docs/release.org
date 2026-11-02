@@ -92,7 +92,7 @@ Tangle this block so you can source [[file:./../bin/python-release-functions.sh]
 ** Build release
 # XXX FIXME AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA absolute insanity where this is parsed as an emacs float and embedded as such so the trailing zero is lost temp fix is to use string
 #+name: &default-python-version
-: "3.10"
+: "3.14"
 
 #+NAME: &vars-build-release
 #+begin_src bash :eval never :exports code :noweb yes
