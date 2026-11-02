@@ -786,15 +786,16 @@ def asStr(astNode, prior=tuple(), dereference=False):
         is just timely enough to realize how useful dynamic extent is
         and just how much we miss it in cases like this >_< """
 
-    if isinstance(astNode, ast.Str):
-        return repr(astNode.s)
+    if isinstance(astNode, ast.Constant) and isinstance(astNode.value, str):
+        return repr(astNode.value)
     elif isinstance(astNode, ast.FormattedValue):
         return asStr(astNode.value, prior, dereference=True)
     elif isinstance(astNode, ast.JoinedStr):
         around = '"""'
+        condition = False
         return (around +
                 ''.join([ast.literal_eval(asStr(v, prior))
-                         if isinstance(v, ast.Str) else asStr(v, prior)
+                         if isinstance(v, ast.Constant) and isinstance(v.value, str) else asStr(v, prior)
                          for v in astNode.values]) +
                 around)
     elif isinstance(astNode, ast.Name):
