@@ -26,6 +26,7 @@ __all__ = [
     'NegEntailedPhenotype',
     'LogicalPhenotype',
     'EntailedLogicalPhenotype',
+    'Cell',
     'Neuron',
     'NeuronCUT',
     'NeuronEBM',
@@ -33,6 +34,7 @@ __all__ = [
     'OntTerm',
     'ilxtr',  # FIXME
     'URIRef',  # FIXME
+    '_CELL_CLASS',  # FIXME
     '_NEURON_CLASS',  # FIXME
     '_CUT_CLASS',
     '_EBM_CLASS',

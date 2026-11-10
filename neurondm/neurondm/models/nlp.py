@@ -4,7 +4,7 @@ from urllib.parse import quote as url_quote
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace, npokb
-from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, LogicalPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf, AND, OR
+from neurondm.core import Config, Cell, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, LogicalPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf, AND, OR
 from neurondm import orders
 
 
@@ -93,6 +93,8 @@ def make_annotation_properties(prefix=ilxtr):
         prefix.literatureCitation,
         prefix.dataCitation,
         prefix.atlasAnnotation,
+        prefix.subClassOf,
+        prefix.neurondmBaseClass,
         TEMP.subClassOf,  # FIXME asco
         TEMP.assertedSubClassOf,
         TEMP.mapsTo,
@@ -168,6 +170,42 @@ def ind_to_adj(ind_uri, *, neuron_id=None):
     return sorted(sedges)
 
 
+def add_entails(phenos):
+    # TODO consider whether we also want to track provenance for such python generated edges
+    # entailments that an owl reasoner cannot add
+    soma_p = {ilxtr.hasSomaLocation}
+    #soma_p = {ilxtr.hasSomaLayerLocation}
+    axon_p = {
+        ilxtr.hasAxonLocatedIn,
+        ilxtr.hasAxonPresynapticElementIn,
+    }
+    saxon_p = {  # XXX FIXME TODO further issues with sensory axons, there might be
+        # a sensory neuron that is also a projection neuron but it should not be
+        # determined to be so on the basis of its sensory axons, however this requires
+        # checking the partial order because the LeadingTo may not have been applied in all cases
+        ilxtr.hasAxonSensorySubcellularElementIn,
+        ilxtr.hasAxonLeadingToSensorySubcellularElementIn,
+    }
+    # XXX WARNING we use axon location and all sub properties, but there are cases where
+    # anatomical aliasing can result in false inference of projection
+    # XXX FIXME if an axon is located only in a part of the soma location but that part has
+    # a different id we do not check the partonomy only identifier equiality
+    soma_locations = set()
+    axon_locations = set()
+    for p in phenos:
+        if p.e in axon_p:
+            axon_locations.add(p.p)
+        elif p.e in soma_p:
+            soma_locations.add(p.p)
+
+    n_phenos = []
+    has_axon_not_in_soma_location = axon_locations - soma_locations
+    if has_axon_not_in_soma_location:
+        n_phenos.append(EntailedPhenotype(ilxtr.ProjectionPhenotype, ilxtr.hasCircuitRolePhenotype))
+
+    return phenos + n_phenos
+
+
 def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=None):
     def derp(v):
         class sigh:
@@ -218,6 +256,7 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                 if hasattr(r, 'predicate_uri') else
                 (r.predicate() if hasattr(r, 'predicate') else r.relationship()))
 
+    id_type_map = {}
     trips = [[cl, (r.union_set().value.strip() if hasattr(r, 'union_set') else None)] + [
         c if isinstance(c, OntId) or isinstance(c, LogicalPhenotype) or isinstance(c, Phenotype) else c.value for c in
         ((r.id() if hasattr(r, 'id') else OntId(r.subject_uri().value)),
@@ -284,7 +323,11 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
 
                     extra_kwargs[s][as_kwarg] = vin
                 else:
-                    to_add_append((s.u, p, vin))
+                    if p == ilxtr.neurondmBaseClass:
+                        _ctype = Cell if str(vin).lower() == 'cell' else neuron_class  # FIXME all sorts of tangled here
+                        id_type_map[s.u] = _ctype
+                    else:
+                        to_add_append((s.u, p, vin))
 
     def bind_lcc(c):
         def lcc(uri_or_curie, _c=c):
@@ -467,6 +510,9 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
     if config is None:
         config = Config('sparc-nlp')
 
+    if neuron_class is None:
+        neuron_class = NeuronSparcNlp
+
     dd = defaultdict(list)
     for c, us, _s, _p, _o in trips:
         _, nlpns, working_set = snames[c.sheet_name]
@@ -577,16 +623,14 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
 
         dd2[id].extend(phenos)
 
-    if neuron_class is None:
-        neuron_class = NeuronSparcNlp
-
     sigh = []
     nrns = []
     ed = {}
     for id, phenos in dd2.items():
-        nc = neuron_class if neuron_class_fun is None else neuron_class_fun(id)
+        nc = neuron_class if neuron_class_fun is None else neuron_class_fun(id.u, id_type_map=id_type_map)
         kwargs = extra_kwargs[id] if id in extra_kwargs else ed
-        n = nc(*phenos, id_=id, **kwargs)
+        n_phenos = add_entails(phenos)
+        n = nc(*n_phenos, id_=id, **kwargs)
         if False and eff(n):
             n._sigh()  # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX FIXME figure out why this is not getting called internally
             sigh.append(n)
@@ -614,10 +658,14 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
     config._written_graph.namespace_manager.bind('skos', str(skos))
     config._written_graph.namespace_manager.bind('npokb', str(npokb))
     config._written_graph.namespace_manager.bind('prcsn', str(prcsn))
+    # TEMP is dropped for some reason I don't understand
+    config._written_graph.namespace_manager.bind('TEMP', str(TEMP))
     labels = (
         #ilxtr.genLabel,
         #rdfs.label,
-        ilxtr.localLabel, ilxtr.simpleLabel,
+        #ilxtr.origLocalLabel,  # needed for ilx dashboard use case provided out of band
+        ilxtr.localLabel,
+        ilxtr.simpleLabel,
         ilxtr.simpleLocalLabel, skos.prefLabel)
     to_remove = [t for t in config._written_graph if t[1] in labels]
 

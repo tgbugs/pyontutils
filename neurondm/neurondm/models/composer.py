@@ -245,7 +245,7 @@ def remlabs_write(config, keep=tuple(), extra_trips=tuple()):
     config._written_graph.write()
 
 
-def ncfun_roundtrip(id):
+def ncfun_roundtrip(id, *args, **kwargs):
     if '/neuron-type-' in id:
         return NeuronApinatComplex
     elif '/sparc-nlp/' in id:

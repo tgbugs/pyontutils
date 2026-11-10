@@ -4,7 +4,7 @@ from urllib.parse import quote as url_quote
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace
-from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf
+from neurondm.core import Config, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf, OwlObject
 from neurondm import orders
 
 from neurondm.models.nlp import map_predicates, main as nlp_main
@@ -76,8 +76,20 @@ def _union_set(self):
 def ncbigene(nrns):
     pref = 'http://www.ncbi.nlm.nih.gov/gene/'
     c = nrns[0].out_graph.namespace_manager.curie
-    ncbigene_ids = [c(p.p) for n in nrns for p in n.pes if p.p.startswith(pref)]
+    ncbigene_ids = [c(p) for n in nrns for maybe_p in n.pes  # FIXME doesn't handle arbitrary nesting
+                    for p in ((x for y in maybe_p.p.members() for x in (y if isinstance(y, tuple) and not log.debug(y) else (y,)))
+                              if isinstance(maybe_p.p, OwlObject)
+                              else (maybe_p.p if isinstance(maybe_p.p, tuple) else (maybe_p.p,)))
+                    if p.startswith(pref)]
     print('\n'.join(ncbigene_ids))
+
+
+def cell_type_fun(id, *args, id_type_map=tuple(), **kwargs):
+    if id not in id_type_map:
+        #log.debug(f'unknown type for id {id}')
+        return NeuronPrecision
+
+    return id_type_map[id]
 
 
 def main():
@@ -107,7 +119,7 @@ def main():
          OntId('https://doi.org/10.1126/sciadv.adj9173').u))
 
     cs = [PRE()]
-    nlp_main(cs=cs, config=config, neuron_class=NeuronPrecision)
+    nlp_main(cs=cs, config=config, neuron_class=NeuronPrecision, neuron_class_fun=cell_type_fun)
     nrns = config.neurons()
     #ncbigene(nrns)
 

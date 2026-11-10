@@ -95,6 +95,7 @@ __all__ = [
     'NegEntailedPhenotype',
     'LogicalPhenotype',
     'EntailedLogicalPhenotype',
+    'Cell',
     'Neuron',
     'NeuronCUT',
     'NeuronEBM',
@@ -103,6 +104,7 @@ __all__ = [
     'owl',  # FIXME
     'ilxtr',  # FIXME
     'URIRef',  # FIXME
+    '_CELL_CLASS',
     '_NEURON_CLASS',
     '_CUT_CLASS',
     '_EBM_CLASS',
@@ -120,6 +122,7 @@ AND = owl.intersectionOf
 OR = owl.unionOf
 
 # utility identifiers
+_CELL_CLASS = OntId('SAO:1813327414').URIRef
 _NEURON_CLASS = OntId('SAO:1417703748').URIRef
 _CUT_CLASS = ilxtr.NeuronCUT
 _EBM_CLASS = ilxtr.NeuronEBM
@@ -925,7 +928,7 @@ class Config:
 
         self.__name = name  # TODO allow reload from owl to get the load graph? how to handle this
 
-        graphBase.python_subclasses = list(subclasses(NeuronEBM)) + [Neuron, NeuronCUT]
+        graphBase.python_subclasses = list(subclasses(NeuronEBM)) + [Cell, Neuron, NeuronCUT]
         graphBase.knownClasses = [OntId(c.owlClass).u
                                   for c in graphBase.python_subclasses]
 
@@ -3079,7 +3082,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         parent = cls.mro()[1]  # FIXME EVIL
         if (hasattr(parent, 'owlClass') and
             cls.owlClass != parent.owlClass and
-            cls not in (NeuronBase, Neuron, NeuronCUT, NeuronEBM) and
+            cls not in (Cell, NeuronBase, Neuron, NeuronCUT, NeuronEBM) and
             not hasattr(cls, '_runonce')):
             cls._runonce = True
             cls.ng.add_trip(cls.owlClass, rdf.type, owl.Class)
@@ -3874,7 +3877,7 @@ class Neuron(NeuronBase):
                         expand_restriction(pr, pes)
                     elif id_ == self.owlClass:
                         pes.append(id_)
-                    elif id_ == _NEURON_CLASS:  # CUT case
+                    elif id_ == _NEURON_CLASS or id_ == _CELL_CLASS:  # CUT case
                         pes.append(id_)
                     elif pr is None:
                         log.warning(f'dangling reference {id_}')
@@ -4003,6 +4006,15 @@ class Neuron(NeuronBase):
         self._graphify_labels(graph)
         members = [self.expand(self.owlClass)]
         return self._graphify_pes(graph, members)
+
+
+class Cell(NeuronBase):
+    # FIXME obviously this has the wrong parent class but not mucking
+    # with changing NeuronBase to CellBase right now
+    owlClass = _CELL_CLASS
+    _graphify = Neuron._graphify
+    _graphify_labels = Neuron._graphify_labels
+    _graphify_pes = Neuron._graphify_pes
 
 
 class NeuronCUT(Neuron):
