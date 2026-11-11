@@ -1,3 +1,4 @@
+from functools import wraps
 import augpathlib as aug
 from pyontutils.core import OntGraph, OntResPath
 from pyontutils.config import auth
@@ -43,7 +44,7 @@ def _genlabel(oid):
 
 
 from pprint import pprint
-#from pyontutils.sheets import Sheet
+from pyontutils.sheets import Sheet as pSheet
 from sparcur.sheets import Sheet  # FIXME move the caching functionality to pyontutils.sheets
 # XXX for now if you make a change you can e.g. insts[0].fetch(_refresh_cache=True)
 
@@ -267,6 +268,24 @@ def citations(ncs, neus):
                 yield s, p, o
 
 
+def cleanup(fun):
+    @wraps(fun)
+    def inner(*args, **kwargs):
+        try:
+            return fun(*args, **kwargs)
+        finally:
+            Sheet._do_cache = False
+            if hasattr(pSheet, '_Sheet__spreadsheet_service'):
+                del pSheet._Sheet__spreadsheet_service
+            if hasattr(pSheet, '_Sheet__spreadsheet_service_ro'):
+                del pSheet._Sheet__spreadsheet_service_ro
+            if hasattr(pSheet, '_Sheet__drive_service_ro'):
+                del pSheet._Sheet__drive_service_ro
+
+    return inner
+
+
+@cleanup
 def main(make_manual=True):
     # XXX TODO need to ensure that the type phenotype axioms so that the model superclass is included
     if make_manual:
