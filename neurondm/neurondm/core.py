@@ -4044,6 +4044,8 @@ class Cell(NeuronBase):
     _graphify = Neuron._graphify
     _graphify_labels = Neuron._graphify_labels
     _graphify_pes = Neuron._graphify_pes
+    _unpackPheno = Neuron._unpackPheno
+    bagExisting = Neuron.bagExisting
 
 
 class NeuronCUT(Neuron):
