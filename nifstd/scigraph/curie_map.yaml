@@ -92,6 +92,9 @@ swglnd: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/swglnd/
 liver: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/liver/
 kidney: http://uri.interlex.org/tgbugs/uris/readable/sparc-nlp/kidney/
 atom:   http://uri.interlex.org/tgbugs/uris/readable/atlas/
+pain1: http://uri.interlex.org/composer/uris/set/pain1/
+pain2: http://uri.interlex.org/composer/uris/set/pain2/
+portal: http://uri.interlex.org/composer/uris/set/portal/
 PRECISETBI.CDE: http://uri.interlex.org/precise-tbi/uris/cde/
 
 # alternate ids
