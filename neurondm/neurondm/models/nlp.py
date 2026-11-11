@@ -4,7 +4,7 @@ from urllib.parse import quote as url_quote
 import rdflib
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import ilxtr, TEMP, rdfs, skos, owl, interlex_namespace, npokb
-from neurondm.core import Config, Cell, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, LogicalPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf, AND, OR
+from neurondm.core import Config, Cell, NeuronEBM, Phenotype, EntailedPhenotype, NegPhenotype, LogicalPhenotype, EntailedLogicalPhenotype, log, OntCuries, OntId, add_partial_orders, IntersectionOf, AND, OR
 from neurondm import orders
 
 
@@ -597,7 +597,8 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
                 (p == ilxtr.hasAnatomicalSystemPhenotype and not ('aacar-7' in s.u or 'aacar-8' in s.u or s.u.endswith('keast-2') or s.u.endswith('keast-1'))) or  # XXX hardcoded workaround
                 p == ilxtr.hasCircuitRolePhenotype or
                 (p == ilxtr.hasFunctionalCircuitRolePhenotype and not ('sstom-11' in s.u or 'sstom-12' in s.u or 'sstom-13' in s.u or 'sstom-14' in s.u)) or  # XXX hardcoded workaround
-                (p == ilxtr.hasProjectionPhenotype and not ('sdcol-l' in s.u or 'sdcol-j' in s.u))  # XXX hardcoded workaround for composer
+                (p == ilxtr.hasProjectionPhenotype and not ('sdcol-l' in s.u or 'sdcol-j' in s.u)) or  # XXX hardcoded workaround for composer
+                (p == ilxtr.isMemberOfCircuit)  # FIXME another hardcoded workaround
                 ):
                 # XXX ilxtr.hasBiologicalSex is another candidate for this treatment
                 # FIXME HACK, in order to be defining
@@ -619,7 +620,10 @@ def main(debug=False, cs=None, config=None, neuron_class=None, neuron_class_fun=
     dd2 = defaultdict(list)
     for (id, us), phenos in dd.items():
         if us is not None and us and len(phenos) > 1:
-            phenos = LogicalPhenotype(OR, *phenos),
+            if isinstance(phenos[0], EntailedPhenotype):
+                phenos = EntailedLogicalPhenotype(OR, *phenos),
+            else:
+                phenos = LogicalPhenotype(OR, *phenos),
 
         dd2[id].extend(phenos)
 

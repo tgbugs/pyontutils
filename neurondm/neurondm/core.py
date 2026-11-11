@@ -427,6 +427,9 @@ class LabelMaker:
     def hasAxonPhenotype(self, phenotypes):
         yield from self._default(phenotypes)
     @od
+    def hasAxonSensorySubcellularStructure(self, phenotypes):  # close to subPropertyOf hasAxonMorphologicalPhenotype ...
+        yield from self._default(phenotypes)
+    @od
     def hasElectrophysiologicalPhenotype(self, phenotypes):
         yield from self._default(phenotypes)
     @od
@@ -533,6 +536,11 @@ class LabelMaker:
     @od
     def hasFunctionalCircuitRolePhenotype(self, phenotypes):
         yield from self._default(phenotypes)
+    @od
+    def isMemberOfCircuit(self, phenotypes):
+        for lin in self._default(phenotypes):
+            lout = lin.replace('circuit', '').strip().rstrip()
+            yield lout
     @od
     def hasCircuitRolePhenotype(self, phenotypes):
         interneuron_phenotype = self.predicate_namespace['InterneuronPhenotype']
@@ -1458,6 +1466,7 @@ class OwlObject:
         else:
             qname = lambda x: x
 
+        mod = False
         ps = [phenotype_class(m, parent.e) for m in self.members()]
         pls = []
         for p in ps:
@@ -1466,12 +1475,14 @@ class OwlObject:
                 v = _v()
             else:
                 v = _v
-            if thing == 'pShortName' and v is None:
-                continue
 
-            pls.append(qname(p.p) if v is None else v)
+            if p.p in (ilxtr.HigherExpression, ilxtr.LowerExpression):  # FIXME HACK hardcoded
+                mod = True
+                pls = [p.p.split('/')[-1].replace('Expression', '').strip().rstrip().lower()] + pls
+            elif not (thing == 'pShortName' and v is None):
+                pls.append(qname(p.p) if v is None else v)
 
-        if thing == 'pShortName' and not pls:
+        if thing == 'pShortName' and (not pls or (len(pls) == 1 and mod)):
             return
 
         #print(pls)
@@ -1484,6 +1495,20 @@ class OwlObject:
 
     def members(self):
         return self._members
+
+    def asIndicator(self):
+        def ai(u):
+            if hasattr(u, 'asIndicator'):
+                return u.asIndicator()
+
+            t = OntTerm(u)
+            it = t.asIndicator()
+            if t != it:
+                return it.u
+            else:
+                return u
+
+        return self.__class__(*[ai(m) for m in self.members()])
 
     def _graphify(self, parent=None, members=None, graph=None):
         if self.operator is None:
@@ -2228,8 +2253,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
     def asIndicator(self):
         if isinstance(self.p, OwlObject):
-            log.debug('FIXME TODO')
-            return self
+            #log.debug('FIXME TODO')
+            ninst = self.__class__(self.p.asIndicator(), self.e)
+            return ninst
 
         t = OntTerm(self.p)
         it = t.asIndicator()
@@ -2444,6 +2470,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         if pn.startswith('NCBITaxon'):
             return resp['labels'][0]
+        elif pn == 'PR:000013502':
+            # FIXME sigh hardcoded due to changes in upstream ontology or something
+            return 'PV'
 
         if resp:  # DERP
             abvs = resp['abbreviations']
