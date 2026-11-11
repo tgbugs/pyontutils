@@ -25,7 +25,7 @@ from rdflib.extras import infixowl
 from pyontutils.core import makeGraph, createOntology, OntId as OntId_, OntConjunctiveGraph
 from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger, anyMembers
 from pyontutils.obo_io import OboFile
-from neurondm import _NEURON_CLASS, OntTerm
+from neurondm import _CELL_CLASS, _NEURON_CLASS, OntTerm
 from neurondm.core import OntTermOntologyOnly, OntTermInterLexOnly, log as _log, auth
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.namespaces import (makePrefixes,
@@ -1503,7 +1503,8 @@ def make_devel():
             if not terms:
                 raise BaseException('WHAT')
 
-            skip = 'TEMPIND', 'npokb', 'mmset', 'liver', 'kidney', 'femrep', 'prostate', 'semves', 'senmot', 'swglnd', 'gastint'
+            skip = ('TEMPIND', 'npokb', 'mmset', 'liver', 'kidney', 'femrep', 'prostate', 'semves', 'senmot', 'swglnd', 'gastint',
+                    'pain', 'portal',)
             while terms:
                 next_terms = []
                 for term in terms:
@@ -1520,7 +1521,9 @@ def make_devel():
                     if (not term.label or (not term.label.lower().endswith('neuron') and
                                            not term.label.lower().endswith('cell') and
                                            not term.label.lower().endswith('cell outer'))
-                        or term.URIRef == _NEURON_CLASS):
+                        or term.URIRef == _NEURON_CLASS
+                        or term.curie == 'SAO:1224657022' # nervous system cell sits in between neuron and cell
+                        or term.URIRef == _CELL_CLASS):
                         haveLabel = False
                         for s, p, o in term.triples_simple:
                             if p == rdfs.label:
