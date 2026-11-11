@@ -186,21 +186,31 @@ def add_entails(phenos):
         ilxtr.hasAxonSensorySubcellularElementIn,
         ilxtr.hasAxonLeadingToSensorySubcellularElementIn,
     }
+    hcrp_p = {
+        ilxtr.hasCircuitRolePhenotype,}
     # XXX WARNING we use axon location and all sub properties, but there are cases where
     # anatomical aliasing can result in false inference of projection
     # XXX FIXME if an axon is located only in a part of the soma location but that part has
     # a different id we do not check the partonomy only identifier equiality
     soma_locations = set()
     axon_locations = set()
+    intrinsic = set()
+    already_proj = set()
     for p in phenos:
         if p.e in axon_p:
             axon_locations.add(p.p)
         elif p.e in soma_p:
             soma_locations.add(p.p)
+        elif p.e in hcrp_p:
+            if p.p == ilxtr.IntrinsicPhenotype:
+                intrinsic.add(p.p)
+            elif p.p == ilxtr.ProjectionPhenotype:
+                # FIXME might be eqv instead of ent though
+                already_proj.add(p.p)
 
     n_phenos = []
     has_axon_not_in_soma_location = axon_locations - soma_locations
-    if has_axon_not_in_soma_location:
+    if has_axon_not_in_soma_location and not intrinsic and not already_proj:
         n_phenos.append(EntailedPhenotype(ilxtr.ProjectionPhenotype, ilxtr.hasCircuitRolePhenotype))
 
     return phenos + n_phenos
