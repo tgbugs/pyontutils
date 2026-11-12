@@ -1522,7 +1522,9 @@ def make_devel():
                                            not term.label.lower().endswith('cell') and
                                            not term.label.lower().endswith('cell outer'))
                         or term.URIRef == _NEURON_CLASS
-                        or term.curie == 'SAO:1224657022' # nervous system cell sits in between neuron and cell
+                        or term.curie == 'ILX:0797458'  # Intermediate spinal cord interneuron FIXME not managed via npo
+                        or term.curie == 'ILX:0110941'  # Spinal cord ventral horn motor neuron alpha FIXME managed via npo as SAO:1154704263 updated in composer
+                        or term.curie == 'SAO:1224657022'  # nervous system cell sits in between neuron and cell
                         or term.URIRef == _CELL_CLASS):
                         haveLabel = False
                         for s, p, o in term.triples_simple:
